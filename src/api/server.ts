@@ -1,6 +1,8 @@
 import { createRequire } from "node:module";
+import "dotenv/config";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
+import { loadApiConfig } from "./config.js";
 import { registerRoutes } from "./routes.js";
 
 const require = createRequire(import.meta.url);
@@ -13,8 +15,9 @@ interface ApiError {
 }
 
 export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
+  const config = loadApiConfig();
   const app = Fastify({ logger: false });
-  await app.register(cors, { origin: true });
+  await app.register(cors, { origin: config.corsOrigin });
 
   app.decorate("httpErrors", {
     badRequest(message: string, details?: unknown) {
@@ -68,17 +71,16 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
     });
   });
 
-  await registerRoutes(app, { version: pkg.version });
+  await registerRoutes(app, { version: pkg.version, config });
   return app;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const host = process.env.HOST ?? "127.0.0.1";
-  const port = Number(process.env.PORT ?? "3000");
+  const config = loadApiConfig();
   const app = await buildServer();
   try {
-    await app.listen({ host, port });
-    console.log(`we-build-tl-audit API listening on http://${host}:${port}`);
+    await app.listen({ host: config.host, port: config.port });
+    console.log(`we-build-tl-audit API listening on http://${config.host}:${config.port}`);
   } catch (error) {
     app.log.error(error instanceof Error ? error : { error: String(error) });
     process.exitCode = 1;

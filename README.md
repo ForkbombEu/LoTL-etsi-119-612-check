@@ -97,6 +97,26 @@ Development server:
 npm run dev:api
 ```
 
+Runtime config can come from shell environment or a local `.env` file. Start from `.env-example`:
+
+```bash
+cp .env-example .env
+```
+
+Supported variables:
+
+```text
+HOST=127.0.0.1
+PORT=3000
+PUBLIC_BASE_URL=
+CORS_ORIGIN=*
+AUDIT_CONCURRENCY=4
+AUDIT_TIMEOUT_MS=15000
+AUDIT_STRICT=false
+AUDIT_INCLUDE_JSON_LOTE_CHECKS=false
+AUDIT_FETCH=true
+```
+
 Health check:
 
 ```bash
@@ -203,7 +223,7 @@ Interactive docs:
 http://127.0.0.1:3000/docs
 ```
 
-The docs page serves local OpenAPI from `/openapi.yaml` and loads Stoplight Elements from the public unpkg CDN. CORS is enabled on the API server so the Stoplight Try-It console can call local endpoints where browser/network policy allows it. For fully offline docs, vendor Stoplight Elements assets and update `src/api/docs.ts`.
+The docs page serves local OpenAPI from `/openapi.yaml` and loads Stoplight Elements from the public unpkg CDN. `/openapi.yaml` and `/openapi.json` set `servers[0].url` from `PUBLIC_BASE_URL` when present, otherwise from the incoming request host, so `HOST=0.0.0.0 PORT=8088 npm run api` and `http://127.0.0.1:8088/docs` produce Try-It requests against port 8088. CORS is enabled on the API server so the Stoplight Try-It console can call local endpoints where browser/network policy allows it. For fully offline docs, vendor Stoplight Elements assets and update `src/api/docs.ts`.
 
 ## Checks
 

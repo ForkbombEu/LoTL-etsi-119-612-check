@@ -4,10 +4,12 @@ import YAML from "yaml";
 import { buildServer } from "../src/api/server.js";
 
 const originalFetch = globalThis.fetch;
+const originalEnv = { ...process.env };
 
 describe("API server", () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    process.env = { ...originalEnv };
     vi.restoreAllMocks();
   });
 
@@ -183,6 +185,40 @@ describe("API server", () => {
       expect(parsedYaml.paths[path]).toBeDefined();
       expect(parsedJson.paths[path]).toBeDefined();
     }
+    await app.close();
+  });
+
+  it("uses request origin in served OpenAPI specs", async () => {
+    const app = await buildServer();
+    const headers = { host: "127.0.0.1:8088" };
+    const yamlResponse = await app.inject({ method: "GET", url: "/openapi.yaml", headers });
+    const jsonResponse = await app.inject({ method: "GET", url: "/openapi.json", headers });
+    expect(YAML.parse(yamlResponse.body).servers[0].url).toBe("http://127.0.0.1:8088");
+    expect(jsonResponse.json().servers[0].url).toBe("http://127.0.0.1:8088");
+    await app.close();
+  });
+
+  it("uses PUBLIC_BASE_URL ahead of request origin", async () => {
+    process.env.PUBLIC_BASE_URL = "https://audit.example.test/";
+    const app = await buildServer();
+    const response = await app.inject({ method: "GET", url: "/openapi.json", headers: { host: "127.0.0.1:8088" } });
+    expect(response.json().servers[0].url).toBe("https://audit.example.test");
+    await app.close();
+  });
+
+  it("uses env audit defaults when request options are omitted", async () => {
+    process.env.AUDIT_FETCH = "false";
+    process.env.AUDIT_CONCURRENCY = "2";
+    process.env.AUDIT_TIMEOUT_MS = "500";
+    const app = await buildServer();
+    const lotl = JSON.parse(await readFile("test/fixtures/lotl.json", "utf8"));
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/audit/json",
+      payload: { lotl },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().report.summary).toMatchObject({ fetched: 0, fetchFailed: 0, unknownArtifacts: 3 });
     await app.close();
   });
 

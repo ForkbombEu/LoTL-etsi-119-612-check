@@ -1,4 +1,7 @@
 import type { FastifySchema } from "fastify";
+import type { ApiRuntimeConfig } from "./config.js";
+
+export type AuditOptionDefaults = ApiRuntimeConfig["auditDefaults"];
 
 const auditOptions = {
   type: "object",
@@ -101,40 +104,20 @@ export const markdownReportSchema: FastifySchema = {
   },
 };
 
-export function defaultAuditOptions(input?: Partial<{
-  concurrency: number;
-  timeoutMs: number;
-  strict: boolean;
-  includeJsonLoteChecks: boolean;
-  fetch: boolean;
-}>): {
-  concurrency: number;
-  timeoutMs: number;
-  strict: boolean;
-  includeJsonLoteChecks: boolean;
-  fetch: boolean;
-} {
+export function defaultAuditOptions(input: Partial<AuditOptionDefaults> | undefined, defaults: AuditOptionDefaults): AuditOptionDefaults {
   return {
-    concurrency: input?.concurrency ?? 4,
-    timeoutMs: input?.timeoutMs ?? 15000,
-    strict: input?.strict ?? false,
-    includeJsonLoteChecks: input?.includeJsonLoteChecks ?? false,
-    fetch: input?.fetch ?? true,
+    concurrency: input?.concurrency ?? defaults.concurrency,
+    timeoutMs: input?.timeoutMs ?? defaults.timeoutMs,
+    strict: input?.strict ?? defaults.strict,
+    includeJsonLoteChecks: input?.includeJsonLoteChecks ?? defaults.includeJsonLoteChecks,
+    fetch: input?.fetch ?? defaults.fetch,
   };
 }
 
-export function defaultArtifactOptions(input?: Partial<{
-  timeoutMs: number;
-  strict: boolean;
-  includeJsonLoteChecks: boolean;
-}>): {
-  timeoutMs: number;
-  strict: boolean;
-  includeJsonLoteChecks: boolean;
-} {
+export function defaultArtifactOptions(input: Partial<Omit<AuditOptionDefaults, "concurrency" | "fetch">> | undefined, defaults: AuditOptionDefaults): Omit<AuditOptionDefaults, "concurrency" | "fetch"> {
   return {
-    timeoutMs: input?.timeoutMs ?? 15000,
-    strict: input?.strict ?? false,
-    includeJsonLoteChecks: input?.includeJsonLoteChecks ?? false,
+    timeoutMs: input?.timeoutMs ?? defaults.timeoutMs,
+    strict: input?.strict ?? defaults.strict,
+    includeJsonLoteChecks: input?.includeJsonLoteChecks ?? defaults.includeJsonLoteChecks,
   };
 }

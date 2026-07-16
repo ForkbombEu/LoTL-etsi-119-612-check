@@ -4,6 +4,8 @@ import { isUrl } from "../input.js";
 import { parseLotlJson } from "../lotl.js";
 import { renderMarkdownReport } from "../report/markdownReport.js";
 import type { AuditReport, TrustedListAuditResult } from "../types.js";
+import type { ApiRuntimeConfig } from "./config.js";
+import { requestBaseUrl } from "./config.js";
 import { renderDocsHtml } from "./docs.js";
 import { loadOpenApiJson, loadOpenApiYaml } from "./openapi.js";
 import {
@@ -18,6 +20,7 @@ import {
 
 export interface RouteOptions {
   version: string;
+  config: ApiRuntimeConfig;
 }
 
 interface AuditUrlBody {
@@ -51,12 +54,12 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     version: options.version,
   }));
 
-  app.get("/openapi.yaml", async (_request, reply) => {
+  app.get("/openapi.yaml", async (request, reply) => {
     reply.type("application/yaml");
-    return loadOpenApiYaml();
+    return loadOpenApiYaml(requestBaseUrl(request.headers, options.config));
   });
 
-  app.get("/openapi.json", async () => loadOpenApiJson());
+  app.get("/openapi.json", async (request) => loadOpenApiJson(requestBaseUrl(request.headers, options.config)));
 
   app.get("/docs", async (_request, reply) => {
     reply.type("text/html; charset=utf-8");
@@ -67,7 +70,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     if (!isUrl(request.body.url)) {
       throw request.server.httpErrors.badRequest("Invalid URL.", { code: "invalid_url" });
     }
-    const result = await runAuditFromUrl(request.body.url, defaultAuditOptions(request.body.options), options.version);
+    const result = await runAuditFromUrl(request.body.url, defaultAuditOptions(request.body.options, options.config.auditDefaults), options.version);
     return {
       report: result.json,
       markdown: result.markdown,
@@ -75,7 +78,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
   });
 
   app.post<{ Body: AuditJsonBody }>("/api/v1/audit/json", { schema: auditJsonSchema }, async (request) => {
-    const result = await runAuditFromJson(request.body.lotl, defaultAuditOptions(request.body.options), options.version);
+    const result = await runAuditFromJson(request.body.lotl, defaultAuditOptions(request.body.options, options.config.auditDefaults), options.version);
     return {
       report: result.json,
       markdown: result.markdown,
@@ -98,7 +101,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     if (!isUrl(request.body.url)) {
       throw request.server.httpErrors.badRequest("Invalid URL.", { code: "invalid_url" });
     }
-    const artifactOptions = defaultArtifactOptions(request.body.options);
+    const artifactOptions = defaultArtifactOptions(request.body.options, options.config.auditDefaults);
     const result = await assessArtifactUrl({
       url: request.body.url,
       declared: request.body.declared,
