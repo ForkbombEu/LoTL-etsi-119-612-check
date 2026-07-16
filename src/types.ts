@@ -57,7 +57,7 @@ export interface AuditReport {
   generatedAt: string;
   input: {
     source: string;
-    kind: "file" | "url";
+    kind: "file" | "url" | "json";
     sha256?: string;
   };
   lotl: {

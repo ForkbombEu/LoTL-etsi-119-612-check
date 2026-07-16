@@ -1,8 +1,9 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { sha256Hex } from "./certs.js";
 import { detectArtifact } from "./detect.js";
 import { fetchArtifact, saveFetchedArtifact } from "./fetcher.js";
-import { loadInput } from "./input.js";
+import { isUrl, loadInput } from "./input.js";
 import { assessJsonLote } from "./json/loteChecks.js";
 import { parseLotlJson } from "./lotl.js";
 import { buildAuditReport } from "./report/jsonReport.js";
@@ -10,34 +11,145 @@ import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { AuditReport, CheckResult, CliOptions, PointerInfo, TrustedListAuditResult } from "./types.js";
 import { assessTs119612Xml } from "./xml/ts119612Checks.js";
 
+export interface AuditCoreOptions {
+  concurrency: number;
+  timeoutMs: number;
+  xsd?: string;
+  strict: boolean;
+  includeJsonLoteChecks: boolean;
+  fetch: boolean;
+}
+
+export interface InMemoryAuditOptions extends AuditCoreOptions {
+  source: string;
+  kind: "file" | "url" | "json";
+  lotlText: string;
+  sha256?: string;
+}
+
+export interface AuditInMemoryResult {
+  json: AuditReport;
+  markdown: string;
+}
+
+export interface AssessArtifactUrlOptions {
+  url: string;
+  declared?: Partial<TrustedListAuditResult["declared"]>;
+  timeoutMs: number;
+  strict: boolean;
+  includeJsonLoteChecks: boolean;
+  xsd?: string;
+}
+
 export async function runAudit(options: CliOptions, version: string): Promise<AuditReport> {
   const input = await loadInput(options.input, options.timeoutMs);
-  const parsedLotl = parseLotlJson(input.text);
+  const result = await runAuditInMemory(
+    {
+      source: options.input,
+      kind: input.kind,
+      lotlText: input.text,
+      sha256: input.sha256,
+      concurrency: options.concurrency,
+      timeoutMs: options.timeoutMs,
+      xsd: options.xsd,
+      strict: options.strict,
+      includeJsonLoteChecks: options.includeJsonLoteChecks,
+      fetch: options.fetch,
+    },
+    version,
+  );
+
+  await mkdir(options.outDir, { recursive: true });
+  await writeFile(join(options.outDir, "report.json"), `${JSON.stringify(result.json, null, 2)}\n`);
+  await writeFile(join(options.outDir, "report.md"), result.markdown);
+
+  if (options.fetch) {
+    await persistFetchedArtifacts(result.json.results, options);
+  }
+
+  return result.json;
+}
+
+export async function runAuditInMemory(options: InMemoryAuditOptions, version: string): Promise<AuditInMemoryResult> {
+  const parsedLotl = parseLotlJson(options.lotlText);
   const generatedAt = new Date().toISOString();
 
-  const results = await mapConcurrent(parsedLotl.pointers, options.concurrency, (pointer) =>
-    auditPointer(pointer, options),
-  );
+  const results = await mapConcurrent(parsedLotl.pointers, options.concurrency, (pointer) => auditPointer(pointer, options));
 
   const report = buildAuditReport({
     generatedAt,
     input: {
-      source: options.input,
-      kind: input.kind,
-      sha256: input.sha256,
+      source: options.source,
+      kind: options.kind,
+      sha256: options.sha256 ?? sha256Hex(Buffer.from(options.lotlText, "utf8")),
     },
     lotl: parsedLotl.summary,
     results,
     version,
   });
 
-  await mkdir(options.outDir, { recursive: true });
-  await writeFile(join(options.outDir, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
-  await writeFile(join(options.outDir, "report.md"), renderMarkdownReport(report));
-  return report;
+  return {
+    json: report,
+    markdown: renderMarkdownReport(report),
+  };
 }
 
-async function auditPointer(pointer: PointerInfo, options: CliOptions): Promise<TrustedListAuditResult> {
+export async function runAuditFromUrl(url: string, options: AuditCoreOptions, version: string): Promise<AuditInMemoryResult> {
+  if (!isUrl(url)) {
+    throw new Error("Invalid URL input.");
+  }
+  const input = await loadInput(url, options.timeoutMs);
+  return runAuditInMemory(
+    {
+      ...options,
+      source: url,
+      kind: "url",
+      lotlText: input.text,
+      sha256: input.sha256,
+    },
+    version,
+  );
+}
+
+export async function runAuditFromJson(lotl: unknown, options: AuditCoreOptions, version: string): Promise<AuditInMemoryResult> {
+  const lotlText = typeof lotl === "string" ? lotl : JSON.stringify(lotl);
+  return runAuditInMemory(
+    {
+      ...options,
+      source: "request-body",
+      kind: "json",
+      lotlText,
+      sha256: sha256Hex(Buffer.from(lotlText, "utf8")),
+    },
+    version,
+  );
+}
+
+export async function assessArtifactUrl(
+  options: AssessArtifactUrlOptions,
+): Promise<TrustedListAuditResult> {
+  if (!isUrl(options.url)) {
+    throw new Error("Invalid URL input.");
+  }
+  return auditPointer(
+    {
+      index: 1,
+      location: options.url,
+      declared: normalizeDeclared(options.declared),
+      raw: undefined,
+    },
+    {
+      concurrency: 1,
+      timeoutMs: options.timeoutMs,
+      strict: options.strict,
+      includeJsonLoteChecks: options.includeJsonLoteChecks,
+      fetch: true,
+      xsd: options.xsd,
+    },
+  );
+}
+
+async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Promise<TrustedListAuditResult> {
   const base: TrustedListAuditResult = {
     index: pointer.index,
     location: pointer.location,
@@ -87,7 +199,6 @@ async function auditPointer(pointer: PointerInfo, options: CliOptions): Promise<
     format: detected.format,
     artifactKind: detected.artifactKind,
   };
-  await saveFetchedArtifact(options.outDir, pointer.index, pointer.location, fetched.bytes, detected.format);
 
   if (detected.format === "xml") {
     const assessed = await assessTs119612Xml(fetched.bytes.toString("utf8"), {
@@ -118,6 +229,25 @@ async function auditPointer(pointer: PointerInfo, options: CliOptions): Promise<
     warnings: [],
   };
   return base;
+}
+
+async function persistFetchedArtifacts(results: TrustedListAuditResult[], options: CliOptions): Promise<void> {
+  await mapConcurrent(results, options.concurrency, async (result) => {
+    if (!result.fetch.ok || !result.fetch.finalUrl) return;
+    const fetched = await fetchArtifact(result.location, options.timeoutMs);
+    if (!fetched.bytes) return;
+    await saveFetchedArtifact(options.outDir, result.index, result.location, fetched.bytes, result.detected.format);
+  });
+}
+
+function normalizeDeclared(declared?: Partial<TrustedListAuditResult["declared"]>): TrustedListAuditResult["declared"] {
+  return {
+    mimeType: declared?.mimeType,
+    loteType: declared?.loteType,
+    schemeOperatorName: declared?.schemeOperatorName,
+    schemeTerritory: declared?.schemeTerritory,
+    pointerCertificateFingerprintsSha256: declared?.pointerCertificateFingerprintsSha256 ?? [],
+  };
 }
 
 function mergeResult(

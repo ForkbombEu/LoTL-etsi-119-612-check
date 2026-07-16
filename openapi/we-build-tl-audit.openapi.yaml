@@ -1,0 +1,516 @@
+openapi: 3.1.0
+info:
+  title: WE BUILD Trusted List Audit API
+  version: 0.1.0
+  description: HTTP API for auditing trusted-list pointers in WE BUILD WP4 LoTL JSON artifacts.
+servers:
+  - url: http://127.0.0.1:3000
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Server is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, name, version]
+                properties:
+                  ok: { type: boolean, const: true }
+                  name: { type: string, const: we-build-tl-audit }
+                  version: { type: string }
+              examples:
+                ok:
+                  value: { ok: true, name: we-build-tl-audit, version: 0.1.0 }
+  /openapi.yaml:
+    get:
+      summary: OpenAPI YAML specification
+      responses:
+        '200':
+          description: OpenAPI YAML.
+          content:
+            application/yaml:
+              schema: { type: string }
+  /openapi.json:
+    get:
+      summary: OpenAPI JSON specification
+      responses:
+        '200':
+          description: OpenAPI JSON.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+  /docs:
+    get:
+      summary: Stoplight Elements documentation UI
+      responses:
+        '200':
+          description: HTML documentation page.
+          content:
+            text/html:
+              schema: { type: string }
+  /api/v1/audit/url:
+    post:
+      summary: Audit a LoTL JSON loaded from URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              additionalProperties: false
+              properties:
+                url: { type: string, format: uri }
+                options:
+                  $ref: '#/components/schemas/AuditOptions'
+            examples:
+              webuild:
+                value:
+                  url: https://webuild-consortium.github.io/wp4-trust-group/list_of_trusted_lists.json
+                  options:
+                    concurrency: 4
+                    timeoutMs: 15000
+                    strict: false
+                    includeJsonLoteChecks: true
+                    fetch: true
+      responses:
+        '200':
+          description: Audit completed. Individual fetch failures are represented inside the report.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/audit/json:
+    post:
+      summary: Audit a LoTL supplied as JSON object or string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lotl]
+              additionalProperties: false
+              properties:
+                lotl:
+                  oneOf:
+                    - type: object
+                      additionalProperties: true
+                    - type: string
+                options:
+                  $ref: '#/components/schemas/AuditOptions'
+            examples:
+              minimal:
+                value:
+                  lotl:
+                    LoTE:
+                      ListAndSchemeInformation:
+                        SchemeOperatorName: Example Operator
+                        SchemeName: Example LoTL
+                        LoTEType: example
+                        LoTESequenceNumber: 1
+                        PointersToOtherLoTE: []
+                  options:
+                    concurrency: 4
+                    timeoutMs: 15000
+                    strict: false
+                    includeJsonLoteChecks: true
+                    fetch: true
+      responses:
+        '200':
+          description: Audit completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/lotl/parse:
+    post:
+      summary: Parse and summarize a LoTL without fetching pointers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lotl]
+              additionalProperties: false
+              properties:
+                lotl:
+                  oneOf:
+                    - type: object
+                      additionalProperties: true
+                    - type: string
+            examples:
+              minimal:
+                value:
+                  lotl:
+                    LoTE:
+                      ListAndSchemeInformation:
+                        SchemeOperatorName: Example Operator
+                        PointersToOtherLoTE:
+                          - LoTELocation: https://example.test/tl.xml
+                            MimeType: application/xml
+      responses:
+        '200':
+          description: Parsed LoTL summary and pointers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [summary, pointers]
+                properties:
+                  summary:
+                    $ref: '#/components/schemas/LoTLSummary'
+                  pointers:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PointerSummary'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/artifact/assess-url:
+    post:
+      summary: Assess one referenced artifact URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              additionalProperties: false
+              properties:
+                url: { type: string, format: uri }
+                declared:
+                  $ref: '#/components/schemas/DeclaredPointer'
+                options:
+                  $ref: '#/components/schemas/ArtifactAssessOptions'
+            examples:
+              xml:
+                value:
+                  url: https://example.test/tl.xml
+                  declared:
+                    mimeType: application/xml
+                    loteType: http://uri.etsi.org/19602/LoTEType/EUPIDProvidersList
+                    schemeOperatorName: Example Operator
+                    schemeTerritory: EU
+                    pointerCertificateFingerprintsSha256: []
+                  options:
+                    timeoutMs: 15000
+                    strict: false
+                    includeJsonLoteChecks: true
+      responses:
+        '200':
+          description: Single artifact assessment result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    $ref: '#/components/schemas/TrustedListAuditResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/report/markdown:
+    post:
+      summary: Render Markdown from a machine-readable audit report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [report]
+              additionalProperties: false
+              properties:
+                report:
+                  $ref: '#/components/schemas/AuditReport'
+            examples:
+              emptyReport:
+                value:
+                  report:
+                    tool: { name: we-build-tl-audit, version: 0.1.0 }
+                    generatedAt: '2026-07-16T00:00:00.000Z'
+                    input: { source: request-body, kind: json }
+                    lotl: { pointerCount: 0, uniqueLocationCount: 0, duplicateLocations: [] }
+                    summary:
+                      totalPointers: 0
+                      fetched: 0
+                      fetchFailed: 0
+                      xmlArtifacts: 0
+                      jsonArtifacts: 0
+                      unknownArtifacts: 0
+                      ts119612:
+                        conformant: 0
+                        partiallyConformant: 0
+                        nonConformant: 0
+                        notApplicable: 0
+                        notChecked: 0
+                        parseFailed: 0
+                    results: []
+      responses:
+        '200':
+          description: Markdown report.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [markdown]
+                properties:
+                  markdown: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+          examples:
+            invalid:
+              value:
+                error:
+                  code: invalid_request
+                  message: Invalid request body.
+    InternalError:
+      description: Unexpected internal error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+  schemas:
+    ConformanceLevel:
+      type: string
+      enum: [conformant, partially_conformant, non_conformant, not_applicable, not_checked, fetch_failed, parse_failed]
+    AuditOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        concurrency: { type: integer, minimum: 1, default: 4 }
+        timeoutMs: { type: integer, minimum: 1, default: 15000 }
+        strict: { type: boolean, default: false }
+        includeJsonLoteChecks: { type: boolean, default: false }
+        fetch: { type: boolean, default: true }
+    ArtifactAssessOptions:
+      type: object
+      additionalProperties: false
+      properties:
+        timeoutMs: { type: integer, minimum: 1, default: 15000 }
+        strict: { type: boolean, default: false }
+        includeJsonLoteChecks: { type: boolean, default: false }
+    ApiErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [invalid_request, invalid_lotl_json, invalid_url, assessment_failed, internal_error]
+            message: { type: string }
+            details: true
+    AuditResponse:
+      type: object
+      required: [report, markdown]
+      properties:
+        report:
+          $ref: '#/components/schemas/AuditReport'
+        markdown:
+          type: string
+    AuditReport:
+      type: object
+      required: [tool, generatedAt, input, lotl, summary, results]
+      properties:
+        tool:
+          type: object
+          required: [name, version]
+          properties:
+            name: { type: string, const: we-build-tl-audit }
+            version: { type: string }
+        generatedAt: { type: string, format: date-time }
+        input:
+          type: object
+          required: [source, kind]
+          properties:
+            source: { type: string }
+            kind: { type: string, enum: [file, url, json] }
+            sha256: { type: string }
+        lotl:
+          $ref: '#/components/schemas/LoTLSummary'
+        summary:
+          type: object
+          required: [totalPointers, fetched, fetchFailed, xmlArtifacts, jsonArtifacts, unknownArtifacts, ts119612]
+          properties:
+            totalPointers: { type: integer, minimum: 0 }
+            fetched: { type: integer, minimum: 0 }
+            fetchFailed: { type: integer, minimum: 0 }
+            xmlArtifacts: { type: integer, minimum: 0 }
+            jsonArtifacts: { type: integer, minimum: 0 }
+            unknownArtifacts: { type: integer, minimum: 0 }
+            ts119612:
+              type: object
+              required: [conformant, partiallyConformant, nonConformant, notApplicable, notChecked, parseFailed]
+              properties:
+                conformant: { type: integer, minimum: 0 }
+                partiallyConformant: { type: integer, minimum: 0 }
+                nonConformant: { type: integer, minimum: 0 }
+                notApplicable: { type: integer, minimum: 0 }
+                notChecked: { type: integer, minimum: 0 }
+                parseFailed: { type: integer, minimum: 0 }
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrustedListAuditResult'
+    LoTLSummary:
+      type: object
+      required: [pointerCount, uniqueLocationCount, duplicateLocations]
+      properties:
+        schemeOperatorName: { type: string }
+        schemeName: { type: string }
+        loteType: { type: string }
+        sequenceNumber: { type: integer }
+        issueDateTime: { type: string }
+        nextUpdate: { type: string }
+        pointerCount: { type: integer, minimum: 0 }
+        uniqueLocationCount: { type: integer, minimum: 0 }
+        duplicateLocations:
+          type: array
+          items: { type: string }
+    PointerSummary:
+      type: object
+      required: [index, location, declared]
+      properties:
+        index: { type: integer, minimum: 1 }
+        location: { type: string }
+        declared:
+          $ref: '#/components/schemas/DeclaredPointer'
+    DeclaredPointer:
+      type: object
+      required: [pointerCertificateFingerprintsSha256]
+      properties:
+        mimeType: { type: string }
+        loteType: { type: string }
+        schemeOperatorName: { type: string }
+        schemeTerritory: { type: string }
+        pointerCertificateFingerprintsSha256:
+          type: array
+          items: { type: string }
+    TrustedListAuditResult:
+      type: object
+      required: [index, location, declared, fetch, detected, ts119612]
+      properties:
+        index: { type: integer, minimum: 1 }
+        location: { type: string }
+        declared:
+          $ref: '#/components/schemas/DeclaredPointer'
+        fetch:
+          type: object
+          required: [attempted, ok]
+          properties:
+            attempted: { type: boolean }
+            ok: { type: boolean }
+            status: { type: integer }
+            statusText: { type: string }
+            finalUrl: { type: string }
+            contentType: { type: string }
+            durationMs: { type: integer, minimum: 0 }
+            sha256: { type: string }
+            bytes: { type: integer, minimum: 0 }
+            error: { type: string }
+        detected:
+          type: object
+          required: [format, artifactKind]
+          properties:
+            format: { type: string, enum: [xml, json, html, text, empty, unknown] }
+            artifactKind: { type: string, enum: [ts119612_xml_tsl, xml_lotl_like, json_lote, html_error, unknown] }
+        ts119612:
+          type: object
+          required: [applicable, conformanceLevel, score, checks, mandatoryFailures, warnings]
+          properties:
+            applicable: { type: boolean }
+            conformanceLevel:
+              $ref: '#/components/schemas/ConformanceLevel'
+            score:
+              oneOf:
+                - type: number
+                  minimum: 0
+                  maximum: 100
+                - type: 'null'
+            checks:
+              type: array
+              items:
+                $ref: '#/components/schemas/CheckResult'
+            mandatoryFailures:
+              type: array
+              items: { type: string }
+            warnings:
+              type: array
+              items: { type: string }
+        extracted:
+          type: object
+          additionalProperties: true
+          properties:
+            tslVersionIdentifier: { type: string }
+            tslSequenceNumber: { type: string }
+            tslType: { type: string }
+            schemeOperatorName:
+              type: array
+              items: { type: string }
+            schemeName:
+              type: array
+              items: { type: string }
+            schemeTerritory: { type: string }
+            statusDeterminationApproach: { type: string }
+            listIssueDateTime: { type: string }
+            nextUpdate: { type: string }
+            distributionPoints:
+              type: array
+              items: { type: string }
+            trustServiceProviderCount: { type: integer, minimum: 0 }
+            serviceCount: { type: integer, minimum: 0 }
+            certificates:
+              type: array
+              items:
+                $ref: '#/components/schemas/CertificateSummary'
+            jsonLote:
+              type: object
+              additionalProperties: true
+    CheckResult:
+      type: object
+      required: [id, category, status, severity, message]
+      properties:
+        id: { type: string }
+        category:
+          type: string
+          enum: [fetch, parse, schema, structure, dates, signature, xades, services, certificates, profile]
+        status:
+          type: string
+          enum: [pass, fail, warn, not_applicable, not_checked]
+        severity:
+          type: string
+          enum: [info, warning, error, critical]
+        message: { type: string }
+        evidence: true
+    CertificateSummary:
+      type: object
+      required: [source]
+      properties:
+        source: { type: string, enum: [pointer, xml_signature, service_digital_identity] }
+        subject: { type: string }
+        issuer: { type: string }
+        serialNumber: { type: string }
+        notBefore: { type: string }
+        notAfter: { type: string }
+        fingerprintSha256: { type: string }
+        validAtAssessmentTime: { type: boolean }

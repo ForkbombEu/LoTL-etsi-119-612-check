@@ -3,3 +3,7 @@ dist/
 coverage/
 audit-output/
 tl-audit-output/
+.env
+artifacts/*
+!artifacts/handoffs/
+!artifacts/handoffs/*.md
