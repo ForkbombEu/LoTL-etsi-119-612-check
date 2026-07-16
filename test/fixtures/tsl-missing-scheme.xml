@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/19612/v2.4.1#" Id="MISSING-SCHEME">
+  <TrustServiceProviderList />
+</TrustServiceStatusList>

@@ -1,0 +1,161 @@
+export type ConformanceLevel =
+  | "conformant"
+  | "partially_conformant"
+  | "non_conformant"
+  | "not_applicable"
+  | "not_checked"
+  | "fetch_failed"
+  | "parse_failed";
+
+export type DetectedFormat = "xml" | "json" | "html" | "text" | "empty" | "unknown";
+
+export type ArtifactKind =
+  | "ts119612_xml_tsl"
+  | "xml_lotl_like"
+  | "json_lote"
+  | "html_error"
+  | "unknown";
+
+export type CheckStatus = "pass" | "fail" | "warn" | "not_applicable" | "not_checked";
+export type CheckSeverity = "info" | "warning" | "error" | "critical";
+
+export interface CheckResult {
+  id: string;
+  category:
+    | "fetch"
+    | "parse"
+    | "schema"
+    | "structure"
+    | "dates"
+    | "signature"
+    | "xades"
+    | "services"
+    | "certificates"
+    | "profile";
+  status: CheckStatus;
+  severity: CheckSeverity;
+  message: string;
+  evidence?: unknown;
+}
+
+export interface CertificateSummary {
+  source: "pointer" | "xml_signature" | "service_digital_identity";
+  subject?: string;
+  issuer?: string;
+  serialNumber?: string;
+  notBefore?: string;
+  notAfter?: string;
+  fingerprintSha256?: string;
+  validAtAssessmentTime?: boolean;
+}
+
+export interface AuditReport {
+  tool: {
+    name: "we-build-tl-audit";
+    version: string;
+  };
+  generatedAt: string;
+  input: {
+    source: string;
+    kind: "file" | "url";
+    sha256?: string;
+  };
+  lotl: {
+    schemeOperatorName?: string;
+    schemeName?: string;
+    loteType?: string;
+    sequenceNumber?: number;
+    issueDateTime?: string;
+    nextUpdate?: string;
+    pointerCount: number;
+    uniqueLocationCount: number;
+    duplicateLocations: string[];
+  };
+  summary: {
+    totalPointers: number;
+    fetched: number;
+    fetchFailed: number;
+    xmlArtifacts: number;
+    jsonArtifacts: number;
+    unknownArtifacts: number;
+    ts119612: {
+      conformant: number;
+      partiallyConformant: number;
+      nonConformant: number;
+      notApplicable: number;
+      notChecked: number;
+      parseFailed: number;
+    };
+  };
+  results: TrustedListAuditResult[];
+}
+
+export interface TrustedListAuditResult {
+  index: number;
+  location: string;
+  declared: {
+    mimeType?: string;
+    loteType?: string;
+    schemeOperatorName?: string;
+    schemeTerritory?: string;
+    pointerCertificateFingerprintsSha256: string[];
+  };
+  fetch: {
+    attempted: boolean;
+    ok: boolean;
+    status?: number;
+    statusText?: string;
+    finalUrl?: string;
+    contentType?: string;
+    durationMs?: number;
+    sha256?: string;
+    bytes?: number;
+    error?: string;
+  };
+  detected: {
+    format: DetectedFormat;
+    artifactKind: ArtifactKind;
+  };
+  ts119612: {
+    applicable: boolean;
+    conformanceLevel: ConformanceLevel;
+    score: number | null;
+    checks: CheckResult[];
+    mandatoryFailures: string[];
+    warnings: string[];
+  };
+  extracted?: {
+    tslVersionIdentifier?: string;
+    tslSequenceNumber?: string;
+    tslType?: string;
+    schemeOperatorName?: string[];
+    schemeName?: string[];
+    schemeTerritory?: string;
+    statusDeterminationApproach?: string;
+    listIssueDateTime?: string;
+    nextUpdate?: string;
+    distributionPoints?: string[];
+    trustServiceProviderCount?: number;
+    serviceCount?: number;
+    certificates?: CertificateSummary[];
+    jsonLote?: Record<string, unknown>;
+  };
+}
+
+export interface PointerInfo {
+  index: number;
+  location: string;
+  declared: TrustedListAuditResult["declared"];
+  raw: unknown;
+}
+
+export interface CliOptions {
+  input: string;
+  outDir: string;
+  concurrency: number;
+  timeoutMs: number;
+  xsd?: string;
+  strict: boolean;
+  includeJsonLoteChecks: boolean;
+  fetch: boolean;
+}

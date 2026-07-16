@@ -1,0 +1,29 @@
+{
+  "name": "we-build-tl-audit",
+  "version": "0.1.0",
+  "description": "Audit Trusted Lists referenced by a WE BUILD WP4 LoTL JSON file.",
+  "type": "module",
+  "bin": {
+    "we-build-tl-audit": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "^0.9.8",
+    "commander": "^12.1.0",
+    "node-forge": "^1.3.1",
+    "xml-crypto": "^6.0.1",
+    "xpath": "^0.0.34"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/node-forge": "^1.3.11",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

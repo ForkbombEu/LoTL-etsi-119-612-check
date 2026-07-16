@@ -1,0 +1,17 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEType": "http://example.test/LoTEType/TrustedEntities",
+      "LoTESequenceNumber": 3,
+      "SchemeOperatorName": "JSON Operator",
+      "SchemeTerritory": "EU",
+      "ListIssueDateTime": "2026-01-01T00:00:00Z",
+      "NextUpdate": "2026-08-01T00:00:00Z",
+      "PointersToOtherLoTE": []
+    },
+    "TrustedEntitiesList": {
+      "TrustServiceProvider": [{ "name": "Provider" }]
+    }
+  },
+  "signature": {}
+}

@@ -1,0 +1,30 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEType": "http://example.test/LoTEType/ListOfLists",
+      "LoTESequenceNumber": 7,
+      "SchemeOperatorName": "WE BUILD Test Operator",
+      "SchemeName": "WE BUILD Test LoTL",
+      "SchemeTerritory": "EU",
+      "ListIssueDateTime": "2026-01-01T00:00:00Z",
+      "NextUpdate": "2026-08-01T00:00:00Z",
+      "PointersToOtherLoTE": [
+        {
+          "LoTELocation": "https://example.test/tl.xml",
+          "MimeType": "application/xml",
+          "LoTEType": "xml"
+        },
+        {
+          "LoTELocation": "https://example.test/lote.json",
+          "MimeType": "application/json",
+          "LoTEType": "json"
+        },
+        {
+          "LoTELocation": "https://example.test/unreachable.xml",
+          "MimeType": "application/xml",
+          "LoTEType": "xml"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tsl:TrustServiceStatusList
+  xmlns:tsl="http://uri.etsi.org/19612/v2.4.1#"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  Id="TSL-TEST"
+  xsi:schemaLocation="http://uri.etsi.org/19612/v2.4.1# 19612_xsd.xsd">
+  <tsl:SchemeInformation>
+    <tsl:TSLVersionIdentifier>6</tsl:TSLVersionIdentifier>
+    <tsl:TSLSequenceNumber>42</tsl:TSLSequenceNumber>
+    <tsl:TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</tsl:TSLType>
+    <tsl:SchemeOperatorName>
+      <tsl:Name xml:lang="en">Test Scheme Operator</tsl:Name>
+    </tsl:SchemeOperatorName>
+    <tsl:SchemeOperatorAddress>
+      <tsl:PostalAddresses>
+        <tsl:PostalAddress xml:lang="en">
+          <tsl:StreetAddress>Example Street</tsl:StreetAddress>
+          <tsl:Locality>Example City</tsl:Locality>
+          <tsl:CountryName>EU</tsl:CountryName>
+        </tsl:PostalAddress>
+      </tsl:PostalAddresses>
+    </tsl:SchemeOperatorAddress>
+    <tsl:SchemeName>
+      <tsl:Name xml:lang="en">Test Trusted List</tsl:Name>
+    </tsl:SchemeName>
+    <tsl:SchemeInformationURI>
+      <tsl:URI xml:lang="en">https://example.test/info</tsl:URI>
+    </tsl:SchemeInformationURI>
+    <tsl:StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate</tsl:StatusDeterminationApproach>
+    <tsl:SchemeTypeCommunityRules>
+      <tsl:URI xml:lang="en">https://example.test/rules</tsl:URI>
+    </tsl:SchemeTypeCommunityRules>
+    <tsl:SchemeTerritory>EU</tsl:SchemeTerritory>
+    <tsl:PolicyOrLegalNotice>
+      <tsl:TSLLegalNotice xml:lang="en">Test only</tsl:TSLLegalNotice>
+    </tsl:PolicyOrLegalNotice>
+    <tsl:ListIssueDateTime>2026-01-01T00:00:00Z</tsl:ListIssueDateTime>
+    <tsl:NextUpdate>
+      <tsl:dateTime>2026-04-01T00:00:00Z</tsl:dateTime>
+    </tsl:NextUpdate>
+    <tsl:DistributionPoints>
+      <tsl:URI>https://example.test/tl.xml</tsl:URI>
+    </tsl:DistributionPoints>
+  </tsl:SchemeInformation>
+  <tsl:TrustServiceProviderList>
+    <tsl:TrustServiceProvider>
+      <tsl:TSPInformation>
+        <tsl:TSPName>
+          <tsl:Name xml:lang="en">Provider A</tsl:Name>
+        </tsl:TSPName>
+        <tsl:TSPAddress>
+          <tsl:PostalAddresses>
+            <tsl:PostalAddress xml:lang="en">
+              <tsl:CountryName>EU</tsl:CountryName>
+            </tsl:PostalAddress>
+          </tsl:PostalAddresses>
+        </tsl:TSPAddress>
+      </tsl:TSPInformation>
+      <tsl:TSPServices>
+        <tsl:TSPService>
+          <tsl:ServiceInformation>
+            <tsl:ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/QC</tsl:ServiceTypeIdentifier>
+            <tsl:ServiceName>
+              <tsl:Name xml:lang="en">Service A</tsl:Name>
+            </tsl:ServiceName>
+            <tsl:ServiceDigitalIdentity>
+              <tsl:DigitalId>
+                <tsl:X509SubjectName>CN=Example</tsl:X509SubjectName>
+              </tsl:DigitalId>
+            </tsl:ServiceDigitalIdentity>
+            <tsl:ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted</tsl:ServiceStatus>
+            <tsl:StatusStartingTime>2026-01-01T00:00:00Z</tsl:StatusStartingTime>
+          </tsl:ServiceInformation>
+        </tsl:TSPService>
+      </tsl:TSPServices>
+    </tsl:TrustServiceProvider>
+  </tsl:TrustServiceProviderList>
+</tsl:TrustServiceStatusList>
