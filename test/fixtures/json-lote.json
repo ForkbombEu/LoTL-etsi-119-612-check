@@ -1,13 +1,22 @@
 {
   "LoTE": {
     "ListAndSchemeInformation": {
+      "LoTEVersionIdentifier": "1",
       "LoTEType": "http://example.test/LoTEType/TrustedEntities",
       "LoTESequenceNumber": 3,
       "SchemeOperatorName": "JSON Operator",
+      "SchemeInformationURI": "https://example.test/info",
+      "StatusDeterminationApproach": "http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate",
       "SchemeTerritory": "EU",
       "ListIssueDateTime": "2026-01-01T00:00:00Z",
       "NextUpdate": "2026-08-01T00:00:00Z",
-      "PointersToOtherLoTE": []
+      "DistributionPoints": ["https://example.test/lote.json"],
+      "PointersToOtherLoTE": [
+        {
+          "LoTELocation": "https://example.test/referenced-lote.json",
+          "ServiceDigitalIdentities": [{ "X509Certificates": [] }]
+        }
+      ]
     },
     "TrustedEntitiesList": {
       "TrustServiceProvider": [{ "name": "Provider" }]

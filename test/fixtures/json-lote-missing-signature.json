@@ -1,0 +1,17 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEVersionIdentifier": "1",
+      "LoTEType": "http://example.test/LoTEType/TrustedEntities",
+      "LoTESequenceNumber": 1,
+      "SchemeOperatorName": "Example Operator",
+      "SchemeInformationURI": "https://example.test/info",
+      "StatusDeterminationApproach": "example",
+      "SchemeTerritory": "EU",
+      "ListIssueDateTime": "2026-01-01T00:00:00Z",
+      "NextUpdate": "2026-02-01T00:00:00Z",
+      "DistributionPoints": ["https://example.test/lote.json"],
+      "PointersToOtherLoTE": []
+    }
+  }
+}

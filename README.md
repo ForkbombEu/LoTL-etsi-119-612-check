@@ -292,7 +292,7 @@ When a fetched artifact is JSON and contains a `LoTE` root, the tool classifies 
 Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; this artifact should be assessed under ETSI TS 119 602 / WE BUILD profile rules instead.
 ```
 
-Pass `--include-json-lote-checks` in the CLI or `includeJsonLoteChecks: true` in API options to include basic JSON LoTE metadata checks such as `LoTEType`, sequence number, issue date, next update, pointer count, trusted-entity count, and signature-object presence.
+Pass `--include-json-lote-checks` in the CLI or `includeJsonLoteChecks: true` in API options to include TS 119 602-style / JSON LoTE checks. These evidence checks cover list metadata, pointer identities, JSON signature-object presence, and issue/next-update dates; they do not claim full normative TS 119 602 conformance.
 
 ## Known limitations
 

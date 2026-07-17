@@ -77,6 +77,7 @@ describe("runAudit", () => {
     const reportJson = await readFile(join(outDir, "report.json"), "utf8");
     expect(reportJson).toContain("\"structure.scheme_information\"");
     expect(reportJson).toContain("\"schema.xsd\"");
+    expect(reportJson).toContain("\"json_lote.version_identifier\"");
     const markdown = await readFile(join(outDir, "report.md"), "utf8");
     expect(markdown).toContain("TS 119 602");
     expect(markdown).toContain("**structure.scheme_information**");
@@ -85,5 +86,6 @@ describe("runAudit", () => {
     expect(markdown).toContain("**signature.signing_certificate_present**");
     expect(markdown).toContain("### Certificate evidence");
     expect(markdown).toContain("Source: xml_signature");
+    expect(markdown).toContain("**json_lote.pointers.service_digital_identities**");
   });
 });
