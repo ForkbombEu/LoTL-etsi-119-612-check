@@ -121,6 +121,20 @@ describe("API server", () => {
       generatedAt: "2026-07-16T00:00:00.000Z",
       input: { source: "request-body", kind: "json" },
       lotl: { pointerCount: 0, uniqueLocationCount: 0, duplicateLocations: [] },
+      weBuildProfile: {
+        recognized: false,
+        recognitionReasons: [],
+        listTypeCounts: {},
+        roleCounts: {},
+        pointerConsistency: {
+          declaredMimeMismatches: 0,
+          duplicateLocations: 0,
+          pointersMissingServiceDigitalIdentities: 0,
+          pointersMissingQualifiers: 0,
+          pointerCertificatesParsed: 0,
+          pointerCertificatesInvalidAtAssessment: 0,
+        },
+      },
       summary: {
         totalPointers: 0,
         fetched: 0,

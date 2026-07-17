@@ -83,6 +83,20 @@ export interface AuditReport {
     uniqueLocationCount: number;
     duplicateLocations: string[];
   };
+  weBuildProfile: {
+    recognized: boolean;
+    recognitionReasons: string[];
+    listTypeCounts: Record<string, number>;
+    roleCounts: Record<string, number>;
+    pointerConsistency: {
+      declaredMimeMismatches: number;
+      duplicateLocations: number;
+      pointersMissingServiceDigitalIdentities: number;
+      pointersMissingQualifiers: number;
+      pointerCertificatesParsed: number;
+      pointerCertificatesInvalidAtAssessment: number;
+    };
+  };
   summary: {
     totalPointers: number;
     fetched: number;

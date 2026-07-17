@@ -1,0 +1,31 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEType": "http://uri.etsi.org/19602/LoTLType/EUListOfTrustedLists",
+      "LoTESequenceNumber": 1,
+      "SchemeOperatorName": "WE BUILD WP4 Test Operator",
+      "SchemeName": "WE BUILD WP4 Test LoTL",
+      "PointersToOtherLoTE": [
+        {
+          "LoTELocation": "https://example.test/wallet.json",
+          "MimeType": "application/xml",
+          "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
+          "ServiceDigitalIdentities": [{ "X509Certificates": [] }],
+          "LoTEQualifiers": [{ "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList" }]
+        },
+        {
+          "LoTELocation": "https://example.test/wrpac.xml",
+          "MimeType": "application/xml",
+          "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWRPACProvidersList",
+          "LoTEQualifiers": [{ "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWRPACProvidersList" }]
+        },
+        {
+          "LoTELocation": "https://example.test/wallet.json",
+          "MimeType": "application/json",
+          "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
+          "ServiceDigitalIdentities": [{ "X509Certificates": [] }]
+        }
+      ]
+    }
+  }
+}

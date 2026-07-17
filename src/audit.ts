@@ -6,6 +6,7 @@ import { fetchArtifact, saveFetchedArtifact } from "./fetcher.js";
 import { isUrl, loadInput } from "./input.js";
 import { assessJsonLote } from "./json/loteChecks.js";
 import { parseLotlJson } from "./lotl.js";
+import { assessWeBuildProfile } from "./profiles/weBuild.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
@@ -75,6 +76,7 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
   const generatedAt = new Date().toISOString();
 
   const results = await mapConcurrent(parsedLotl.pointers, options.concurrency, (pointer) => auditPointer(pointer, options));
+  const weBuildProfile = assessWeBuildProfile(parsedLotl, results);
 
   const report = buildAuditReport({
     generatedAt,
@@ -84,6 +86,7 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
       sha256: options.sha256 ?? sha256Hex(Buffer.from(options.lotlText, "utf8")),
     },
     lotl: parsedLotl.summary,
+    weBuildProfile,
     results,
     version,
   });

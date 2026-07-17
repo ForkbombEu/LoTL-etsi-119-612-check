@@ -19,6 +19,14 @@ export function renderMarkdownReport(report: AuditReport): string {
   lines.push(`- Total pointers: ${report.lotl.pointerCount}`);
   lines.push(`- Unique locations: ${report.lotl.uniqueLocationCount}`);
   lines.push("");
+  lines.push("## WE BUILD profile");
+  lines.push("");
+  lines.push(`- Recognized: ${report.weBuildProfile.recognized ? "yes" : "no"}`);
+  lines.push(`- Recognition: ${report.weBuildProfile.recognitionReasons.join("; ") || "none"}`);
+  lines.push(`- List types: ${countSummary(report.weBuildProfile.listTypeCounts)}`);
+  lines.push(`- Roles: ${countSummary(report.weBuildProfile.roleCounts)}`);
+  lines.push(`- MIME mismatches: ${report.weBuildProfile.pointerConsistency.declaredMimeMismatches}; duplicate pointers: ${report.weBuildProfile.pointerConsistency.duplicateLocations}; missing ServiceDigitalIdentities: ${report.weBuildProfile.pointerConsistency.pointersMissingServiceDigitalIdentities}; missing LoTEQualifiers: ${report.weBuildProfile.pointerConsistency.pointersMissingQualifiers}`);
+  lines.push("");
   lines.push("## Summary");
   lines.push("");
   lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | Level |");
@@ -140,4 +148,9 @@ function escapeCell(value: string): string {
 function shortJson(value: unknown): string {
   const text = typeof value === "string" ? value : JSON.stringify(value);
   return text.length > 240 ? `${text.slice(0, 237)}...` : text;
+}
+
+function countSummary(counts: Record<string, number>): string {
+  const entries = Object.entries(counts);
+  return entries.length === 0 ? "none" : entries.map(([name, count]) => `${name}=${count}`).join(", ");
 }

@@ -282,6 +282,10 @@ Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint
 
 Reports now include `schemaVersion: 2`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, and `standardApplicability` for TS 119 612, TS 119 602, the WE BUILD profile, and EUDI trust roles. Markdown renders the same compact classification in its summary table.
 
+## WE BUILD profile checks
+
+When the input identifies itself through the canonical WE BUILD WP4 LoTL type URI or WE BUILD WP4 scheme metadata, the report adds a `weBuildProfile` summary. It classifies implemented pointer list types, reports pointer MIME/format consistency, duplicate locations, missing identities/qualifiers, and parses available pointer certificates as evidence. These are profile checks, not a declaration of WE BUILD trust or certificate-chain validation.
+
 ## TS 119 612 vs TS 119 602
 
 ETSI TS 119 612 defines the XML Trusted List format. JSON LoTE/LoTL-style artifacts are not directly assessable as TS 119 612 XML.

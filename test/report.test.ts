@@ -88,4 +88,38 @@ describe("runAudit", () => {
     expect(markdown).toContain("Source: xml_signature");
     expect(markdown).toContain("**json_lote.pointers.service_digital_identities**");
   });
+
+  it("adds WE BUILD list-type and pointer-consistency summary from a reduced fixture", async () => {
+    const [xml, json] = await Promise.all([
+      readFile("test/fixtures/tsl-valid-ish.xml", "utf8"),
+      readFile("test/fixtures/json-lote.json", "utf8"),
+    ]);
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      return new Response(url.endsWith(".xml") ? xml : json, {
+        status: 200,
+        headers: { "content-type": url.endsWith(".xml") ? "application/xml" : "application/json" },
+      });
+    }) as typeof fetch;
+    const outDir = await mkdtemp(join(tmpdir(), "we-build-profile-test-"));
+    const report = await runAudit({
+      input: "test/fixtures/we-build-lotl-profile.json",
+      outDir,
+      concurrency: 2,
+      timeoutMs: 1000,
+      strict: false,
+      includeJsonLoteChecks: true,
+      fetch: true,
+    }, "0.0.0-test");
+    expect(report.weBuildProfile).toMatchObject({
+      recognized: true,
+      listTypeCounts: { EUWalletProvidersList: 2, EUWRPACProvidersList: 1 },
+      roleCounts: { wallet_provider: 2, wrpac_provider: 1 },
+      pointerConsistency: { declaredMimeMismatches: 1, duplicateLocations: 2 },
+    });
+    expect(report.results[0].ts119612.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "we_build.pointer.declared_mime_matches_detected", status: "warn" }),
+    ]));
+    await expect(readFile(join(outDir, "report.md"), "utf8")).resolves.toContain("## WE BUILD profile");
+  });
 });

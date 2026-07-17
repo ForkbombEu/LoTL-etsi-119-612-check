@@ -241,6 +241,18 @@ paths:
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
                     lotl: { pointerCount: 0, uniqueLocationCount: 0, duplicateLocations: [] }
+                    weBuildProfile:
+                      recognized: false
+                      recognitionReasons: []
+                      listTypeCounts: {}
+                      roleCounts: {}
+                      pointerConsistency:
+                        declaredMimeMismatches: 0
+                        duplicateLocations: 0
+                        pointersMissingServiceDigitalIdentities: 0
+                        pointersMissingQualifiers: 0
+                        pointerCertificatesParsed: 0
+                        pointerCertificatesInvalidAtAssessment: 0
                     summary:
                       totalPointers: 0
                       fetched: 0
@@ -331,7 +343,7 @@ components:
           type: string
     AuditReport:
       type: object
-      required: [schemaVersion, tool, generatedAt, input, lotl, summary, results]
+      required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, summary, results]
       properties:
         schemaVersion: { type: integer, const: 2 }
         tool:
@@ -350,6 +362,8 @@ components:
             sha256: { type: string }
         lotl:
           $ref: '#/components/schemas/LoTLSummary'
+        weBuildProfile:
+          $ref: '#/components/schemas/WeBuildProfileSummary'
         summary:
           type: object
           required: [totalPointers, fetched, fetchFailed, xmlArtifacts, jsonArtifacts, unknownArtifacts, ts119612]
@@ -389,6 +403,30 @@ components:
         duplicateLocations:
           type: array
           items: { type: string }
+    WeBuildProfileSummary:
+      type: object
+      required: [recognized, recognitionReasons, listTypeCounts, roleCounts, pointerConsistency]
+      properties:
+        recognized: { type: boolean }
+        recognitionReasons:
+          type: array
+          items: { type: string }
+        listTypeCounts:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        roleCounts:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        pointerConsistency:
+          type: object
+          required: [declaredMimeMismatches, duplicateLocations, pointersMissingServiceDigitalIdentities, pointersMissingQualifiers, pointerCertificatesParsed, pointerCertificatesInvalidAtAssessment]
+          properties:
+            declaredMimeMismatches: { type: integer, minimum: 0 }
+            duplicateLocations: { type: integer, minimum: 0 }
+            pointersMissingServiceDigitalIdentities: { type: integer, minimum: 0 }
+            pointersMissingQualifiers: { type: integer, minimum: 0 }
+            pointerCertificatesParsed: { type: integer, minimum: 0 }
+            pointerCertificatesInvalidAtAssessment: { type: integer, minimum: 0 }
     PointerSummary:
       type: object
       required: [index, location, declared]
