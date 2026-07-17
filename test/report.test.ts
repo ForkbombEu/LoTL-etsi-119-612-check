@@ -6,6 +6,10 @@ import { runAudit } from "../src/audit.js";
 
 const originalFetch = globalThis.fetch;
 
+async function signedFixture(): Promise<string> {
+  return readFile("test/fixtures/tsl-signed-unsupported.xml", "utf8");
+}
+
 describe("runAudit", () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
@@ -13,7 +17,7 @@ describe("runAudit", () => {
   });
 
   it("writes JSON and Markdown reports without treating JSON LoTE as TS 119 612 failure", async () => {
-    const xml = await readFile("test/fixtures/tsl-valid-ish.xml", "utf8");
+    const xml = await signedFixture();
     const json = await readFile("test/fixtures/json-lote.json", "utf8");
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -78,5 +82,8 @@ describe("runAudit", () => {
     expect(markdown).toContain("**structure.scheme_information**");
     expect(markdown).toContain("**structure.trust_service_provider_list**");
     expect(markdown).toContain("**schema.xsd**");
+    expect(markdown).toContain("**signature.signing_certificate_present**");
+    expect(markdown).toContain("### Certificate evidence");
+    expect(markdown).toContain("Source: xml_signature");
   });
 });

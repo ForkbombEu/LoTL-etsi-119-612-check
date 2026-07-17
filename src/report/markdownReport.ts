@@ -58,6 +58,22 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   renderChecks(lines, "Failures", result.ts119612.checks.filter((c) => c.status === "fail"));
   renderChecks(lines, "Warnings", result.ts119612.checks.filter((c) => c.status === "warn" || c.status === "not_checked"));
   renderMetadata(lines, result);
+  renderCertificateEvidence(lines, result);
+}
+
+function renderCertificateEvidence(lines: string[], result: TrustedListAuditResult): void {
+  lines.push("### Certificate evidence");
+  lines.push("");
+  const certificates = result.extracted?.certificates ?? [];
+  if (certificates.length === 0) {
+    lines.push("- None");
+    lines.push("");
+    return;
+  }
+  certificates.forEach((certificate, index) => {
+    lines.push(`- ${index + 1}. Source: ${certificate.source}; subject: ${value(certificate.subject)}; issuer: ${value(certificate.issuer)}; serial: ${value(certificate.serialNumber)}; valid from: ${value(certificate.notBefore)}; valid to: ${value(certificate.notAfter)}; valid at assessment: ${value(certificate.validAtAssessmentTime)}; SHA-256: ${value(certificate.fingerprintSha256)}`);
+  });
+  lines.push("");
 }
 
 function renderChecks(lines: string[], title: string, checks: CheckResult[]): void {

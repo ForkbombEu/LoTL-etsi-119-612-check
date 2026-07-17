@@ -272,6 +272,8 @@ The report does not claim full legal or normative ETSI conformance.
 
 XML findings are implemented structural, date, schema, signature, certificate, and service-metadata checks. They are evidence-oriented results rather than a claim of full ETSI TS 119 612 conformance.
 
+For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, whether cryptographic verification was attempted, its result or limitation, and XAdES-property detection. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence. XMLDSig/XAdES results remain best-effort evidence checks, not a trust decision.
+
 ### Optional local XSD validation
 
 Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint`. The tool does not download schemas. If no schema is supplied, the schema check is `not_checked`; if `xmllint` is unavailable, it is also `not_checked` with an actionable message. An `xmllint` validation failure is reported as a schema finding in both JSON and Markdown output.

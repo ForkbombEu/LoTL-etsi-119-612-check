@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/19612/v2.4.1#" xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:xades="http://uri.etsi.org/01903/v1.3.2#" Id="SIGNED-UNSUPPORTED">
+  <SchemeInformation>
+    <TSLVersionIdentifier>6</TSLVersionIdentifier>
+    <TSLSequenceNumber>1</TSLSequenceNumber>
+    <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType>
+    <SchemeOperatorName><Name>Example Operator</Name></SchemeOperatorName>
+    <SchemeOperatorAddress><PostalAddresses><PostalAddress><CountryName>EU</CountryName></PostalAddress></PostalAddresses></SchemeOperatorAddress>
+    <SchemeName><Name>Signed Test List</Name></SchemeName>
+    <SchemeInformationURI><URI>https://example.test/info</URI></SchemeInformationURI>
+    <StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate</StatusDeterminationApproach>
+    <SchemeTypeCommunityRules><URI>https://example.test/rules</URI></SchemeTypeCommunityRules>
+    <SchemeTerritory>EU</SchemeTerritory>
+    <ListIssueDateTime>2026-03-17T00:00:00Z</ListIssueDateTime>
+    <NextUpdate><dateTime>2026-04-01T00:00:00Z</dateTime></NextUpdate>
+    <DistributionPoints><URI>https://example.test/tl.xml</URI></DistributionPoints>
+  </SchemeInformation>
+  <TrustServiceProviderList />
+  <ds:Signature>
+    <ds:KeyInfo><ds:X509Data><ds:X509Certificate>MIIDgzCCAmugAwIBAgIUTsnMCujoxujfyT0NKW2v6X5idvswDQYJKoZIhvcNAQELBQAwUTEqMCgGA1UEAwwhV0UgQlVJTEQgVGVzdCBTaWduaW5nIENlcnRpZmljYXRlMRYwFAYDVQQKDA1XRSBCVUlMRCBUZXN0MQswCQYDVQQGEwJFVTAeFw0yNjA3MTcwOTU1MTNaFw0zNjA3MTQwOTU1MTNaMFExKjAoBgNVBAMMIVdFIEJVSUxEIFRlc3QgU2lnbmluZyBDZXJ0aWZpY2F0ZTEWMBQGA1UECgwNV0UgQlVJTEQgVGVzdDELMAkGA1UEBhMCRVUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCS/l/YExnC6JbRN2cTxyhh8PlwgqPISVhzZU0DueZUYz4x44AetgpUoCUFdGIs/U7raqpZxf7cT+2EP5nKgVa9y3LOVO+B3lKWfGZ7jrA3dtIIpVfJdjKSdArES5oYCDzAp+FIBhkROKVXY7ICDoKqpii4KEuIQBfvExdJJIhChINt3Gg9mtIP1V0BA0x+vaAYZCQrP0JdQ5KFBe/zA/Z7tXXQyKH/ELI0k24KGMC1E4cTjtaRkgn2JQcwZsV5/hA47Hjke4BhgnILsLutromvCKjgf+bAGUJzWO9zNAZQHxOMi8+o20aR0CouMQd8J08/WRv/qsCj3FXuzbVlb0BPAgMBAAGjUzBRMB0GA1UdDgQWBBSjsyOO1XA+BhgxXz7Zc5bb7wO/eDAfBgNVHSMEGDAWgBSjsyOO1XA+BhgxXz7Zc5bb7wO/eDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQA63XGA8TxCX5Bo/tj+WKwCg9W9N245EjzX9GPxZHWzRnQ1oqqNtl9W1uT2L/LwS6iEoITD1O2xQAXegftKwe6VEX5Fgy5WJCrP3VNIeLXpMRRn635utZBCdk6TVaUgKTd6AVOOEjD/ZwBs0NTpNwhtde2sKcLoNkjaN6imJ+a8BRA20WQJAsIqLlMEQjiGHqVprTrb3deQ+AzpAvIw6z/CS/3jKN/runrcO1wzOu2TFlmSrJDwl1PxMYd+iXvReoKIlOSL4wI0Bp1yHEZNg4ysCtifKYa0CfmyJUupotetNvxI7MO0TrPwNAV1e/No/13z3SRltI+HF0IFE9940aaj</ds:X509Certificate></ds:X509Data></ds:KeyInfo>
+    <xades:QualifyingProperties Target="#SIGNED-UNSUPPORTED"><xades:SignedProperties Id="SignedProperties" /></xades:QualifyingProperties>
+  </ds:Signature>
+</TrustServiceStatusList>
