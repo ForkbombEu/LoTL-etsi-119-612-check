@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/19612/v2.4.1#" Id="EXPIRED-TEST">
+  <SchemeInformation>
+    <TSLVersionIdentifier>6</TSLVersionIdentifier>
+    <TSLSequenceNumber>1</TSLSequenceNumber>
+    <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType>
+    <SchemeOperatorName><Name>Example Operator</Name></SchemeOperatorName>
+    <SchemeOperatorAddress><PostalAddresses><PostalAddress><CountryName>EU</CountryName></PostalAddress></PostalAddresses></SchemeOperatorAddress>
+    <SchemeName><Name>Expired Test List</Name></SchemeName>
+    <SchemeInformationURI><URI>https://example.test/info</URI></SchemeInformationURI>
+    <StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate</StatusDeterminationApproach>
+    <SchemeTypeCommunityRules><URI>https://example.test/rules</URI></SchemeTypeCommunityRules>
+    <SchemeTerritory>EU</SchemeTerritory>
+    <ListIssueDateTime>2025-01-01T00:00:00Z</ListIssueDateTime>
+    <NextUpdate><dateTime>2025-07-01T00:00:00Z</dateTime></NextUpdate>
+    <DistributionPoints><URI>https://example.test/tl.xml</URI></DistributionPoints>
+  </SchemeInformation>
+  <TrustServiceProviderList />
+</TrustServiceStatusList>

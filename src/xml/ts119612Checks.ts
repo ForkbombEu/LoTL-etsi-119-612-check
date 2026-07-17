@@ -51,6 +51,10 @@ export async function assessTs119612Xml(
   const root = document.documentElement;
   const rootLocalName = root.localName || root.nodeName;
   const rootNs = root.namespaceURI ?? undefined;
+  push(checks, "parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML parsed successfully." : "XML parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined);
+  push(checks, "parse.root_name", "parse", rootLocalName === "TrustServiceStatusList" ? "pass" : "fail", "critical", "Root element local name is TrustServiceStatusList.", rootLocalName);
+  push(checks, "parse.root_namespace", "parse", rootNs === ETSI_NS ? "pass" : "fail", "error", "Root namespace matches ETSI TS 119 612 v2.4.1.", rootNs);
+  push(checks, "parse.root_id", "parse", root.hasAttribute("Id") ? "pass" : "fail", "error", "Root TrustServiceStatusList has Id attribute.", root.getAttribute("Id") ?? undefined);
   if (rootLocalName !== "TrustServiceStatusList" || rootNs !== ETSI_NS) {
     return {
       detected: { format: "xml", artifactKind: rootLocalName === "TrustServiceStatusList" ? "xml_lotl_like" : "unknown" },
@@ -58,14 +62,14 @@ export async function assessTs119612Xml(
         applicable: false,
         conformanceLevel: "not_applicable",
         score: null,
-        checks: [{
-          id: "profile.ts119612_applicability",
-          category: "profile",
-          status: "not_applicable",
-          severity: "info",
-          message: "XML root element and namespace do not identify an ETSI TS 119 612 TrustServiceStatusList artifact.",
-          evidence: { rootLocalName, rootNamespace: rootNs },
-        }],
+        checks: [...checks, {
+            id: "profile.ts119612_applicability",
+            category: "profile",
+            status: "not_applicable",
+            severity: "info",
+            message: "XML root element and namespace do not identify an ETSI TS 119 612 TrustServiceStatusList artifact.",
+            evidence: { rootLocalName, rootNamespace: rootNs },
+          }],
         mandatoryFailures: [],
         warnings: [],
       },
@@ -73,10 +77,6 @@ export async function assessTs119612Xml(
   }
   const artifactKind = isLotlTslType(text(document, D("TSLType"))) ? "ts119612_xml_lotl" : "ts119612_xml_tsl";
 
-  push(checks, "parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML parsed successfully." : "XML parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined);
-  push(checks, "parse.root_name", "parse", rootLocalName === "TrustServiceStatusList" ? "pass" : "fail", "critical", "Root element local name is TrustServiceStatusList.", rootLocalName);
-  push(checks, "parse.root_namespace", "parse", rootNs === ETSI_NS ? "pass" : "fail", "error", "Root namespace matches ETSI TS 119 612 v2.4.1.", rootNs);
-  push(checks, "parse.root_id", "parse", root.hasAttribute("Id") ? "pass" : "fail", "error", "Root TrustServiceStatusList has Id attribute.", root.getAttribute("Id") ?? undefined);
   push(checks, "parse.schema_location", "parse", hasSchemaLocation(root) ? "pass" : "warn", "warning", "xsi:schemaLocation is present.", schemaLocation(root));
 
   const signature = assessSignature(xml, document, assessmentDate);
@@ -107,25 +107,19 @@ export async function assessTs119612Xml(
   checkExists(checks, document, "structure.list_issue_date_time", D("ListIssueDateTime"), "ListIssueDateTime exists.", "error");
   checkExists(checks, document, "structure.next_update", D("NextUpdate"), "NextUpdate exists.", "error");
   checkExists(checks, document, "structure.distribution_points", D("DistributionPoints"), "DistributionPoints exists.", "warning");
+  if (artifactKind === "ts119612_xml_tsl") {
+    checkExists(checks, document, "structure.trust_service_provider_list", D("TrustServiceProviderList"), "TrustServiceProviderList exists for a Trusted List artifact.", "error");
+  } else {
+    push(checks, "structure.trust_service_provider_list", "structure", "not_applicable", "info", "TrustServiceProviderList is not required by this implemented check for an XML LoTL artifact.");
+  }
 
   checks.push(...dateChecks(extracted.listIssueDateTime, extracted.nextUpdate, assessmentDate));
-  const serviceAssessment = assessServices(document, assessmentDate);
+  const serviceAssessment = assessServices(document, assessmentDate, artifactKind === "ts119612_xml_tsl");
   checks.push(...serviceAssessment.checks);
   certificates.push(...serviceAssessment.certificates);
   extracted.certificates = certificates;
   extracted.trustServiceProviderCount = serviceAssessment.tspCount;
   extracted.serviceCount = serviceAssessment.serviceCount;
-
-  if (!has(document, D("TrustServiceProviderList")) && rootLocalName === "TrustServiceStatusList") {
-    checks.push({
-      id: "profile.lotl_like_subset",
-      category: "profile",
-      status: "warn",
-      severity: "warning",
-      message:
-        "TrustServiceProviderList absent. XML appears to be a TS 119 612 structural subset / LoTL-like XML; missing TSL service-provider components are reported but not treated as a hard profile conclusion by this tool.",
-    });
-  }
 
   const mandatoryFailures = checks
     .filter((check) => check.status === "fail" && (check.severity === "critical" || check.severity === "error"))
@@ -169,7 +163,7 @@ function extractMetadata(document: Document): ExtractedMetadata {
   };
 }
 
-function assessServices(document: Document, assessmentDate: Date): {
+function assessServices(document: Document, assessmentDate: Date, expectTspContent: boolean): {
   checks: CheckResult[];
   certificates: CertificateSummary[];
   tspCount: number;
@@ -179,6 +173,9 @@ function assessServices(document: Document, assessmentDate: Date): {
   const certificates: CertificateSummary[] = [];
   const tsps = nodes(document, D("TrustServiceProvider"));
   const services = nodes(document, D("ServiceInformation"));
+  if (!expectTspContent) {
+    return { checks, certificates, tspCount: tsps.length, serviceCount: services.length };
+  }
   push(checks, "services.tsp_count", "services", tsps.length > 0 ? "pass" : "warn", "warning", "TrustServiceProvider entries counted.", tsps.length);
 
   tsps.forEach((tsp, tspIndex) => {

@@ -14,6 +14,11 @@ describe("assessTs119612Xml", () => {
     expect(result.extracted?.tslVersionIdentifier).toBe("6");
     expect(result.extracted?.trustServiceProviderCount).toBe(1);
     expect(result.extracted?.serviceCount).toBeGreaterThan(0);
+    expect(result.ts119612.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "structure.trust_service_provider_list", status: "pass" }),
+      ]),
+    );
   });
 
   it("reports SchemeInformation as critical missing structure", async () => {
@@ -32,5 +37,34 @@ describe("assessTs119612Xml", () => {
       ]),
     );
     expect(result.ts119612.conformanceLevel).toBe("non_conformant");
+  });
+
+  it("reports bad namespace as not applicable with explicit root evidence", async () => {
+    const xml = await readFile("test/fixtures/tsl-bad-namespace.xml", "utf8");
+    const result = await assessTs119612Xml(xml, { strict: false });
+    expect(result.detected.artifactKind).toBe("xml_lotl_like");
+    expect(result.ts119612.conformanceLevel).toBe("not_applicable");
+    expect(result.ts119612.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "parse.root_name", status: "pass" }),
+        expect.objectContaining({ id: "parse.root_namespace", status: "fail" }),
+      ]),
+    );
+  });
+
+  it("warns when NextUpdate is expired at assessment time", async () => {
+    const xml = await readFile("test/fixtures/tsl-expired-next-update.xml", "utf8");
+    const result = await assessTs119612Xml(xml, {
+      strict: false,
+      assessmentDate: new Date("2026-02-01T00:00:00Z"),
+    });
+    expect(result.ts119612.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "dates.issue_valid", status: "pass" }),
+        expect.objectContaining({ id: "dates.next_update_valid", status: "pass" }),
+        expect.objectContaining({ id: "dates.next_after_issue", status: "pass" }),
+        expect.objectContaining({ id: "dates.next_update_expired", status: "warn" }),
+      ]),
+    );
   });
 });
