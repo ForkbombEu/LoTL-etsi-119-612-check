@@ -7,6 +7,7 @@ export function buildAuditReport(args: {
   weBuildProfile: AuditReport["weBuildProfile"];
   fixtureReadiness: AuditReport["fixtureReadiness"];
   fcafTrustedAuthorities: AuditReport["fcafTrustedAuthorities"];
+  negativeFixtureDescriptors: AuditReport["negativeFixtureDescriptors"];
   results: TrustedListAuditResult[];
   version: string;
 }): AuditReport {
@@ -20,6 +21,7 @@ export function buildAuditReport(args: {
     weBuildProfile: args.weBuildProfile,
     fixtureReadiness: args.fixtureReadiness,
     fcafTrustedAuthorities: args.fcafTrustedAuthorities,
+    negativeFixtureDescriptors: args.negativeFixtureDescriptors,
     summary: {
       totalPointers: results.length,
       fetched: results.filter((r) => r.fetch.attempted && r.fetch.ok).length,

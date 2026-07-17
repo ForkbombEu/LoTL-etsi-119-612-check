@@ -142,6 +142,7 @@ describe("API server", () => {
         caveats: ["No referenced artifact was assessed."],
       },
       fcafTrustedAuthorities: { scenarios: [] },
+      negativeFixtureDescriptors: [],
       summary: {
         totalPointers: 0,
         fetched: 0,

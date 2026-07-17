@@ -9,6 +9,7 @@ import { parseLotlJson } from "./lotl.js";
 import { assessWeBuildProfile } from "./profiles/weBuild.js";
 import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
 import { assessFcafTrustedAuthorities } from "./fcaf/trustedAuthorities.js";
+import { generateNegativeFixtureDescriptors, writeNegativeFixtureDescriptors } from "./fixtures/negativeDescriptors.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
@@ -68,6 +69,9 @@ export async function runAudit(options: CliOptions, version: string): Promise<Au
   await mkdir(options.outDir, { recursive: true });
   await writeFile(join(options.outDir, "report.json"), `${JSON.stringify(result.json, null, 2)}\n`);
   await writeFile(join(options.outDir, "report.md"), result.markdown);
+  if (options.generateNegativeFixtures) {
+    await writeNegativeFixtureDescriptors(result.json.negativeFixtureDescriptors);
+  }
 
   if (options.fetch) {
     await persistFetchedArtifacts(result.json.results, options);
@@ -97,6 +101,14 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
     accessCaOrWrpacProviderCount: weBuildProfile.roleCounts.wrpac_provider ?? 0,
     fixtureReadiness,
   });
+  const negativeFixtureDescriptors = generateNegativeFixtureDescriptors({
+    results,
+    fcafTrustedAuthorities,
+    fixtureReadiness,
+    pointerCertificatesParsed: weBuildProfile.pointerConsistency.pointerCertificatesParsed,
+    accessCaOrWrpacProviderCount: weBuildProfile.roleCounts.wrpac_provider ?? 0,
+    listTypeCounts: weBuildProfile.listTypeCounts,
+  });
 
   const report = buildAuditReport({
     generatedAt,
@@ -109,6 +121,7 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
     weBuildProfile,
     fixtureReadiness,
     fcafTrustedAuthorities,
+    negativeFixtureDescriptors,
     results,
     version,
   });

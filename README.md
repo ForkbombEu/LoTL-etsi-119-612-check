@@ -308,6 +308,10 @@ It writes results under `artifacts/reference-smoke/eudi-ri-tlp/` and is not part
 
 Every audit report also includes `fcafTrustedAuthorities`, a readiness matrix for the implemented FCAF WS_RP trust-mechanism fixture scenarios. It maps the audited LoTL pointers, fetched TL/LoTE artifacts, XML signing-certificate evidence, parseable pointer certificates, WE BUILD Access CA/WRPAC roles, and optional RPAC-chain result to AKI, `etsi_tl`, cascading, and RPAC-to-Access-CA cases. Each scenario includes a readiness status, evidence, and explicit missing prerequisites. It does not create presentation requests or make a verifier trust decision.
 
+## Negative fixture descriptors
+
+The report's `negativeFixtureDescriptors` provides compact JSON and Markdown-ready instructions for unknown Access CA, expired RPAC, wrong list type, unreachable URL, invalid signature, missing anchor, unanchored-but-structurally-valid RPAC chain, and missing verifier-role scenarios. They describe test-owned configuration or copies only and never modify fetched artifacts. Pass `--generate-negative-fixtures` to additionally write `negative-fixture-descriptors.json` and `.md` beneath ignored `artifacts/generated-fixtures/`.
+
 ## TS 119 612 vs TS 119 602
 
 ETSI TS 119 612 defines the XML Trusted List format. JSON LoTE/LoTL-style artifacts are not directly assessable as TS 119 612 XML.

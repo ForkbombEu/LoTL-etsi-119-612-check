@@ -49,6 +49,14 @@ export function renderMarkdownReport(report: AuditReport): string {
     lines.push(`| ${scenario.id} | ${scenario.status} | ${escapeCell(scenario.missingPrerequisites.join("; ") || "none")} |`);
   }
   lines.push("");
+  lines.push("## Negative fixture descriptors");
+  lines.push("");
+  lines.push("| Descriptor | Status | Missing prerequisites |");
+  lines.push("|---|---|---|");
+  for (const descriptor of report.negativeFixtureDescriptors) {
+    lines.push(`| ${descriptor.id} | ${descriptor.status} | ${escapeCell(descriptor.missingPrerequisites.join("; ") || "none")} |`);
+  }
+  lines.push("");
   lines.push("## Summary");
   lines.push("");
   lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | Level |");

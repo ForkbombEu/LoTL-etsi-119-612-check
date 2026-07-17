@@ -99,6 +99,7 @@ export interface AuditReport {
   };
   fixtureReadiness: FixtureReadiness;
   fcafTrustedAuthorities: FcafTrustedAuthoritiesReadiness;
+  negativeFixtureDescriptors: NegativeFixtureDescriptor[];
   summary: {
     totalPointers: number;
     fetched: number;
@@ -193,6 +194,7 @@ export interface CliOptions {
   includeJsonLoteChecks: boolean;
   fetch: boolean;
   rpacChain?: string;
+  generateNegativeFixtures?: boolean;
 }
 
 export interface FixtureReadiness {
@@ -227,4 +229,24 @@ export interface FcafTrustedAuthoritiesScenario {
 
 export interface FcafTrustedAuthoritiesReadiness {
   scenarios: FcafTrustedAuthoritiesScenario[];
+}
+
+export type NegativeFixtureDescriptorId =
+  | "unknown_access_ca"
+  | "expired_rpac"
+  | "wrong_lote_or_list_type"
+  | "unreachable_tl_url"
+  | "invalid_tl_signature"
+  | "missing_trust_anchor"
+  | "rpac_chain_not_anchored"
+  | "requested_verifier_role_not_present";
+
+export interface NegativeFixtureDescriptor {
+  id: NegativeFixtureDescriptorId;
+  status: FixtureScenarioStatus;
+  title: string;
+  sourceArtifacts: string[];
+  evidence: Record<string, unknown>;
+  steps: string[];
+  missingPrerequisites: string[];
 }

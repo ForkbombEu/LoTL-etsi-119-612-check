@@ -348,7 +348,7 @@ components:
           type: string
     AuditReport:
       type: object
-      required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, summary, results]
+      required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors, summary, results]
       properties:
         schemaVersion: { type: integer, const: 2 }
         tool:
@@ -373,6 +373,10 @@ components:
           $ref: '#/components/schemas/FixtureReadiness'
         fcafTrustedAuthorities:
           $ref: '#/components/schemas/FcafTrustedAuthoritiesReadiness'
+        negativeFixtureDescriptors:
+          type: array
+          items:
+            $ref: '#/components/schemas/NegativeFixtureDescriptor'
         summary:
           type: object
           required: [totalPointers, fetched, fetchFailed, xmlArtifacts, jsonArtifacts, unknownArtifacts, ts119612]
@@ -476,6 +480,29 @@ components:
         evidence:
           type: object
           additionalProperties: true
+        missingPrerequisites:
+          type: array
+          items: { type: string }
+    NegativeFixtureDescriptor:
+      type: object
+      required: [id, status, title, sourceArtifacts, evidence, steps, missingPrerequisites]
+      properties:
+        id:
+          type: string
+          enum: [unknown_access_ca, expired_rpac, wrong_lote_or_list_type, unreachable_tl_url, invalid_tl_signature, missing_trust_anchor, rpac_chain_not_anchored, requested_verifier_role_not_present]
+        status:
+          type: string
+          enum: [ready, not_ready, partially_ready, not_checked]
+        title: { type: string }
+        sourceArtifacts:
+          type: array
+          items: { type: string }
+        evidence:
+          type: object
+          additionalProperties: true
+        steps:
+          type: array
+          items: { type: string }
         missingPrerequisites:
           type: array
           items: { type: string }

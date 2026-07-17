@@ -20,6 +20,7 @@ const program = new Command()
   .option("--strict", "Failed mandatory checks make XML artifact non_conformant.", false)
   .option("--include-json-lote-checks", "Perform basic JSON LoTE metadata checks.", false)
   .option("--rpac-chain <path>", "Optional PEM, base64, x5c JSON, or JSON certificate-array RPAC/WRPAC chain.")
+  .option("--generate-negative-fixtures", "Write negative fixture descriptors under artifacts/generated-fixtures/.", false)
   .option("--no-fetch", "Parse LoTL only and report referenced URLs without fetching.")
   .parse();
 
@@ -34,6 +35,7 @@ const opts = program.opts<{
   includeJsonLoteChecks: boolean;
   fetch: boolean;
   rpacChain?: string;
+  generateNegativeFixtures: boolean;
 }>();
 
 const input = resolveInput(opts.input, opts.referenceSource);
@@ -50,11 +52,13 @@ try {
       includeJsonLoteChecks: opts.includeJsonLoteChecks,
       fetch: opts.fetch,
       rpacChain: opts.rpacChain,
+      generateNegativeFixtures: opts.generateNegativeFixtures,
     },
     pkg.version,
   );
   console.log(`Wrote ${opts.outDir}/report.json and ${opts.outDir}/report.md`);
   console.log(`Pointers: ${report.summary.totalPointers}; fetched: ${report.summary.fetched}; failed: ${report.summary.fetchFailed}`);
+  if (opts.generateNegativeFixtures) console.log("Wrote artifacts/generated-fixtures/negative-fixture-descriptors.{json,md}");
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

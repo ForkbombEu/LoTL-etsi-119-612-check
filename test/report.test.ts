@@ -90,6 +90,8 @@ describe("runAudit", () => {
     expect(markdown).toContain("Can this trust-list bundle be used as a wallet trust fixture?");
     expect(markdown).toContain("## FCAF trusted_authorities fixture readiness");
     expect(report.fcafTrustedAuthorities.scenarios).toHaveLength(8);
+    expect(markdown).toContain("## Negative fixture descriptors");
+    expect(report.negativeFixtureDescriptors).toHaveLength(8);
   });
 
   it("adds WE BUILD list-type and pointer-consistency summary from a reduced fixture", async () => {
