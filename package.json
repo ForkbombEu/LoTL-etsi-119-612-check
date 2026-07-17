@@ -12,7 +12,9 @@
     "api": "node dist/api/server.js",
     "dev:api": "tsx src/api/server.ts",
     "reference-smoke": "scripts/optional/reference-source-smoke.sh",
-    "eudi-ri-tlp-fixture-readiness": "scripts/optional/eudi-ri-tlp-fixture-readiness.sh"
+    "eudi-ri-tlp-fixture-readiness": "scripts/optional/eudi-ri-tlp-fixture-readiness.sh",
+    "reference-smoke-run": "scripts/optional/run-reference-smoke.sh",
+    "package-reference-smoke": "scripts/optional/package-reference-smoke.sh"
   },
   "engines": {
     "node": ">=20"

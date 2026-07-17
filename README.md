@@ -59,10 +59,18 @@ Supported named sources are `eudi-ri-tlp`, `we-build-lotl-json`, and `we-build-l
 Optional live smoke checks are intentionally outside `npm test`:
 
 ```bash
-npm run reference-smoke -- we-build-lotl-json
+npm run reference-smoke-run -- we-build-lotl-json
 ```
 
-The optional command builds the CLI, fetches the named live source, and writes reports and fetched evidence to `artifacts/reference-smoke/<source-name>/`, which is ignored by git.
+The optional runner supports `eudi-ri-tlp`, `we-build-lotl-json`, and `we-build-lotl-xml`. It builds the CLI, fetches the selected live source, and writes reports and fetched evidence to ignored `artifacts/reference-smoke/<source-name>/<timestamp>/`.
+
+Package one completed smoke directory for review without including the repository:
+
+```bash
+npm run package-reference-smoke -- we-build-lotl-json 20260717T120000Z
+```
+
+This creates the ignored sibling archive `artifacts/reference-smoke/we-build-lotl-json/20260717T120000Z-review.zip`, containing only that timestamped smoke directory. The runner and packager are manual commands and never run from `npm test`.
 
 With local ETSI TS 119 612 XSD and strict structural scoring:
 
