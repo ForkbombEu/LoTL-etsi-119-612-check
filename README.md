@@ -2,6 +2,11 @@
 
 TypeScript/Node.js CLI and HTTP API for auditing trusted-list pointers in a WE BUILD WP4 `list_of_trusted_lists.json`.
 
+Repository orientation:
+
+- [Current and target architecture](docs/architecture.md)
+- [Trust-infrastructure glossary](docs/glossary.md)
+
 The tool reads:
 
 ```ts
