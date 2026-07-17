@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import forge from "node-forge";
+import { X509Certificate } from "node:crypto";
 import type { CertificateSummary } from "./types.js";
 
 export function sha256Hex(data: Buffer | Uint8Array | string): string {
@@ -20,14 +20,13 @@ export function certificateFromBase64(
 ): CertificateSummary {
   const clean = normalizeBase64Certificate(base64);
   const der = Buffer.from(clean, "base64");
-  const asn1 = forge.asn1.fromDer(der.toString("binary"));
-  const cert = forge.pki.certificateFromAsn1(asn1);
-  const notBefore = cert.validity.notBefore;
-  const notAfter = cert.validity.notAfter;
+  const cert = new X509Certificate(der);
+  const notBefore = new Date(cert.validFrom);
+  const notAfter = new Date(cert.validTo);
   return {
     source,
-    subject: attributesToString(cert.subject.attributes),
-    issuer: attributesToString(cert.issuer.attributes),
+    subject: cert.subject,
+    issuer: cert.issuer,
     serialNumber: cert.serialNumber,
     notBefore: notBefore.toISOString(),
     notAfter: notAfter.toISOString(),
@@ -54,10 +53,4 @@ export function certificateFingerprintSha256(base64: string): string | undefined
   } catch {
     return undefined;
   }
-}
-
-function attributesToString(attrs: forge.pki.CertificateField[]): string {
-  return attrs
-    .map((attr) => `${attr.shortName ?? attr.name}=${String(attr.value)}`)
-    .join(", ");
 }

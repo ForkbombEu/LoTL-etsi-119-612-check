@@ -1,4 +1,4 @@
-import forge from "node-forge";
+import { X509Certificate } from "node:crypto";
 import { normalizeBase64Certificate, sha256Hex } from "../certs.js";
 import type { CheckResult } from "../types.js";
 import { isAccessCertificateRole, type EudiTrustRole } from "./roles.js";
@@ -36,7 +36,7 @@ export interface CertificateChainAssessment {
 }
 
 interface ParsedCertificate {
-  cert: forge.pki.Certificate;
+  cert: X509Certificate;
   evidence: ChainCertificateEvidence;
 }
 
@@ -110,7 +110,7 @@ export function assessCertificateChain(input: CertificateChainAssessmentInput): 
   for (const { child, issuer } of links) {
     if (!issuer) { signatureFailures.push(child.evidence.fingerprintSha256); continue; }
     try {
-      if (!issuer.cert.verify(child.cert)) signatureFailures.push(child.evidence.fingerprintSha256);
+      if (!child.cert.verify(issuer.cert.publicKey)) signatureFailures.push(child.evidence.fingerprintSha256);
     } catch {
       signatureFailures.push(child.evidence.fingerprintSha256);
     }
@@ -165,24 +165,22 @@ function parseCertificate(material: string, position: ChainCertificateEvidence["
   try {
     const clean = normalizeBase64Certificate(material);
     const der = Buffer.from(clean, "base64");
-    const cert = forge.pki.certificateFromAsn1(forge.asn1.fromDer(der.toString("binary")));
-    const basicConstraints = cert.getExtension("basicConstraints") as { cA?: boolean } | undefined;
-    const keyUsage = cert.getExtension("keyUsage") as Record<string, unknown> | undefined;
-    const extendedKeyUsage = cert.getExtension("extKeyUsage") as Record<string, unknown> | undefined;
+    const cert = new X509Certificate(der);
+    const notBefore = new Date(cert.validFrom);
+    const notAfter = new Date(cert.validTo);
     return {
       cert,
       evidence: {
         position,
-        subject: attributesToString(cert.subject.attributes),
-        issuer: attributesToString(cert.issuer.attributes),
+        subject: cert.subject,
+        issuer: cert.issuer,
         serialNumber: cert.serialNumber,
-        notBefore: cert.validity.notBefore.toISOString(),
-        notAfter: cert.validity.notAfter.toISOString(),
+        notBefore: notBefore.toISOString(),
+        notAfter: notAfter.toISOString(),
         fingerprintSha256: sha256Hex(der),
-        validAtAssessmentTime: assessmentDate >= cert.validity.notBefore && assessmentDate <= cert.validity.notAfter,
-        basicConstraintsCa: basicConstraints?.cA,
-        keyUsage: extensionNames(keyUsage, ["digitalSignature", "keyCertSign", "cRLSign", "keyEncipherment"]),
-        extendedKeyUsage: extensionNames(extendedKeyUsage, ["serverAuth", "clientAuth", "codeSigning", "emailProtection"]),
+        validAtAssessmentTime: assessmentDate >= notBefore && assessmentDate <= notAfter,
+        basicConstraintsCa: cert.ca,
+        extendedKeyUsage: cert.keyUsage,
       },
     };
   } catch {
@@ -196,7 +194,7 @@ function findAnchorIssuer(child: ParsedCertificate, anchors: ParsedCertificate[]
 
 function safelyVerifies(issuer: ParsedCertificate, child: ParsedCertificate): boolean {
   try {
-    return issuer.cert.verify(child.cert);
+    return child.cert.verify(issuer.cert.publicKey);
   } catch {
     return false;
   }
@@ -207,15 +205,6 @@ function keyUsageCheck(leaf: ParsedCertificate, intermediates: ParsedCertificate
   const invalidIntermediates = intermediates.filter((certificate) => certificate.evidence.keyUsage && !certificate.evidence.keyUsage.includes("keyCertSign"));
   const status = leafUsage.length === 0 && intermediates.every((certificate) => !certificate.evidence.keyUsage) ? "not_checked" : invalidIntermediates.length === 0 ? "pass" : "warn";
   return check("chain.key_usage_and_extended_key_usage", status, status === "pass" ? "info" : "warning", status === "not_checked" ? "Key usage and extended key usage were not present in the parsed certificate extensions." : invalidIntermediates.length === 0 ? "Available key usage and extended key usage evidence is compatible with the implemented chain roles." : "One or more intermediate certificates lack keyCertSign in available key-usage evidence.", { leafKeyUsage: leafUsage, leafExtendedKeyUsage: leaf.evidence.extendedKeyUsage, invalidIntermediateFingerprints: invalidIntermediates.map((certificate) => certificate.evidence.fingerprintSha256) });
-}
-
-function extensionNames(extension: Record<string, unknown> | undefined, names: string[]): string[] | undefined {
-  if (!extension) return undefined;
-  return names.filter((name) => extension[name] === true);
-}
-
-function attributesToString(attributes: forge.pki.CertificateField[]): string {
-  return attributes.map((attribute) => `${attribute.shortName ?? attribute.name}=${String(attribute.value)}`).join(", ");
 }
 
 function check(id: string, status: CheckResult["status"], severity: CheckResult["severity"], message: string, evidence?: unknown): CheckResult {

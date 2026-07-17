@@ -1,54 +1,38 @@
-import forge from "node-forge";
+import { X509Certificate } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { assessCertificateChain } from "../src/eudi/certificateChain.js";
 
-interface IssuedCertificate {
-  certificate: forge.pki.Certificate;
-  privateKey: forge.pki.rsa.PrivateKey;
-  base64: string;
+async function fixtureCertificates(): Promise<{ activeEc: string; expiredEc: string; unknownAnchor: string }> {
+  const document = JSON.parse(await readFile("test/fixtures/list_of_trusted_lists.json", "utf8")) as {
+    LoTE: { ListAndSchemeInformation: { PointersToOtherLoTE: Array<{ LoTELocation: string; ServiceDigitalIdentities: Array<{ X509Certificates: Array<{ val: string }> }> }> } };
+  };
+  const pointerValue = (fragment: string) => {
+    const pointer = document.LoTE.ListAndSchemeInformation.PointersToOtherLoTE.find((item) => item.LoTELocation.includes(fragment));
+    if (!pointer) throw new Error(`Fixture pointer '${fragment}' is missing.`);
+    return pointer.ServiceDigitalIdentities[0].X509Certificates[0].val;
+  };
+  return {
+    activeEc: pointerValue("nxd-eaa-providers-lote.json"),
+    expiredEc: pointerValue("hD5M82eY"),
+    unknownAnchor: pointerValue("wrpac-providers-lote.json"),
+  };
 }
 
-let serialNumber = 0;
-
-function issueCertificate(commonName: string, isCa: boolean, issuer?: IssuedCertificate, validity?: { notBefore: Date; notAfter: Date }): IssuedCertificate {
-  const keys = forge.pki.rsa.generateKeyPair(1024);
-  const certificate = forge.pki.createCertificate();
-  certificate.publicKey = keys.publicKey;
-  certificate.serialNumber = `${++serialNumber}`;
-  certificate.validity.notBefore = validity?.notBefore ?? new Date("2025-01-01T00:00:00Z");
-  certificate.validity.notAfter = validity?.notAfter ?? new Date("2030-01-01T00:00:00Z");
-  certificate.setSubject([{ name: "commonName", value: commonName }]);
-  certificate.setIssuer(issuer?.certificate.subject.attributes ?? certificate.subject.attributes);
-  certificate.setExtensions([
-    { name: "basicConstraints", cA: isCa },
-    { name: "keyUsage", digitalSignature: !isCa, keyCertSign: isCa, cRLSign: isCa },
-    { name: "extKeyUsage", clientAuth: !isCa },
-  ]);
-  certificate.sign(issuer?.privateKey ?? keys.privateKey, forge.md.sha256.create());
-  const der = forge.asn1.toDer(forge.pki.certificateToAsn1(certificate)).getBytes();
-  return { certificate, privateKey: keys.privateKey, base64: Buffer.from(der, "binary").toString("base64") };
-}
-
-const root = issueCertificate("Access CA Root", true);
-const intermediate = issueCertificate("Access CA Intermediate", true, root);
-const rpac = issueCertificate("RPAC End Entity", false, intermediate);
-const expiredRpac = issueCertificate("Expired RPAC", false, intermediate, {
-  notBefore: new Date("2024-01-01T00:00:00Z"),
-  notAfter: new Date("2025-01-01T00:00:00Z"),
-});
-const assessmentDate = new Date("2026-07-01T00:00:00Z");
+const assessmentDate = new Date("2026-08-01T00:00:00Z");
 
 describe("assessCertificateChain", () => {
-  it("assesses an x5c RPAC chain separately from its Access CA trust anchor", () => {
+  it("assesses an EC RPAC fixture separately from its selected trust anchor", async () => {
+    const { activeEc } = await fixtureCertificates();
     const result = assessCertificateChain({
-      chain: [rpac.base64, intermediate.base64],
+      chain: [activeEc],
       format: "x5c",
-      trustAnchors: [root.base64],
+      trustAnchors: [activeEc],
       declaredRole: "access_ca_or_wrpac_provider",
       assessmentDate,
     });
     expect(result).toMatchObject({ chainStructurallyValid: true, trustedByTlLote: true });
-    expect(result.certificates.map((certificate) => certificate.position)).toEqual(["end_entity", "intermediate"]);
+    expect(result.certificates.map((certificate) => certificate.position)).toEqual(["end_entity"]);
     expect(result.trustAnchors.map((certificate) => certificate.position)).toEqual(["trust_anchor"]);
     expect(result.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "chain.rpac_access_ca_anchor", status: "pass" }),
@@ -56,30 +40,28 @@ describe("assessCertificateChain", () => {
     ]));
   });
 
-  it("accepts a PEM chain input", () => {
-    const result = assessCertificateChain({
-      chain: `${forge.pki.certificateToPem(rpac.certificate)}\n${forge.pki.certificateToPem(intermediate.certificate)}`,
-      format: "pem",
-      trustAnchors: [root.base64],
-      assessmentDate,
-    });
+  it("accepts an EC PEM chain input", async () => {
+    const { activeEc } = await fixtureCertificates();
+    const pem = new X509Certificate(Buffer.from(activeEc, "base64")).toString();
+    const result = assessCertificateChain({ chain: pem, format: "pem", trustAnchors: [activeEc], assessmentDate });
     expect(result.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "chain.certificates_parsed", status: "pass" }),
       expect.objectContaining({ id: "chain.trust_anchor_match", status: "pass" }),
     ]));
   });
 
-  it("reports an unknown trust anchor separately from chain structure", () => {
-    const unknownAnchor = issueCertificate("Unknown Access CA", true);
-    const result = assessCertificateChain({ chain: [rpac.base64, intermediate.base64], trustAnchors: [unknownAnchor.base64], assessmentDate });
+  it("reports an unknown trust anchor separately from EC chain structure", async () => {
+    const { activeEc, unknownAnchor } = await fixtureCertificates();
+    const result = assessCertificateChain({ chain: [activeEc], trustAnchors: [unknownAnchor], assessmentDate });
     expect(result).toMatchObject({ chainStructurallyValid: true, trustedByTlLote: false });
     expect(result.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "chain.trust_anchor_match", status: "warn" }),
     ]));
   });
 
-  it("reports an expired RPAC while preserving the separate anchor result", () => {
-    const result = assessCertificateChain({ chain: [expiredRpac.base64, intermediate.base64], trustAnchors: [root.base64], assessmentDate });
+  it("reports an expired EC RPAC while preserving the separate anchor result", async () => {
+    const { expiredEc } = await fixtureCertificates();
+    const result = assessCertificateChain({ chain: [expiredEc], trustAnchors: [expiredEc], assessmentDate });
     expect(result.chainStructurallyValid).toBe(false);
     expect(result.trustedByTlLote).toBe(true);
     expect(result.checks).toEqual(expect.arrayContaining([
@@ -88,8 +70,9 @@ describe("assessCertificateChain", () => {
     ]));
   });
 
-  it("reports a malformed certificate chain without crashing", () => {
-    const result = assessCertificateChain({ chain: ["not-a-certificate"], trustAnchors: [root.base64], assessmentDate });
+  it("reports a malformed certificate chain without crashing", async () => {
+    const { activeEc } = await fixtureCertificates();
+    const result = assessCertificateChain({ chain: ["not-a-certificate"], trustAnchors: [activeEc], assessmentDate });
     expect(result.chainStructurallyValid).toBe(false);
     expect(result.trustedByTlLote).toBe(false);
     expect(result.checks).toEqual(expect.arrayContaining([
