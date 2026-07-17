@@ -2,6 +2,7 @@ import { DOMParser } from "@xmldom/xmldom";
 import type { ArtifactKind, DetectedFormat } from "./types.js";
 
 const ETSI_TS119612_NAMESPACE = "http://uri.etsi.org/19612/v2.4.1#";
+const ETSI_TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
 
 export interface DetectionResult {
   format: DetectedFormat;
@@ -42,6 +43,9 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
         format: "xml",
         artifactKind: isXmlLotl(root) ? "ts119612_xml_lotl" : "ts119612_xml_tsl",
       };
+    }
+    if (root && localName === "TrustedEntitiesList" && root.namespaceURI === ETSI_TS119602_NAMESPACE) {
+      return { format: "xml", artifactKind: "xml_lote" };
     }
     if (root && localName === "TrustServiceStatusList") return { format: "xml", artifactKind: "xml_lotl_like" };
     return { format: "xml", artifactKind: "unknown" };

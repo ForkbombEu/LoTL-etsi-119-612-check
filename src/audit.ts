@@ -14,6 +14,7 @@ import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
 import { assessTs119612Xml } from "./xml/ts119612Checks.js";
+import { assessXmlLoteMetadata } from "./xml/loteMetadata.js";
 
 export interface AuditCoreOptions {
   concurrency: number;
@@ -298,6 +299,10 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
     return mergeResult(base, assessed);
   }
 
+  if (detected.artifactKind === "xml_lote") {
+    return mergeResult(base, assessXmlLoteMetadata(bytes.toString("utf8")));
+  }
+
   if (detected.artifactKind === "json_lote" || detected.artifactKind === "json_lotl") {
     const assessed = assessJsonLote(detected.parsedJson, options.includeJsonLoteChecks);
     return mergeResult(base, assessed);
@@ -343,7 +348,7 @@ function applicabilityFor(artifactKind: ArtifactKind): StandardApplicability {
       eudiTrustRole: "unknown",
     };
   }
-  if (artifactKind === "json_lote" || artifactKind === "json_lotl") {
+  if (artifactKind === "xml_lote" || artifactKind === "json_lote" || artifactKind === "json_lotl") {
     return {
       ts119612: "not_applicable",
       ts119602: "applicable",

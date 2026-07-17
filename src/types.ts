@@ -13,6 +13,7 @@ export type ArtifactKind =
   | "ts119612_xml_tsl"
   | "ts119612_xml_lotl"
   | "xml_lotl_like"
+  | "xml_lote"
   | "json_lote"
   | "json_lotl"
   | "html_error"

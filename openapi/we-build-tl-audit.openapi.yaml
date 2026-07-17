@@ -709,7 +709,7 @@ components:
           required: [format, artifactKind]
           properties:
             format: { type: string, enum: [xml, json, html, text, empty, unknown] }
-            artifactKind: { type: string, enum: [ts119612_xml_tsl, ts119612_xml_lotl, xml_lotl_like, json_lote, json_lotl, html_error, unknown] }
+            artifactKind: { type: string, enum: [ts119612_xml_tsl, ts119612_xml_lotl, xml_lotl_like, xml_lote, json_lote, json_lotl, html_error, unknown] }
         standardApplicability:
           type: object
           required: [ts119612, ts119602, weBuildProfile, eudiTrustRole]

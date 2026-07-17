@@ -15,7 +15,7 @@ export interface NegativeFixtureDescriptorInput {
 export function generateNegativeFixtureDescriptors(input: NegativeFixtureDescriptorInput): NegativeFixtureDescriptor[] {
   const successfulSources = input.results.filter((result) => result.fetch.ok).map((result) => result.source);
   const xmlSources = input.results.filter((result) => result.fetch.ok && (result.detected.artifactKind === "ts119612_xml_tsl" || result.detected.artifactKind === "ts119612_xml_lotl")).map((result) => result.source);
-  const recognizedSources = input.results.filter((result) => result.fetch.ok && ["ts119612_xml_tsl", "ts119612_xml_lotl", "json_lote", "json_lotl"].includes(result.detected.artifactKind)).map((result) => result.source);
+  const recognizedSources = input.results.filter((result) => result.fetch.ok && ["ts119612_xml_tsl", "ts119612_xml_lotl", "xml_lote", "json_lote", "json_lotl"].includes(result.detected.artifactKind)).map((result) => result.source);
   const scenario = (id: string) => input.fcafTrustedAuthorities.scenarios.find((item) => item.id === id);
   const anchorCount = input.pointerCertificatesParsed;
   const hasRole = input.accessCaOrWrpacProviderCount > 0;

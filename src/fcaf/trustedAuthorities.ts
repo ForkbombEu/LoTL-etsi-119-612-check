@@ -16,7 +16,7 @@ export interface FcafTrustedAuthoritiesInput {
 export function assessFcafTrustedAuthorities(input: FcafTrustedAuthoritiesInput): FcafTrustedAuthoritiesReadiness {
   const successful = input.results.filter((result) => result.fetch.ok);
   const xml = successful.filter((result) => result.detected.artifactKind === "ts119612_xml_tsl" || result.detected.artifactKind === "ts119612_xml_lotl");
-  const recognized = successful.filter((result) => ["ts119612_xml_tsl", "ts119612_xml_lotl", "json_lote", "json_lotl"].includes(result.detected.artifactKind));
+  const recognized = successful.filter((result) => ["ts119612_xml_tsl", "ts119612_xml_lotl", "xml_lote", "json_lote", "json_lotl"].includes(result.detected.artifactKind));
   const signingEvidence = xml.filter((result) => hasPassingCheck(result, "signature.signing_certificate_parsed"));
   const failedFetches = input.results.filter((result) => result.fetch.attempted && !result.fetch.ok);
   const hasAnchors = input.pointerCertificatesParsed > 0;

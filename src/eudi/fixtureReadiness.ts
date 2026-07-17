@@ -22,7 +22,7 @@ export function assessFixtureReadiness(input: FixtureReadinessInput): FixtureRea
   const fetched = input.results.filter((result) => result.fetch.ok);
   checks.push(check("fixture_readiness.source_reachable", fetched.length > 0 ? "pass" : "warn", fetched.length > 0 ? "info" : "warning", fetched.length > 0 ? "At least one referenced artifact was fetched successfully." : "No referenced artifact was fetched successfully; fixture readiness cannot be established."));
 
-  const recognizedArtifacts = input.results.filter((result) => result.detected.artifactKind === "ts119612_xml_tsl" || result.detected.artifactKind === "ts119612_xml_lotl" || result.detected.artifactKind === "json_lote" || result.detected.artifactKind === "json_lotl");
+  const recognizedArtifacts = input.results.filter((result) => result.detected.artifactKind === "ts119612_xml_tsl" || result.detected.artifactKind === "ts119612_xml_lotl" || result.detected.artifactKind === "xml_lote" || result.detected.artifactKind === "json_lote" || result.detected.artifactKind === "json_lotl");
   checks.push(check("fixture_readiness.artifact_type_detected", recognizedArtifacts.length > 0 ? "pass" : "warn", recognizedArtifacts.length > 0 ? "info" : "warning", recognizedArtifacts.length > 0 ? "Recognized TL/LoTE artifact types were detected." : "No recognized TL/LoTE artifact type was detected.", recognizedArtifacts.map((result) => result.detected.artifactKind)));
 
   checkAssessmentCoverage(checks, input.results, "xml", "fixture_readiness.ts119612_checks_run", "TS 119 612 XML checks");

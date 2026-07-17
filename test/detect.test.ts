@@ -27,6 +27,14 @@ describe("detectArtifact", () => {
     });
   });
 
+  it("detects ETSI TS 119 602 XML LoTE", () => {
+    const xml = "<TrustedEntitiesList xmlns=\"http://uri.etsi.org/019602/v1#\"><ListAndSchemeInformation /></TrustedEntitiesList>";
+    expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({
+      format: "xml",
+      artifactKind: "xml_lote",
+    });
+  });
+
   it("detects JSON LoTE", async () => {
     const bytes = await readFile("test/fixtures/json-lote.json");
     expect(detectArtifact(bytes, "application/json")).toMatchObject({
