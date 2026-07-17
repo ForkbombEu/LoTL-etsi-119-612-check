@@ -98,6 +98,7 @@ export interface AuditReport {
     };
   };
   fixtureReadiness: FixtureReadiness;
+  fcafTrustedAuthorities: FcafTrustedAuthoritiesReadiness;
   summary: {
     totalPointers: number;
     fetched: number;
@@ -203,4 +204,27 @@ export interface FixtureReadiness {
     chainStructurallyValid: boolean;
     trustedByTlLote: boolean;
   };
+}
+
+export type FixtureScenarioStatus = "ready" | "not_ready" | "partially_ready" | "not_checked";
+
+export type FcafTrustedAuthoritiesScenarioId =
+  | "aki_positive_match_possible"
+  | "aki_no_match_possible"
+  | "etsi_tl_positive_match_possible"
+  | "etsi_tl_no_match_possible"
+  | "etsi_tl_unreachable_negative_possible"
+  | "etsi_tl_invalid_signature_negative_possible"
+  | "etsi_tl_cascading_lotl_tl_possible"
+  | "rpac_chain_to_access_ca_possible";
+
+export interface FcafTrustedAuthoritiesScenario {
+  id: FcafTrustedAuthoritiesScenarioId;
+  status: FixtureScenarioStatus;
+  evidence: Record<string, unknown>;
+  missingPrerequisites: string[];
+}
+
+export interface FcafTrustedAuthoritiesReadiness {
+  scenarios: FcafTrustedAuthoritiesScenario[];
 }

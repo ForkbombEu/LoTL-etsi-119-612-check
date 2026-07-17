@@ -41,6 +41,14 @@ export function renderMarkdownReport(report: AuditReport): string {
     lines.push(`- **${fixtureCheck.id}** (${fixtureCheck.status}): ${fixtureCheck.message}${evidence}`);
   }
   lines.push("");
+  lines.push("## FCAF trusted_authorities fixture readiness");
+  lines.push("");
+  lines.push("| Scenario | Status | Missing prerequisites |");
+  lines.push("|---|---|---|");
+  for (const scenario of report.fcafTrustedAuthorities.scenarios) {
+    lines.push(`| ${scenario.id} | ${scenario.status} | ${escapeCell(scenario.missingPrerequisites.join("; ") || "none")} |`);
+  }
+  lines.push("");
   lines.push("## Summary");
   lines.push("");
   lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | Level |");

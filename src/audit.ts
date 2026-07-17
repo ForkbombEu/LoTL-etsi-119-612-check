@@ -8,6 +8,7 @@ import { assessJsonLote } from "./json/loteChecks.js";
 import { parseLotlJson } from "./lotl.js";
 import { assessWeBuildProfile } from "./profiles/weBuild.js";
 import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
+import { assessFcafTrustedAuthorities } from "./fcaf/trustedAuthorities.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
@@ -89,6 +90,13 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
     weBuildPointerConsistency: weBuildProfile.pointerConsistency,
     rpacChain: options.rpacChain,
   });
+  const fcafTrustedAuthorities = assessFcafTrustedAuthorities({
+    pointerCount: parsedLotl.summary.pointerCount,
+    results,
+    pointerCertificatesParsed: weBuildProfile.pointerConsistency.pointerCertificatesParsed,
+    accessCaOrWrpacProviderCount: weBuildProfile.roleCounts.wrpac_provider ?? 0,
+    fixtureReadiness,
+  });
 
   const report = buildAuditReport({
     generatedAt,
@@ -100,6 +108,7 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
     lotl: parsedLotl.summary,
     weBuildProfile,
     fixtureReadiness,
+    fcafTrustedAuthorities,
     results,
     version,
   });

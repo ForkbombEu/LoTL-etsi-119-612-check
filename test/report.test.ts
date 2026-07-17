@@ -88,6 +88,8 @@ describe("runAudit", () => {
     expect(markdown).toContain("Source: xml_signature");
     expect(markdown).toContain("**json_lote.pointers.service_digital_identities**");
     expect(markdown).toContain("Can this trust-list bundle be used as a wallet trust fixture?");
+    expect(markdown).toContain("## FCAF trusted_authorities fixture readiness");
+    expect(report.fcafTrustedAuthorities.scenarios).toHaveLength(8);
   });
 
   it("adds WE BUILD list-type and pointer-consistency summary from a reduced fixture", async () => {

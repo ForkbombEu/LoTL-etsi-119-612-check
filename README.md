@@ -304,6 +304,10 @@ npm run eudi-ri-tlp-fixture-readiness
 
 It writes results under `artifacts/reference-smoke/eudi-ri-tlp/` and is not part of `npm test`.
 
+## FCAF `trusted_authorities` fixture mapping
+
+Every audit report also includes `fcafTrustedAuthorities`, a readiness matrix for the implemented FCAF WS_RP trust-mechanism fixture scenarios. It maps the audited LoTL pointers, fetched TL/LoTE artifacts, XML signing-certificate evidence, parseable pointer certificates, WE BUILD Access CA/WRPAC roles, and optional RPAC-chain result to AKI, `etsi_tl`, cascading, and RPAC-to-Access-CA cases. Each scenario includes a readiness status, evidence, and explicit missing prerequisites. It does not create presentation requests or make a verifier trust decision.
+
 ## TS 119 612 vs TS 119 602
 
 ETSI TS 119 612 defines the XML Trusted List format. JSON LoTE/LoTL-style artifacts are not directly assessable as TS 119 612 XML.
