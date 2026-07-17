@@ -27,6 +27,20 @@ export function renderMarkdownReport(report: AuditReport): string {
   lines.push(`- Roles: ${countSummary(report.weBuildProfile.roleCounts)}`);
   lines.push(`- MIME mismatches: ${report.weBuildProfile.pointerConsistency.declaredMimeMismatches}; duplicate pointers: ${report.weBuildProfile.pointerConsistency.duplicateLocations}; missing ServiceDigitalIdentities: ${report.weBuildProfile.pointerConsistency.pointersMissingServiceDigitalIdentities}; missing LoTEQualifiers: ${report.weBuildProfile.pointerConsistency.pointersMissingQualifiers}`);
   lines.push("");
+  lines.push("## Fixture readiness");
+  lines.push("");
+  lines.push(`- Can this trust-list bundle be used as a wallet trust fixture? ${report.fixtureReadiness.usableForWalletTrustFixture ? "Yes" : "No"}`);
+  lines.push(`- Verdict: ${report.fixtureReadiness.verdict}`);
+  if (report.fixtureReadiness.rpacChain) {
+    lines.push(`- RPAC/WRPAC chain: structurally valid=${report.fixtureReadiness.rpacChain.chainStructurallyValid}; trusted by candidate TL/LoTE anchor=${report.fixtureReadiness.rpacChain.trustedByTlLote}`);
+  }
+  lines.push(`- Caveats: ${report.fixtureReadiness.caveats.join("; ") || "none"}`);
+  lines.push("");
+  for (const fixtureCheck of report.fixtureReadiness.checks) {
+    const evidence = fixtureCheck.evidence === undefined ? "" : ` Evidence: \`${shortJson(fixtureCheck.evidence)}\``;
+    lines.push(`- **${fixtureCheck.id}** (${fixtureCheck.status}): ${fixtureCheck.message}${evidence}`);
+  }
+  lines.push("");
   lines.push("## Summary");
   lines.push("");
   lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | Level |");

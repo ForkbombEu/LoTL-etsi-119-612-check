@@ -97,6 +97,7 @@ export interface AuditReport {
       pointerCertificatesInvalidAtAssessment: number;
     };
   };
+  fixtureReadiness: FixtureReadiness;
   summary: {
     totalPointers: number;
     fetched: number;
@@ -190,4 +191,16 @@ export interface CliOptions {
   strict: boolean;
   includeJsonLoteChecks: boolean;
   fetch: boolean;
+  rpacChain?: string;
+}
+
+export interface FixtureReadiness {
+  usableForWalletTrustFixture: boolean;
+  verdict: "ready" | "not_ready" | "partially_ready" | "not_checked";
+  checks: CheckResult[];
+  caveats: string[];
+  rpacChain?: {
+    chainStructurallyValid: boolean;
+    trustedByTlLote: boolean;
+  };
 }

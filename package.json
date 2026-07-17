@@ -11,7 +11,8 @@
     "test": "vitest run",
     "api": "node dist/api/server.js",
     "dev:api": "tsx src/api/server.ts",
-    "reference-smoke": "scripts/optional/reference-source-smoke.sh"
+    "reference-smoke": "scripts/optional/reference-source-smoke.sh",
+    "eudi-ri-tlp-fixture-readiness": "scripts/optional/eudi-ri-tlp-fixture-readiness.sh"
   },
   "engines": {
     "node": ">=20"

@@ -5,6 +5,7 @@ export function buildAuditReport(args: {
   input: AuditReport["input"];
   lotl: AuditReport["lotl"];
   weBuildProfile: AuditReport["weBuildProfile"];
+  fixtureReadiness: AuditReport["fixtureReadiness"];
   results: TrustedListAuditResult[];
   version: string;
 }): AuditReport {
@@ -16,6 +17,7 @@ export function buildAuditReport(args: {
     input: args.input,
     lotl: args.lotl,
     weBuildProfile: args.weBuildProfile,
+    fixtureReadiness: args.fixtureReadiness,
     summary: {
       totalPointers: results.length,
       fetched: results.filter((r) => r.fetch.attempted && r.fetch.ok).length,

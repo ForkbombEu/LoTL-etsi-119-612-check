@@ -290,6 +290,20 @@ When the input identifies itself through the canonical WE BUILD WP4 LoTL type UR
 
 `src/eudi/certificateChain.ts` exposes a core assessment function for PEM bundles, base64/DER certificate arrays, and JOSE/JWT `x5c` arrays. It reports end-entity, intermediate, and separately supplied trust-anchor evidence; structural chain validity and TL/LoTE-anchor trust are separate results. An RPAC/WRPAC leaf is never treated as a trust anchor. Revocation is intentionally reported as `not_checked` until an explicit CRL/OCSP policy is implemented.
 
+## EUDI RI fixture readiness
+
+Every audit report includes `fixtureReadiness`, answering whether the audited bundle has the implemented prerequisites for a wallet trust fixture and listing the evidence/caveats. It checks fetched artifact types, XML/JSON assessment coverage, WRPAC-provider role presence, parseable pointer certificate material, signing evidence, NextUpdate warnings, MIME consistency, and an optional RPAC chain result.
+
+Pass a local certificate chain with `--rpac-chain <path>`. The file may be a PEM bundle, one base64/DER value, a JSON string array, or a JSON object with `x5c`. The CLI assesses it against parseable pointer certificate material without promoting the RPAC leaf to an anchor.
+
+The live EUDI RI readiness smoke is manual only:
+
+```bash
+npm run eudi-ri-tlp-fixture-readiness
+```
+
+It writes results under `artifacts/reference-smoke/eudi-ri-tlp/` and is not part of `npm test`.
+
 ## TS 119 612 vs TS 119 602
 
 ETSI TS 119 612 defines the XML Trusted List format. JSON LoTE/LoTL-style artifacts are not directly assessable as TS 119 612 XML.

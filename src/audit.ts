@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sha256Hex } from "./certs.js";
 import { detectArtifact } from "./detect.js";
@@ -7,6 +7,7 @@ import { isUrl, loadInput } from "./input.js";
 import { assessJsonLote } from "./json/loteChecks.js";
 import { parseLotlJson } from "./lotl.js";
 import { assessWeBuildProfile } from "./profiles/weBuild.js";
+import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
@@ -19,6 +20,7 @@ export interface AuditCoreOptions {
   strict: boolean;
   includeJsonLoteChecks: boolean;
   fetch: boolean;
+  rpacChain?: string | string[];
 }
 
 export interface InMemoryAuditOptions extends AuditCoreOptions {
@@ -44,6 +46,7 @@ export interface AssessArtifactUrlOptions {
 
 export async function runAudit(options: CliOptions, version: string): Promise<AuditReport> {
   const input = await loadInput(options.input, options.timeoutMs);
+  const rpacChain = options.rpacChain ? await loadRpacChain(options.rpacChain) : undefined;
   const result = await runAuditInMemory(
     {
       source: options.input,
@@ -56,6 +59,7 @@ export async function runAudit(options: CliOptions, version: string): Promise<Au
       strict: options.strict,
       includeJsonLoteChecks: options.includeJsonLoteChecks,
       fetch: options.fetch,
+      rpacChain,
     },
     version,
   );
@@ -77,6 +81,14 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
 
   const results = await mapConcurrent(parsedLotl.pointers, options.concurrency, (pointer) => auditPointer(pointer, options));
   const weBuildProfile = assessWeBuildProfile(parsedLotl, results);
+  const fixtureReadiness = assessFixtureReadiness({
+    source: options.source,
+    lotl: parsedLotl,
+    results,
+    weBuildRoleCounts: weBuildProfile.roleCounts,
+    weBuildPointerConsistency: weBuildProfile.pointerConsistency,
+    rpacChain: options.rpacChain,
+  });
 
   const report = buildAuditReport({
     generatedAt,
@@ -87,6 +99,7 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
     },
     lotl: parsedLotl.summary,
     weBuildProfile,
+    fixtureReadiness,
     results,
     version,
   });
@@ -95,6 +108,22 @@ export async function runAuditInMemory(options: InMemoryAuditOptions, version: s
     json: report,
     markdown: renderMarkdownReport(report),
   };
+}
+
+async function loadRpacChain(path: string): Promise<string | string[]> {
+  const text = (await readFile(path, "utf8")).trim();
+  if (!text) throw new Error("RPAC chain file is empty.");
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (Array.isArray(parsed) && parsed.every((item): item is string => typeof item === "string")) return parsed;
+    if (typeof parsed === "object" && parsed !== null && "x5c" in parsed) {
+      const x5c = (parsed as { x5c?: unknown }).x5c;
+      if (Array.isArray(x5c) && x5c.every((item): item is string => typeof item === "string")) return x5c;
+    }
+  } catch {
+    // PEM and base64 chain files are accepted as raw text.
+  }
+  return text;
 }
 
 export async function runAuditFromUrl(url: string, options: AuditCoreOptions, version: string): Promise<AuditInMemoryResult> {

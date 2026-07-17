@@ -135,6 +135,12 @@ describe("API server", () => {
           pointerCertificatesInvalidAtAssessment: 0,
         },
       },
+      fixtureReadiness: {
+        usableForWalletTrustFixture: false,
+        verdict: "not_checked",
+        checks: [],
+        caveats: ["No referenced artifact was assessed."],
+      },
       summary: {
         totalPointers: 0,
         fetched: 0,

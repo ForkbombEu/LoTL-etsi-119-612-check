@@ -19,6 +19,7 @@ const program = new Command()
   .option("--xsd <path>", "Optional local ETSI TS 119 612 XSD path.")
   .option("--strict", "Failed mandatory checks make XML artifact non_conformant.", false)
   .option("--include-json-lote-checks", "Perform basic JSON LoTE metadata checks.", false)
+  .option("--rpac-chain <path>", "Optional PEM, base64, x5c JSON, or JSON certificate-array RPAC/WRPAC chain.")
   .option("--no-fetch", "Parse LoTL only and report referenced URLs without fetching.")
   .parse();
 
@@ -32,6 +33,7 @@ const opts = program.opts<{
   strict: boolean;
   includeJsonLoteChecks: boolean;
   fetch: boolean;
+  rpacChain?: string;
 }>();
 
 const input = resolveInput(opts.input, opts.referenceSource);
@@ -47,6 +49,7 @@ try {
       strict: opts.strict,
       includeJsonLoteChecks: opts.includeJsonLoteChecks,
       fetch: opts.fetch,
+      rpacChain: opts.rpacChain,
     },
     pkg.version,
   );
