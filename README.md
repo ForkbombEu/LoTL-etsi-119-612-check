@@ -6,6 +6,8 @@ Repository orientation:
 
 - [Current and target architecture](docs/architecture.md)
 - [Trust-infrastructure glossary](docs/glossary.md)
+- [EUDI trust model](docs/eudi-trust-model.md)
+- [Credimi / Reference Wallet / Verifier workflow](docs/credimi-reference-wallet-workflow.md)
 
 The tool reads:
 
