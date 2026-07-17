@@ -113,6 +113,50 @@ describe("API server", () => {
     await app.close();
   });
 
+  it("exposes the expanded assessment core through POST endpoints", async () => {
+    const app = await buildServer();
+    const [lotl, xml] = await Promise.all([
+      readFile("test/fixtures/lotl.json", "utf8"),
+      readFile("test/fixtures/tsl-valid-ish.xml", "utf8"),
+    ]);
+    const lotlResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/lotl",
+      payload: { content: lotl, options: { fetch: false } },
+    });
+    expect(lotlResponse.statusCode).toBe(200);
+    expect(lotlResponse.json().report.summary.totalPointers).toBe(3);
+
+    const artifactResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: { content: xml, source: "fixture.xml", contentType: "application/xml", options: { strict: false, includeJsonLoteChecks: true } },
+    });
+    expect(artifactResponse.statusCode).toBe(200);
+    expect(artifactResponse.json().result).toMatchObject({ source: "fixture.xml", fetch: { attempted: false }, detected: { format: "xml" } });
+
+    const chainResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/certificate-chain",
+      payload: { chain: ["malformed-certificate"], declaredRole: "access_ca_or_wrpac_provider" },
+    });
+    expect(chainResponse.statusCode).toBe(200);
+    expect(chainResponse.json().assessment.chainStructurallyValid).toBe(false);
+
+    const fixtureResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/fixture-readiness",
+      payload: { lotl: JSON.parse(lotl), options: { fetch: false } },
+    });
+    expect(fixtureResponse.statusCode).toBe(200);
+    expect(fixtureResponse.json()).toMatchObject({
+      fixtureReadiness: { verdict: "not_checked" },
+      fcafTrustedAuthorities: { scenarios: expect.any(Array) },
+      negativeFixtureDescriptors: expect.any(Array),
+    });
+    await app.close();
+  });
+
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
@@ -203,6 +247,11 @@ describe("API server", () => {
       "/api/v1/lotl/parse",
       "/api/v1/artifact/assess-url",
       "/api/v1/report/markdown",
+      "/api/audit/lotl",
+      "/api/audit/artifact",
+      "/api/audit/certificate-chain",
+      "/api/audit/fixture-readiness",
+      "/api/reports/markdown",
       "/docs",
     ]) {
       expect(parsedYaml.paths[path]).toBeDefined();

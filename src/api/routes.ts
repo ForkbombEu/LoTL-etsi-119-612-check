@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import { assessArtifactUrl, runAuditFromJson, runAuditFromUrl } from "../audit.js";
+import { assessArtifactContent, assessArtifactUrl, runAuditFromJson, runAuditFromUrl } from "../audit.js";
+import { assessCertificateChain } from "../eudi/certificateChain.js";
+import type { EudiTrustRole } from "../eudi/roles.js";
 import { isUrl } from "../input.js";
 import { parseLotlJson } from "../lotl.js";
 import { renderMarkdownReport } from "../report/markdownReport.js";
@@ -10,8 +12,11 @@ import { renderDocsHtml } from "./docs.js";
 import { loadOpenApiJson, loadOpenApiYaml } from "./openapi.js";
 import {
   artifactAssessUrlSchema,
+  artifactAssessContentSchema,
   auditJsonSchema,
+  auditLotlSchema,
   auditUrlSchema,
+  certificateChainSchema,
   defaultArtifactOptions,
   defaultAuditOptions,
   lotlParseSchema,
@@ -33,6 +38,14 @@ interface AuditJsonBody {
   options?: Partial<ReturnType<typeof defaultAuditOptions>>;
 }
 
+interface AuditLotlBody {
+  url?: string;
+  lotl?: unknown;
+  content?: string;
+  options?: Partial<ReturnType<typeof defaultAuditOptions>>;
+  rpacChain?: string | string[];
+}
+
 interface LotlParseBody {
   lotl: unknown;
 }
@@ -41,6 +54,21 @@ interface ArtifactAssessUrlBody {
   url: string;
   declared?: Partial<TrustedListAuditResult["declared"]>;
   options?: Partial<ReturnType<typeof defaultArtifactOptions>>;
+}
+
+interface ArtifactAssessContentBody {
+  content: string;
+  source?: string;
+  contentType?: string;
+  declared?: Partial<TrustedListAuditResult["declared"]>;
+  options?: Partial<ReturnType<typeof defaultArtifactOptions>>;
+}
+
+interface CertificateChainBody {
+  chain: string | string[];
+  format?: "pem" | "der_base64" | "x5c";
+  trustAnchors?: string[];
+  declaredRole?: EudiTrustRole;
 }
 
 interface MarkdownReportBody {
@@ -85,6 +113,11 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     };
   });
 
+  app.post<{ Body: AuditLotlBody }>("/api/audit/lotl", { schema: auditLotlSchema }, async (request) => {
+    const result = await auditLotl(request.body, options, request.server);
+    return { report: result.json, markdown: result.markdown };
+  });
+
   app.post<{ Body: LotlParseBody }>("/api/v1/lotl/parse", { schema: lotlParseSchema }, async (request) => {
     const parsed = parseLotlJson(lotlText(request.body.lotl));
     return {
@@ -112,9 +145,47 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     return { result };
   });
 
+  app.post<{ Body: ArtifactAssessContentBody }>("/api/audit/artifact", { schema: artifactAssessContentSchema }, async (request) => {
+    const artifactOptions = defaultArtifactOptions(request.body.options, options.config.auditDefaults);
+    const result = await assessArtifactContent({
+      content: request.body.content,
+      source: request.body.source,
+      contentType: request.body.contentType,
+      declared: request.body.declared,
+      ...artifactOptions,
+    });
+    return { result };
+  });
+
+  app.post<{ Body: CertificateChainBody }>("/api/audit/certificate-chain", { schema: certificateChainSchema }, async (request) => ({
+    assessment: assessCertificateChain(request.body),
+  }));
+
+  app.post<{ Body: AuditLotlBody }>("/api/audit/fixture-readiness", { schema: auditLotlSchema }, async (request) => {
+    const result = await auditLotl(request.body, options, request.server);
+    return {
+      fixtureReadiness: result.json.fixtureReadiness,
+      fcafTrustedAuthorities: result.json.fcafTrustedAuthorities,
+      negativeFixtureDescriptors: result.json.negativeFixtureDescriptors,
+    };
+  });
+
   app.post<{ Body: MarkdownReportBody }>("/api/v1/report/markdown", { schema: markdownReportSchema }, async (request) => ({
     markdown: renderMarkdownReport(request.body.report),
   }));
+
+  app.post<{ Body: MarkdownReportBody }>("/api/reports/markdown", { schema: markdownReportSchema }, async (request) => ({
+    markdown: renderMarkdownReport(request.body.report),
+  }));
+}
+
+async function auditLotl(body: AuditLotlBody, routeOptions: RouteOptions, app: FastifyInstance) {
+  const auditOptions = { ...defaultAuditOptions(body.options, routeOptions.config.auditDefaults), rpacChain: body.rpacChain };
+  if (body.url !== undefined) {
+    if (!isUrl(body.url)) throw app.httpErrors.badRequest("Invalid URL.", { code: "invalid_url" });
+    return runAuditFromUrl(body.url, auditOptions, routeOptions.version);
+  }
+  return runAuditFromJson(body.content ?? body.lotl, auditOptions, routeOptions.version);
 }
 
 function lotlText(value: unknown): string {

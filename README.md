@@ -224,6 +224,8 @@ curl -s -X POST http://127.0.0.1:3000/api/v1/report/markdown \
   -d @report-wrapper.json | jq -r '.markdown'
 ```
 
+Expanded POST endpoints (also documented in Stoplight) are `/api/audit/lotl`, `/api/audit/artifact`, `/api/audit/certificate-chain`, `/api/audit/fixture-readiness`, and `/api/reports/markdown`. The LoTL endpoint accepts `url`, `lotl`, or raw JSON `content`; the artifact endpoint accepts raw XML/JSON content without fetching it. Certificate-chain and fixture-readiness responses reuse the same core assessment functions as the CLI/API audit flow.
+
 Assessment endpoints return both:
 
 - `report`: machine-readable `AuditReport` JSON;

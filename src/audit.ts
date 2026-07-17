@@ -46,6 +46,16 @@ export interface AssessArtifactUrlOptions {
   xsd?: string;
 }
 
+export interface AssessArtifactContentOptions {
+  content: string;
+  source?: string;
+  contentType?: string;
+  declared?: Partial<TrustedListAuditResult["declared"]>;
+  strict: boolean;
+  includeJsonLoteChecks: boolean;
+  xsd?: string;
+}
+
 export async function runAudit(options: CliOptions, version: string): Promise<AuditReport> {
   const input = await loadInput(options.input, options.timeoutMs);
   const rpacChain = options.rpacChain ? await loadRpacChain(options.rpacChain) : undefined;
@@ -203,6 +213,24 @@ export async function assessArtifactUrl(
   );
 }
 
+/** Assess supplied XML or JSON directly without a network request. */
+export async function assessArtifactContent(options: AssessArtifactContentOptions): Promise<TrustedListAuditResult> {
+  const bytes = Buffer.from(options.content, "utf8");
+  const source = options.source ?? "request-body";
+  const base: TrustedListAuditResult = {
+    id: resultId({ index: 1, location: source, declared: normalizeDeclared(options.declared), raw: undefined }),
+    index: 1,
+    source,
+    location: source,
+    declared: normalizeDeclared(options.declared),
+    fetch: { attempted: false, ok: true, contentType: options.contentType, bytes: bytes.length, sha256: sha256Hex(bytes) },
+    detected: { format: "unknown", artifactKind: "unknown" },
+    standardApplicability: unknownApplicability(),
+    ts119612: { applicable: false, conformanceLevel: "not_checked", score: null, checks: [check("input.raw_artifact", "parse", "pass", "info", "Raw artifact content was supplied directly; no network request was made.")], mandatoryFailures: [], warnings: [] },
+  };
+  return assessArtifactBytes(base, bytes, options.contentType, options);
+}
+
 async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Promise<TrustedListAuditResult> {
   const base: TrustedListAuditResult = {
     id: resultId(pointer),
@@ -251,7 +279,11 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
     return base;
   }
 
-  const detected = detectArtifact(fetched.bytes, fetched.fetch.contentType);
+  return assessArtifactBytes(base, fetched.bytes, fetched.fetch.contentType, options);
+}
+
+async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, contentType: string | undefined, options: Pick<AuditCoreOptions, "strict" | "includeJsonLoteChecks" | "xsd">): Promise<TrustedListAuditResult> {
+  const detected = detectArtifact(bytes, contentType);
   base.detected = {
     format: detected.format,
     artifactKind: detected.artifactKind,
@@ -259,7 +291,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
   base.standardApplicability = applicabilityFor(detected.artifactKind);
 
   if (detected.artifactKind === "ts119612_xml_tsl" || detected.artifactKind === "ts119612_xml_lotl") {
-    const assessed = await assessTs119612Xml(fetched.bytes.toString("utf8"), {
+    const assessed = await assessTs119612Xml(bytes.toString("utf8"), {
       strict: options.strict,
       xsdPath: options.xsd,
     });

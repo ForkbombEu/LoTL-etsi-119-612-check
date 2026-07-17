@@ -258,6 +258,8 @@ paths:
                       verdict: not_checked
                       checks: []
                       caveats: [No referenced artifact was assessed.]
+                    fcafTrustedAuthorities: { scenarios: [] }
+                    negativeFixtureDescriptors: []
                     summary:
                       totalPointers: 0
                       fetched: 0
@@ -273,6 +275,111 @@ paths:
                         notChecked: 0
                         parseFailed: 0
                     results: []
+      responses:
+        '200':
+          description: Markdown report.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [markdown]
+                properties:
+                  markdown: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/audit/lotl:
+    post:
+      summary: Audit a LoTL from a URL, JSON object, or raw file content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoTLAuditRequest'
+      responses:
+        '200':
+          description: Audit completed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/audit/artifact:
+    post:
+      summary: Assess raw XML or JSON TL/LoTE artifact content without fetching it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArtifactContentRequest' }
+      responses:
+        '200':
+          description: Raw artifact assessment result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result: { $ref: '#/components/schemas/TrustedListAuditResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/audit/certificate-chain:
+    post:
+      summary: Assess an RPAC/WRPAC certificate chain against supplied trust anchors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CertificateChainRequest' }
+      responses:
+        '200':
+          description: Certificate-chain evidence assessment.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assessment]
+                properties:
+                  assessment: { $ref: '#/components/schemas/CertificateChainAssessment' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /api/audit/fixture-readiness:
+    post:
+      summary: Assess EUDI and FCAF trust-fixture readiness from a LoTL input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoTLAuditRequest' }
+      responses:
+        '200':
+          description: Fixture readiness and deterministic negative descriptors.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors]
+                properties:
+                  fixtureReadiness: { $ref: '#/components/schemas/FixtureReadiness' }
+                  fcafTrustedAuthorities: { $ref: '#/components/schemas/FcafTrustedAuthoritiesReadiness' }
+                  negativeFixtureDescriptors:
+                    type: array
+                    items: { $ref: '#/components/schemas/NegativeFixtureDescriptor' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/reports/markdown:
+    post:
+      summary: Render Markdown from a machine-readable audit report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [report]
+              additionalProperties: false
+              properties:
+                report: { $ref: '#/components/schemas/AuditReport' }
       responses:
         '200':
           description: Markdown report.
@@ -318,6 +425,54 @@ components:
         strict: { type: boolean, default: false }
         includeJsonLoteChecks: { type: boolean, default: false }
         fetch: { type: boolean, default: true }
+    LoTLAuditRequest:
+      type: object
+      additionalProperties: false
+      oneOf:
+        - required: [url]
+        - required: [lotl]
+        - required: [content]
+      properties:
+        url: { type: string, format: uri }
+        lotl:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: string
+        content: { type: string }
+        options: { $ref: '#/components/schemas/AuditOptions' }
+        rpacChain:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+    ArtifactContentRequest:
+      type: object
+      required: [content]
+      additionalProperties: false
+      properties:
+        content: { type: string, minLength: 1 }
+        source: { type: string }
+        contentType: { type: string }
+        declared: { $ref: '#/components/schemas/DeclaredPointer' }
+        options: { $ref: '#/components/schemas/ArtifactAssessOptions' }
+    CertificateChainRequest:
+      type: object
+      required: [chain]
+      additionalProperties: false
+      properties:
+        chain:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+        format: { type: string, enum: [pem, der_base64, x5c] }
+        trustAnchors:
+          type: array
+          items: { type: string }
+        declaredRole:
+          type: string
+          enum: [wallet_provider, pid_provider, qeaa_provider, pub_eaa_provider, access_ca_or_wrpac_provider, registration_ca_or_wrprc_provider, registrar_or_register]
     ArtifactAssessOptions:
       type: object
       additionalProperties: false
@@ -646,3 +801,38 @@ components:
         notAfter: { type: string }
         fingerprintSha256: { type: string }
         validAtAssessmentTime: { type: boolean }
+    CertificateChainAssessment:
+      type: object
+      required: [certificates, trustAnchors, chainStructurallyValid, trustedByTlLote, checks]
+      properties:
+        declaredRole: { type: string }
+        certificates:
+          type: array
+          items: { $ref: '#/components/schemas/ChainCertificateEvidence' }
+        trustAnchors:
+          type: array
+          items: { $ref: '#/components/schemas/ChainCertificateEvidence' }
+        chainStructurallyValid: { type: boolean }
+        trustedByTlLote: { type: boolean }
+        checks:
+          type: array
+          items: { $ref: '#/components/schemas/CheckResult' }
+    ChainCertificateEvidence:
+      type: object
+      required: [position, subject, issuer, serialNumber, notBefore, notAfter, fingerprintSha256, validAtAssessmentTime]
+      properties:
+        position: { type: string, enum: [end_entity, intermediate, trust_anchor] }
+        subject: { type: string }
+        issuer: { type: string }
+        serialNumber: { type: string }
+        notBefore: { type: string }
+        notAfter: { type: string }
+        fingerprintSha256: { type: string }
+        validAtAssessmentTime: { type: boolean }
+        basicConstraintsCa: { type: boolean }
+        keyUsage:
+          type: array
+          items: { type: string }
+        extendedKeyUsage:
+          type: array
+          items: { type: string }

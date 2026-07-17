@@ -67,6 +67,21 @@ export const auditJsonSchema: FastifySchema = {
   },
 };
 
+export const auditLotlSchema: FastifySchema = {
+  body: {
+    type: "object",
+    additionalProperties: false,
+    anyOf: [{ required: ["url"] }, { required: ["lotl"] }, { required: ["content"] }],
+    properties: {
+      url: { type: "string", format: "uri" },
+      lotl: { anyOf: [{ type: "object", additionalProperties: true }, { type: "string" }] },
+      content: { type: "string" },
+      options: auditOptions,
+      rpacChain: { anyOf: [{ type: "string" }, { type: "array", items: { type: "string" } }] },
+    },
+  },
+};
+
 export const lotlParseSchema: FastifySchema = {
   body: {
     type: "object",
@@ -89,6 +104,35 @@ export const artifactAssessUrlSchema: FastifySchema = {
       url: { type: "string", format: "uri" },
       declared: declaredPointer,
       options: artifactOptions,
+    },
+  },
+};
+
+export const artifactAssessContentSchema: FastifySchema = {
+  body: {
+    type: "object",
+    required: ["content"],
+    additionalProperties: false,
+    properties: {
+      content: { type: "string", minLength: 1 },
+      source: { type: "string" },
+      contentType: { type: "string" },
+      declared: declaredPointer,
+      options: artifactOptions,
+    },
+  },
+};
+
+export const certificateChainSchema: FastifySchema = {
+  body: {
+    type: "object",
+    required: ["chain"],
+    additionalProperties: false,
+    properties: {
+      chain: { anyOf: [{ type: "string" }, { type: "array", items: { type: "string" }, minItems: 1 }] },
+      format: { type: "string", enum: ["pem", "der_base64", "x5c"] },
+      trustAnchors: { type: "array", items: { type: "string" } },
+      declaredRole: { type: "string", enum: ["wallet_provider", "pid_provider", "qeaa_provider", "pub_eaa_provider", "access_ca_or_wrpac_provider", "registration_ca_or_wrprc_provider", "registrar_or_register"] },
     },
   },
 };
