@@ -13,7 +13,8 @@ export interface XmlAssessmentOptions {
 
 type ExtractedMetadata = NonNullable<TrustedListAuditResult["extracted"]>;
 
-const ETSI_NS = "http://uri.etsi.org/19612/v2.4.1#";
+const CANONICAL_ETSI_NS = "http://uri.etsi.org/02231/v2#";
+const EUDI_RI_ETSI_NS_VARIANT = "http://uri.etsi.org/19612/v2.4.1#";
 const EU_APPROPRIATE = "http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate";
 
 export async function assessTs119612Xml(
@@ -53,9 +54,22 @@ export async function assessTs119612Xml(
   const rootNs = root.namespaceURI ?? undefined;
   push(checks, "parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML parsed successfully." : "XML parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined);
   push(checks, "parse.root_name", "parse", rootLocalName === "TrustServiceStatusList" ? "pass" : "fail", "critical", "Root element local name is TrustServiceStatusList.", rootLocalName);
-  push(checks, "parse.root_namespace", "parse", rootNs === ETSI_NS ? "pass" : "fail", "error", "Root namespace matches ETSI TS 119 612 v2.4.1.", rootNs);
+  const namespaceStatus = rootNs === CANONICAL_ETSI_NS ? "pass" : rootNs === EUDI_RI_ETSI_NS_VARIANT ? "warn" : "fail";
+  push(
+    checks,
+    "parse.root_namespace",
+    "parse",
+    namespaceStatus,
+    namespaceStatus === "pass" ? "info" : namespaceStatus === "warn" ? "warning" : "error",
+    namespaceStatus === "pass"
+      ? "Root namespace matches the canonical ETSI TS 119 612 namespace."
+      : namespaceStatus === "warn"
+        ? "Root namespace is the observed EUDI RI/profile TS 119 612 variant; use an XSD whose target namespace matches this artifact."
+        : "Root namespace does not identify a supported ETSI TS 119 612 namespace.",
+    rootNs,
+  );
   push(checks, "parse.root_id", "parse", root.hasAttribute("Id") ? "pass" : "fail", "error", "Root TrustServiceStatusList has Id attribute.", root.getAttribute("Id") ?? undefined);
-  if (rootLocalName !== "TrustServiceStatusList" || rootNs !== ETSI_NS) {
+  if (rootLocalName !== "TrustServiceStatusList" || !isTs119612Namespace(rootNs)) {
     return {
       detected: { format: "xml", artifactKind: rootLocalName === "TrustServiceStatusList" ? "xml_lotl_like" : "unknown" },
       ts119612: {
@@ -84,7 +98,7 @@ export async function assessTs119612Xml(
   });
   checks.push(...signature.checks);
   certificates.push(...signature.certificates);
-  checks.push(await validateXsd(xml, options.xsdPath));
+  checks.push(await validateXsd(xml, options.xsdPath, {}, { expectedNamespace: rootNs }));
 
   const scheme = text(document, `/*[local-name()='TrustServiceStatusList']/${L("SchemeInformation")}`);
   push(checks, "structure.scheme_information", "structure", scheme ? "pass" : "fail", "critical", "SchemeInformation element exists.");
@@ -144,6 +158,10 @@ export async function assessTs119612Xml(
     },
     extracted,
   };
+}
+
+function isTs119612Namespace(namespace: string | undefined): boolean {
+  return namespace === CANONICAL_ETSI_NS || namespace === EUDI_RI_ETSI_NS_VARIANT;
 }
 
 function isLotlTslType(tslType: string | undefined): boolean {

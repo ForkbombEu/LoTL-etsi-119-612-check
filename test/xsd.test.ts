@@ -3,6 +3,7 @@ import { validateXsd } from "../src/xml/xsd.js";
 
 const xml = "<TrustServiceStatusList />";
 const xsdPath = "test/fixtures/minimal-tsl.xsd";
+const canonicalXsdPath = "test/fixtures/minimal-tsl-canonical.xsd";
 
 describe("validateXsd", () => {
   it("reports not_checked when no local schema is supplied", async () => {
@@ -48,5 +49,20 @@ describe("validateXsd", () => {
       severity: "error",
       evidence: "element not allowed",
     });
+  });
+
+  it("does not validate with an XSD for a different namespace", async () => {
+    const runner = vi.fn();
+    await expect(validateXsd(xml, canonicalXsdPath, { commandRunner: runner }, {
+      expectedNamespace: "http://uri.etsi.org/19612/v2.4.1#",
+    })).resolves.toMatchObject({
+      status: "not_checked",
+      message: expect.stringContaining("target namespace does not match"),
+      evidence: expect.objectContaining({
+        artifactNamespace: "http://uri.etsi.org/19612/v2.4.1#",
+        schemaNamespace: "http://uri.etsi.org/02231/v2#",
+      }),
+    });
+    expect(runner).not.toHaveBeenCalled();
   });
 });

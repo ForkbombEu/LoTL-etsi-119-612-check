@@ -52,6 +52,29 @@ describe("assessTs119612Xml", () => {
     );
   });
 
+  it("warns for the observed EUDI RI namespace variant while accepting it as TS 119 612", async () => {
+    const xml = await readFile("test/fixtures/tsl-valid-ish.xml", "utf8");
+    const result = await assessTs119612Xml(xml, { strict: false });
+    expect(result.detected.artifactKind).toBe("ts119612_xml_tsl");
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "parse.root_namespace",
+      status: "warn",
+      severity: "warning",
+    }));
+  });
+
+  it("accepts the canonical namespace without a namespace warning", async () => {
+    const xml = (await readFile("test/fixtures/tsl-valid-ish.xml", "utf8"))
+      .replace("http://uri.etsi.org/19612/v2.4.1#", "http://uri.etsi.org/02231/v2#");
+    const result = await assessTs119612Xml(xml, { strict: false });
+    expect(result.detected.artifactKind).toBe("ts119612_xml_tsl");
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "parse.root_namespace",
+      status: "pass",
+      severity: "info",
+    }));
+  });
+
   it("warns when NextUpdate is expired at assessment time", async () => {
     const xml = await readFile("test/fixtures/tsl-expired-next-update.xml", "utf8");
     const result = await assessTs119612Xml(xml, {

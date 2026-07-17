@@ -11,6 +11,14 @@ describe("detectArtifact", () => {
     });
   });
 
+  it("detects the canonical TS 119 612 namespace", () => {
+    const xml = "<TrustServiceStatusList xmlns=\"http://uri.etsi.org/02231/v2#\" />";
+    expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({
+      format: "xml",
+      artifactKind: "ts119612_xml_tsl",
+    });
+  });
+
   it("distinguishes a TS 119 612 XML LoTL", () => {
     const xml = `<?xml version="1.0"?><TrustServiceStatusList xmlns="http://uri.etsi.org/19612/v2.4.1#"><SchemeInformation><TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUlistofthelists</TSLType></SchemeInformation></TrustServiceStatusList>`;
     expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({

@@ -1,4 +1,4 @@
-import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -16,10 +16,15 @@ export interface XsdValidationDependencies {
   commandRunner?: XsdCommandRunner;
 }
 
+export interface XsdValidationOptions {
+  expectedNamespace?: string;
+}
+
 export async function validateXsd(
   xml: string,
   xsdPath?: string,
   dependencies: XsdValidationDependencies = {},
+  options: XsdValidationOptions = {},
 ): Promise<CheckResult> {
   if (!xsdPath) {
     return {
@@ -42,6 +47,20 @@ export async function validateXsd(
       message: "XSD validation not checked because schema file was not readable.",
       evidence: xsdPath,
     };
+  }
+
+  if (options.expectedNamespace) {
+    const schemaNamespace = await targetNamespace(xsdPath);
+    if (schemaNamespace !== options.expectedNamespace) {
+      return {
+        id: "schema.xsd",
+        category: "schema",
+        status: "not_checked",
+        severity: "warning",
+        message: "XSD validation not checked because the supplied schema target namespace does not match the XML artifact namespace.",
+        evidence: { artifactNamespace: options.expectedNamespace, schemaNamespace: schemaNamespace ?? null, xsdPath },
+      };
+    }
   }
 
   const commandRunner = dependencies.commandRunner ?? runCommand;
@@ -71,6 +90,15 @@ export async function validateXsd(
     };
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function targetNamespace(xsdPath: string): Promise<string | undefined> {
+  try {
+    const schema = await readFile(xsdPath, "utf8");
+    return /<[^>]*schema\b[^>]*\btargetNamespace\s*=\s*["']([^"']+)["']/i.exec(schema)?.[1];
+  } catch {
+    return undefined;
   }
 }
 

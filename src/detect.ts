@@ -1,7 +1,8 @@
 import { DOMParser } from "@xmldom/xmldom";
 import type { ArtifactKind, DetectedFormat } from "./types.js";
 
-const ETSI_TS119612_NAMESPACE = "http://uri.etsi.org/19612/v2.4.1#";
+const CANONICAL_ETSI_TS119612_NAMESPACE = "http://uri.etsi.org/02231/v2#";
+const EUDI_RI_TS119612_NAMESPACE_VARIANT = "http://uri.etsi.org/19612/v2.4.1#";
 const ETSI_TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
 
 export interface DetectionResult {
@@ -38,7 +39,7 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
     const doc = new DOMParser().parseFromString(bytes.toString("utf8"), "application/xml");
     const root = doc.documentElement;
     const localName = root?.localName ?? root?.nodeName;
-    if (root && localName === "TrustServiceStatusList" && root.namespaceURI === ETSI_TS119612_NAMESPACE) {
+    if (root && localName === "TrustServiceStatusList" && isTs119612Namespace(root.namespaceURI)) {
       return {
         format: "xml",
         artifactKind: isXmlLotl(root) ? "ts119612_xml_lotl" : "ts119612_xml_tsl",
@@ -55,6 +56,10 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
     return { format: "text", artifactKind: "unknown" };
   }
   return { format: "unknown", artifactKind: "unknown" };
+}
+
+function isTs119612Namespace(namespace: string | null): boolean {
+  return namespace === CANONICAL_ETSI_TS119612_NAMESPACE || namespace === EUDI_RI_TS119612_NAMESPACE_VARIANT;
 }
 
 function startsJson(text: string): boolean {
