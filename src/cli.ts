@@ -2,6 +2,7 @@
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { runAudit } from "./audit.js";
+import { referenceSourceIds, resolveReferenceSource } from "./referenceSources.js";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -10,7 +11,8 @@ const program = new Command()
   .name("we-build-tl-audit")
   .description("Audit trusted lists referenced by a WE BUILD WP4 LoTL JSON file.")
   .version(pkg.version)
-  .requiredOption("--input <path-or-url>", "Local path or URL to LoTL JSON.")
+  .option("--input <path-or-url>", "Local path or URL to LoTL JSON.")
+  .option("--reference-source <id>", `Named reference source (${referenceSourceIds().join(", ")}).`)
   .option("--out-dir <dir>", "Output directory.", "./tl-audit-output")
   .option("--concurrency <n>", "Concurrent referenced artifact fetches.", parsePositiveInteger, 4)
   .option("--timeout-ms <n>", "Fetch timeout in milliseconds.", parsePositiveInteger, 15_000)
@@ -22,6 +24,7 @@ const program = new Command()
 
 const opts = program.opts<{
   input: string;
+  referenceSource?: string;
   outDir: string;
   concurrency: number;
   timeoutMs: number;
@@ -31,10 +34,12 @@ const opts = program.opts<{
   fetch: boolean;
 }>();
 
+const input = resolveInput(opts.input, opts.referenceSource);
+
 try {
   const report = await runAudit(
     {
-      input: opts.input,
+      input,
       outDir: opts.outDir,
       concurrency: opts.concurrency,
       timeoutMs: opts.timeoutMs,
@@ -50,6 +55,23 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
+}
+
+function resolveInput(input: string | undefined, referenceSourceId: string | undefined): string {
+  if (input && referenceSourceId) {
+    program.error("Use either --input or --reference-source, not both.");
+  }
+  if (input) return input;
+  if (!referenceSourceId) {
+    program.error("Missing required option: provide --input <path-or-url> or --reference-source <id>.");
+    throw new Error("Unreachable after Commander error.");
+  }
+  const referenceSource = resolveReferenceSource(referenceSourceId);
+  if (!referenceSource) {
+    program.error(`Unknown reference source '${referenceSourceId}'. Available sources: ${referenceSourceIds().join(", ")}.`);
+    throw new Error("Unreachable after Commander error.");
+  }
+  return referenceSource.url;
 }
 
 function parsePositiveInteger(value: string): number {

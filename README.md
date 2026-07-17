@@ -44,6 +44,24 @@ node dist/cli.js \
   --out-dir ./audit-output
 ```
 
+Named reference source:
+
+```bash
+node dist/cli.js \
+  --reference-source we-build-lotl-json \
+  --out-dir ./audit-output
+```
+
+Supported named sources are `eudi-ri-tlp`, `we-build-lotl-json`, and `we-build-lotl-xml`. They resolve to the EUDI RI Trusted List Provider and the WE BUILD WP4 JSON/XML LoTL URLs. They are explicit reference inputs for manual assessment, not implicit production trust roots. `--input` remains available for local paths and arbitrary URLs; it cannot be combined with `--reference-source`.
+
+Optional live smoke checks are intentionally outside `npm test`:
+
+```bash
+npm run reference-smoke -- we-build-lotl-json
+```
+
+The optional command builds the CLI, fetches the named live source, and writes reports and fetched evidence to `artifacts/reference-smoke/<source-name>/`, which is ignored by git.
+
 With local ETSI TS 119 612 XSD and strict structural scoring:
 
 ```bash

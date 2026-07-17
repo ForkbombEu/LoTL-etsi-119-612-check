@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "api": "node dist/api/server.js",
-    "dev:api": "tsx src/api/server.ts"
+    "dev:api": "tsx src/api/server.ts",
+    "reference-smoke": "scripts/optional/reference-source-smoke.sh"
   },
   "engines": {
     "node": ">=20"
