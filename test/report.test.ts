@@ -70,10 +70,13 @@ describe("runAudit", () => {
       weBuildProfile: "applicable",
       eudiTrustRole: "unknown",
     });
-    await expect(readFile(join(outDir, "report.json"), "utf8")).resolves.toContain("\"structure.scheme_information\"");
+    const reportJson = await readFile(join(outDir, "report.json"), "utf8");
+    expect(reportJson).toContain("\"structure.scheme_information\"");
+    expect(reportJson).toContain("\"schema.xsd\"");
     const markdown = await readFile(join(outDir, "report.md"), "utf8");
     expect(markdown).toContain("TS 119 602");
     expect(markdown).toContain("**structure.scheme_information**");
     expect(markdown).toContain("**structure.trust_service_provider_list**");
+    expect(markdown).toContain("**schema.xsd**");
   });
 });

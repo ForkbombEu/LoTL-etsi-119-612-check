@@ -272,6 +272,10 @@ The report does not claim full legal or normative ETSI conformance.
 
 XML findings are implemented structural, date, schema, signature, certificate, and service-metadata checks. They are evidence-oriented results rather than a claim of full ETSI TS 119 612 conformance.
 
+### Optional local XSD validation
+
+Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint`. The tool does not download schemas. If no schema is supplied, the schema check is `not_checked`; if `xmllint` is unavailable, it is also `not_checked` with an actionable message. An `xmllint` validation failure is reported as a schema finding in both JSON and Markdown output.
+
 ## Report schema v2
 
 Reports now include `schemaVersion: 2`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, and `standardApplicability` for TS 119 612, TS 119 602, the WE BUILD profile, and EUDI trust roles. Markdown renders the same compact classification in its summary table.

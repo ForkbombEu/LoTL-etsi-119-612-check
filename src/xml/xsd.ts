@@ -1,10 +1,26 @@
-import { access, mkdtemp, writeFile } from "node:fs/promises";
+import { access, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import type { CheckResult } from "../types.js";
 
-export async function validateXsd(xml: string, xsdPath?: string): Promise<CheckResult> {
+export interface XsdCommandResult {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+export type XsdCommandRunner = (command: string, args: string[]) => Promise<XsdCommandResult>;
+
+export interface XsdValidationDependencies {
+  commandRunner?: XsdCommandRunner;
+}
+
+export async function validateXsd(
+  xml: string,
+  xsdPath?: string,
+  dependencies: XsdValidationDependencies = {},
+): Promise<CheckResult> {
   if (!xsdPath) {
     return {
       id: "schema.xsd",
@@ -28,7 +44,8 @@ export async function validateXsd(xml: string, xsdPath?: string): Promise<CheckR
     };
   }
 
-  const xmllint = await hasXmllint();
+  const commandRunner = dependencies.commandRunner ?? runCommand;
+  const xmllint = await hasXmllint(commandRunner);
   if (!xmllint) {
     return {
       id: "schema.xsd",
@@ -41,24 +58,28 @@ export async function validateXsd(xml: string, xsdPath?: string): Promise<CheckR
 
   const dir = await mkdtemp(join(tmpdir(), "we-build-tl-audit-"));
   const xmlPath = join(dir, "artifact.xml");
-  await writeFile(xmlPath, xml);
-  const result = await run("xmllint", ["--schema", xsdPath, xmlPath, "--noout"]);
-  return {
-    id: "schema.xsd",
-    category: "schema",
-    status: result.code === 0 ? "pass" : "fail",
-    severity: result.code === 0 ? "info" : "error",
-    message: result.code === 0 ? "XSD validation passed with xmllint." : "XSD validation failed with xmllint.",
-    evidence: result.stderr || result.stdout || undefined,
-  };
+  try {
+    await writeFile(xmlPath, xml);
+    const result = await commandRunner("xmllint", ["--schema", xsdPath, xmlPath, "--noout"]);
+    return {
+      id: "schema.xsd",
+      category: "schema",
+      status: result.code === 0 ? "pass" : "fail",
+      severity: result.code === 0 ? "info" : "error",
+      message: result.code === 0 ? "XSD validation passed with xmllint." : "XSD validation failed with xmllint.",
+      evidence: result.stderr || result.stdout || undefined,
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
-async function hasXmllint(): Promise<boolean> {
-  const result = await run("xmllint", ["--version"]);
+async function hasXmllint(commandRunner: XsdCommandRunner): Promise<boolean> {
+  const result = await commandRunner("xmllint", ["--version"]);
   return result.code === 0;
 }
 
-function run(command: string, args: string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
+function runCommand(command: string, args: string[]): Promise<XsdCommandResult> {
   return new Promise((resolve) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
