@@ -286,6 +286,10 @@ Reports now include `schemaVersion: 2`. Each assessed artifact has a stable repo
 
 When the input identifies itself through the canonical WE BUILD WP4 LoTL type URI or WE BUILD WP4 scheme metadata, the report adds a `weBuildProfile` summary. It classifies implemented pointer list types, reports pointer MIME/format consistency, duplicate locations, missing identities/qualifiers, and parses available pointer certificates as evidence. These are profile checks, not a declaration of WE BUILD trust or certificate-chain validation.
 
+## EUDI RPAC/WRPAC chain assessment library
+
+`src/eudi/certificateChain.ts` exposes a core assessment function for PEM bundles, base64/DER certificate arrays, and JOSE/JWT `x5c` arrays. It reports end-entity, intermediate, and separately supplied trust-anchor evidence; structural chain validity and TL/LoTE-anchor trust are separate results. An RPAC/WRPAC leaf is never treated as a trust anchor. Revocation is intentionally reported as `not_checked` until an explicit CRL/OCSP policy is implemented.
+
 ## TS 119 612 vs TS 119 602
 
 ETSI TS 119 612 defines the XML Trusted List format. JSON LoTE/LoTL-style artifacts are not directly assessable as TS 119 612 XML.
