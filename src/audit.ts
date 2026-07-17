@@ -8,7 +8,7 @@ import { assessJsonLote } from "./json/loteChecks.js";
 import { parseLotlJson } from "./lotl.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
-import type { AuditReport, CheckResult, CliOptions, PointerInfo, TrustedListAuditResult } from "./types.js";
+import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
 import { assessTs119612Xml } from "./xml/ts119612Checks.js";
 
 export interface AuditCoreOptions {
@@ -151,7 +151,9 @@ export async function assessArtifactUrl(
 
 async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Promise<TrustedListAuditResult> {
   const base: TrustedListAuditResult = {
+    id: resultId(pointer),
     index: pointer.index,
+    source: pointer.location,
     location: pointer.location,
     declared: pointer.declared,
     fetch: {
@@ -162,6 +164,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
       format: "unknown",
       artifactKind: "unknown",
     },
+    standardApplicability: unknownApplicability(),
     ts119612: {
       applicable: false,
       conformanceLevel: "not_checked",
@@ -199,8 +202,9 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
     format: detected.format,
     artifactKind: detected.artifactKind,
   };
+  base.standardApplicability = applicabilityFor(detected.artifactKind);
 
-  if (detected.format === "xml") {
+  if (detected.artifactKind === "ts119612_xml_tsl" || detected.artifactKind === "ts119612_xml_lotl") {
     const assessed = await assessTs119612Xml(fetched.bytes.toString("utf8"), {
       strict: options.strict,
       xsdPath: options.xsd,
@@ -208,7 +212,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
     return mergeResult(base, assessed);
   }
 
-  if (detected.format === "json" && detected.artifactKind === "json_lote") {
+  if (detected.artifactKind === "json_lote" || detected.artifactKind === "json_lotl") {
     const assessed = assessJsonLote(detected.parsedJson, options.includeJsonLoteChecks);
     return mergeResult(base, assessed);
   }
@@ -216,7 +220,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
   const reason =
     detected.format === "html"
       ? "Fetched artifact appears to be HTML/error page, not TS 119 612 XML."
-      : "Fetched artifact is not a JSON LoTE and not TS 119 612 XML.";
+      : "Fetched artifact is not a recognized JSON LoTE/LoTL or ETSI TS 119 612 XML artifact.";
   base.ts119612 = {
     applicable: false,
     conformanceLevel: "not_applicable",
@@ -229,6 +233,39 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
     warnings: [],
   };
   return base;
+}
+
+function resultId(pointer: PointerInfo): string {
+  return `artifact-${String(pointer.index).padStart(3, "0")}-${sha256Hex(pointer.location).slice(0, 12)}`;
+}
+
+function unknownApplicability(): StandardApplicability {
+  return {
+    ts119612: "unknown",
+    ts119602: "unknown",
+    weBuildProfile: "unknown",
+    eudiTrustRole: "unknown",
+  };
+}
+
+function applicabilityFor(artifactKind: ArtifactKind): StandardApplicability {
+  if (artifactKind === "ts119612_xml_tsl" || artifactKind === "ts119612_xml_lotl") {
+    return {
+      ts119612: "applicable",
+      ts119602: "not_applicable",
+      weBuildProfile: "unknown",
+      eudiTrustRole: "unknown",
+    };
+  }
+  if (artifactKind === "json_lote" || artifactKind === "json_lotl") {
+    return {
+      ts119612: "not_applicable",
+      ts119602: "applicable",
+      weBuildProfile: "applicable",
+      eudiTrustRole: "unknown",
+    };
+  }
+  return unknownApplicability();
 }
 
 async function persistFetchedArtifacts(results: TrustedListAuditResult[], options: CliOptions): Promise<void> {

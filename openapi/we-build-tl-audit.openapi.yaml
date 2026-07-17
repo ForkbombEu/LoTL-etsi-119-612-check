@@ -236,6 +236,7 @@ paths:
               emptyReport:
                 value:
                   report:
+                    schemaVersion: 2
                     tool: { name: we-build-tl-audit, version: 0.1.0 }
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
@@ -330,8 +331,9 @@ components:
           type: string
     AuditReport:
       type: object
-      required: [tool, generatedAt, input, lotl, summary, results]
+      required: [schemaVersion, tool, generatedAt, input, lotl, summary, results]
       properties:
+        schemaVersion: { type: integer, const: 2 }
         tool:
           type: object
           required: [name, version]
@@ -408,9 +410,11 @@ components:
           items: { type: string }
     TrustedListAuditResult:
       type: object
-      required: [index, location, declared, fetch, detected, ts119612]
+      required: [id, index, source, location, declared, fetch, detected, standardApplicability, ts119612]
       properties:
+        id: { type: string }
         index: { type: integer, minimum: 1 }
+        source: { type: string, description: Assessed artifact source URL or path. }
         location: { type: string }
         declared:
           $ref: '#/components/schemas/DeclaredPointer'
@@ -433,7 +437,15 @@ components:
           required: [format, artifactKind]
           properties:
             format: { type: string, enum: [xml, json, html, text, empty, unknown] }
-            artifactKind: { type: string, enum: [ts119612_xml_tsl, xml_lotl_like, json_lote, html_error, unknown] }
+            artifactKind: { type: string, enum: [ts119612_xml_tsl, ts119612_xml_lotl, xml_lotl_like, json_lote, json_lotl, html_error, unknown] }
+        standardApplicability:
+          type: object
+          required: [ts119612, ts119602, weBuildProfile, eudiTrustRole]
+          properties:
+            ts119612: { $ref: '#/components/schemas/ApplicabilityStatus' }
+            ts119602: { $ref: '#/components/schemas/ApplicabilityStatus' }
+            weBuildProfile: { $ref: '#/components/schemas/ApplicabilityStatus' }
+            eudiTrustRole: { $ref: '#/components/schemas/ApplicabilityStatus' }
         ts119612:
           type: object
           required: [applicable, conformanceLevel, score, checks, mandatoryFailures, warnings]
@@ -486,6 +498,9 @@ components:
             jsonLote:
               type: object
               additionalProperties: true
+    ApplicabilityStatus:
+      type: string
+      enum: [applicable, not_applicable, unknown]
     CheckResult:
       type: object
       required: [id, category, status, severity, message]

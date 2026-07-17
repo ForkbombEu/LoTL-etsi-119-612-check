@@ -50,9 +50,27 @@ describe("runAudit", () => {
     expect(report.summary.fetched).toBe(2);
     expect(report.summary.fetchFailed).toBe(1);
     expect(report.summary.jsonArtifacts).toBe(1);
+    expect(report.schemaVersion).toBe(2);
+    expect(report.results[0]).toMatchObject({
+      id: expect.stringMatching(/^artifact-001-[a-f0-9]{12}$/),
+      source: "https://example.test/tl.xml",
+      detected: { artifactKind: "ts119612_xml_tsl" },
+      standardApplicability: {
+        ts119612: "applicable",
+        ts119602: "not_applicable",
+        weBuildProfile: "unknown",
+        eudiTrustRole: "unknown",
+      },
+    });
     expect(report.results[1].ts119612.conformanceLevel).toBe("not_applicable");
     expect(report.results[1].ts119612.mandatoryFailures).toEqual([]);
+    expect(report.results[1].standardApplicability).toEqual({
+      ts119612: "not_applicable",
+      ts119602: "applicable",
+      weBuildProfile: "applicable",
+      eudiTrustRole: "unknown",
+    });
     await expect(readFile(join(outDir, "report.json"), "utf8")).resolves.toContain("\"results\"");
-    await expect(readFile(join(outDir, "report.md"), "utf8")).resolves.toContain("WE BUILD Trusted List Audit");
+    await expect(readFile(join(outDir, "report.md"), "utf8")).resolves.toContain("TS 119 602");
   });
 });

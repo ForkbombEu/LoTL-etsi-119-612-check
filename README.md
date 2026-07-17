@@ -252,6 +252,10 @@ conformant | partially_conformant | non_conformant | not_applicable | not_checke
 
 The report does not claim full legal or normative ETSI conformance.
 
+## Report schema v2
+
+Reports now include `schemaVersion: 2`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, and `standardApplicability` for TS 119 612, TS 119 602, the WE BUILD profile, and EUDI trust roles. Markdown renders the same compact classification in its summary table.
+
 ## TS 119 612 vs TS 119 602
 
 ETSI TS 119 612 defines the XML Trusted List format. JSON LoTE/LoTL-style artifacts are not directly assessable as TS 119 612 XML.

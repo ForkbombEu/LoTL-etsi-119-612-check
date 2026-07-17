@@ -116,6 +116,7 @@ describe("API server", () => {
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
+      schemaVersion: 2,
       tool: { name: "we-build-tl-audit", version: "0.1.0" },
       generatedAt: "2026-07-16T00:00:00.000Z",
       input: { source: "request-body", kind: "json" },

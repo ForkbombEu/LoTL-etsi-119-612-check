@@ -51,7 +51,27 @@ export async function assessTs119612Xml(
   const root = document.documentElement;
   const rootLocalName = root.localName || root.nodeName;
   const rootNs = root.namespaceURI ?? undefined;
-  const artifactKind = rootLocalName === "TrustServiceStatusList" && rootNs === ETSI_NS ? "ts119612_xml_tsl" : "xml_lotl_like";
+  if (rootLocalName !== "TrustServiceStatusList" || rootNs !== ETSI_NS) {
+    return {
+      detected: { format: "xml", artifactKind: rootLocalName === "TrustServiceStatusList" ? "xml_lotl_like" : "unknown" },
+      ts119612: {
+        applicable: false,
+        conformanceLevel: "not_applicable",
+        score: null,
+        checks: [{
+          id: "profile.ts119612_applicability",
+          category: "profile",
+          status: "not_applicable",
+          severity: "info",
+          message: "XML root element and namespace do not identify an ETSI TS 119 612 TrustServiceStatusList artifact.",
+          evidence: { rootLocalName, rootNamespace: rootNs },
+        }],
+        mandatoryFailures: [],
+        warnings: [],
+      },
+    };
+  }
+  const artifactKind = isLotlTslType(text(document, D("TSLType"))) ? "ts119612_xml_lotl" : "ts119612_xml_tsl";
 
   push(checks, "parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML parsed successfully." : "XML parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined);
   push(checks, "parse.root_name", "parse", rootLocalName === "TrustServiceStatusList" ? "pass" : "fail", "critical", "Root element local name is TrustServiceStatusList.", rootLocalName);
@@ -128,6 +148,10 @@ export async function assessTs119612Xml(
     },
     extracted,
   };
+}
+
+function isLotlTslType(tslType: string | undefined): boolean {
+  return /(?:listofthelists|listoflists|lotl)/i.test(tslType ?? "");
 }
 
 function extractMetadata(document: Document): ExtractedMetadata {

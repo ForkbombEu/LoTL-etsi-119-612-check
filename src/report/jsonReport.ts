@@ -9,6 +9,7 @@ export function buildAuditReport(args: {
 }): AuditReport {
   const results = args.results;
   return {
+    schemaVersion: 2,
     tool: { name: "we-build-tl-audit", version: args.version },
     generatedAt: args.generatedAt,
     input: args.input,

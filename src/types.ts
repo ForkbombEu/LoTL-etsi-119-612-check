@@ -11,10 +11,21 @@ export type DetectedFormat = "xml" | "json" | "html" | "text" | "empty" | "unkno
 
 export type ArtifactKind =
   | "ts119612_xml_tsl"
+  | "ts119612_xml_lotl"
   | "xml_lotl_like"
   | "json_lote"
+  | "json_lotl"
   | "html_error"
   | "unknown";
+
+export type ApplicabilityStatus = "applicable" | "not_applicable" | "unknown";
+
+export interface StandardApplicability {
+  ts119612: ApplicabilityStatus;
+  ts119602: ApplicabilityStatus;
+  weBuildProfile: ApplicabilityStatus;
+  eudiTrustRole: ApplicabilityStatus;
+}
 
 export type CheckStatus = "pass" | "fail" | "warn" | "not_applicable" | "not_checked";
 export type CheckSeverity = "info" | "warning" | "error" | "critical";
@@ -50,6 +61,7 @@ export interface CertificateSummary {
 }
 
 export interface AuditReport {
+  schemaVersion: 2;
   tool: {
     name: "we-build-tl-audit";
     version: string;
@@ -91,7 +103,12 @@ export interface AuditReport {
 }
 
 export interface TrustedListAuditResult {
+  /** Stable within a report for the same pointer position and location. */
+  id: string;
   index: number;
+  /** The assessed artifact source URL or path. */
+  source: string;
+  /** @deprecated Use source. Retained for existing integrations. */
   location: string;
   declared: {
     mimeType?: string;
@@ -116,6 +133,7 @@ export interface TrustedListAuditResult {
     format: DetectedFormat;
     artifactKind: ArtifactKind;
   };
+  standardApplicability: StandardApplicability;
   ts119612: {
     applicable: boolean;
     conformanceLevel: ConformanceLevel;

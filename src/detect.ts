@@ -1,6 +1,8 @@
 import { DOMParser } from "@xmldom/xmldom";
 import type { ArtifactKind, DetectedFormat } from "./types.js";
 
+const ETSI_TS119612_NAMESPACE = "http://uri.etsi.org/19612/v2.4.1#";
+
 export interface DetectionResult {
   format: DetectedFormat;
   artifactKind: ArtifactKind;
@@ -19,7 +21,7 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
       const parsedJson = JSON.parse(bytes.toString("utf8"));
       return {
         format: "json",
-        artifactKind: isJsonLote(parsedJson) ? "json_lote" : "unknown",
+        artifactKind: jsonArtifactKind(parsedJson),
         parsedJson,
       };
     } catch {
@@ -35,15 +37,13 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
     const doc = new DOMParser().parseFromString(bytes.toString("utf8"), "application/xml");
     const root = doc.documentElement;
     const localName = root?.localName ?? root?.nodeName;
-    if (root && localName === "TrustServiceStatusList") {
+    if (root && localName === "TrustServiceStatusList" && root.namespaceURI === ETSI_TS119612_NAMESPACE) {
       return {
         format: "xml",
-        artifactKind:
-          root.namespaceURI === "http://uri.etsi.org/19612/v2.4.1#"
-            ? "ts119612_xml_tsl"
-            : "xml_lotl_like",
+        artifactKind: isXmlLotl(root) ? "ts119612_xml_lotl" : "ts119612_xml_tsl",
       };
     }
+    if (root && localName === "TrustServiceStatusList") return { format: "xml", artifactKind: "xml_lotl_like" };
     return { format: "xml", artifactKind: "unknown" };
   }
 
@@ -57,6 +57,31 @@ function startsJson(text: string): boolean {
   return text.startsWith("{") || text.startsWith("[");
 }
 
-function isJsonLote(value: unknown): boolean {
-  return typeof value === "object" && value !== null && "LoTE" in value;
+function jsonArtifactKind(value: unknown): ArtifactKind {
+  if (typeof value !== "object" || value === null || !("LoTE" in value)) return "unknown";
+  const loteType = getJsonLoteType(value);
+  return /(?:listoftrustedlists|listoflists|lotl)/i.test(loteType) ? "json_lotl" : "json_lote";
+}
+
+function getJsonLoteType(value: object): string {
+  const root = "LoTE" in value ? value.LoTE : undefined;
+  if (typeof root !== "object" || root === null || !("ListAndSchemeInformation" in root)) return "";
+  const information = root.ListAndSchemeInformation;
+  if (typeof information !== "object" || information === null || !("LoTEType" in information)) return "";
+  return typeof information.LoTEType === "string" ? information.LoTEType : "";
+}
+
+function isXmlLotl(root: unknown): boolean {
+  if (!root || typeof root !== "object" || !("getElementsByTagNameNS" in root)) return false;
+  const getElementsByTagNameNS = (root as {
+    getElementsByTagNameNS: (namespace: string, localName: string) => {
+      length: number;
+      item: (index: number) => { textContent?: string | null } | null;
+    };
+  }).getElementsByTagNameNS;
+  const tslTypes = getElementsByTagNameNS.call(root, "*", "TSLType");
+  for (let index = 0; index < tslTypes.length; index += 1) {
+    if (/(?:listofthelists|listoflists|lotl)/i.test(tslTypes.item(index)?.textContent ?? "")) return true;
+  }
+  return false;
 }

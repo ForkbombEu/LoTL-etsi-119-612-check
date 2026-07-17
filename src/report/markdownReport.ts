@@ -5,6 +5,7 @@ export function renderMarkdownReport(report: AuditReport): string {
   lines.push("# WE BUILD Trusted List Audit");
   lines.push("");
   lines.push(`Generated: ${report.generatedAt}`);
+  lines.push(`Report schema: v${report.schemaVersion}`);
   lines.push(`Input: ${report.input.source}`);
   lines.push("");
   lines.push("## LoTL summary");
@@ -20,13 +21,11 @@ export function renderMarkdownReport(report: AuditReport): string {
   lines.push("");
   lines.push("## Summary");
   lines.push("");
-  lines.push("| # | Location | Declared type | Declared MIME | Detected format | TS 119 612 level | Critical failures | Warnings |");
-  lines.push("|---:|---|---|---|---|---|---:|---:|");
+  lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | Level |");
+  lines.push("|---:|---|---|---|---|---|---|---|---|");
   for (const result of report.results) {
-    const critical = result.ts119612.checks.filter((c) => c.status === "fail" && c.severity === "critical").length;
-    const warnings = result.ts119612.checks.filter((c) => c.status === "warn" || c.status === "not_checked").length;
     lines.push(
-      `| ${result.index} | ${escapeCell(result.location)} | ${escapeCell(value(result.declared.loteType))} | ${escapeCell(value(result.declared.mimeType))} | ${result.detected.format} | ${result.ts119612.conformanceLevel} | ${critical} | ${warnings} |`,
+      `| ${result.index} | ${result.id} | ${escapeCell(result.source)} | ${result.detected.artifactKind} (${result.detected.format}) | ${result.standardApplicability.ts119612} | ${result.standardApplicability.ts119602} | ${result.standardApplicability.weBuildProfile} | ${result.standardApplicability.eudiTrustRole} | ${result.ts119612.conformanceLevel} |`,
     );
   }
 
@@ -41,6 +40,8 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   lines.push("");
   lines.push(`## ${result.index}. ${result.location}`);
   lines.push("");
+  lines.push(`- Result ID: ${result.id}`);
+  lines.push(`- Source: ${result.source}`);
   lines.push(`- Declared LoTE type: ${value(result.declared.loteType)}`);
   lines.push(`- Declared MIME type: ${value(result.declared.mimeType)}`);
   lines.push(`- Scheme operator: ${value(result.declared.schemeOperatorName)}`);
@@ -48,7 +49,8 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   lines.push(`- Fetch status: ${result.fetch.attempted ? fetchStatus(result) : "not attempted"}`);
   lines.push(`- Detected artifact: ${result.detected.artifactKind} (${result.detected.format})`);
   lines.push(`- SHA-256: ${value(result.fetch.sha256)}`);
-  lines.push(`- TS 119 612 applicability: ${result.ts119612.applicable ? "applicable" : "not applicable"}`);
+  lines.push(`- Standard applicability: TS 119 612=${result.standardApplicability.ts119612}; TS 119 602=${result.standardApplicability.ts119602}; WE BUILD=${result.standardApplicability.weBuildProfile}; EUDI trust role=${result.standardApplicability.eudiTrustRole}`);
+  lines.push(`- TS 119 612 legacy applicability: ${result.ts119612.applicable ? "applicable" : "not applicable"}`);
   lines.push(`- Conformance level: ${result.ts119612.conformanceLevel}`);
   lines.push(`- Score: ${value(result.ts119612.score)}`);
   lines.push("");
