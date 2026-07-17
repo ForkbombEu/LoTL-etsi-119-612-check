@@ -1,5 +1,5 @@
 import { SignedXml } from "xml-crypto";
-import { tryCertificateFromBase64 } from "../certs.js";
+import { certificatePublicKeyFingerprintSha256, tryCertificateFromBase64 } from "../certs.js";
 import type { CertificateSummary, CheckResult } from "../types.js";
 import { has, texts } from "./xpath.js";
 
@@ -20,11 +20,17 @@ export interface SignatureAssessmentDependencies {
   verifier?: SignatureVerifier;
 }
 
+export interface SignatureAssessmentOptions {
+  /** Require the first list ServiceDigitalIdentity certificate to identify the XMLDSig signing key. */
+  requireFirstListCertificateMatch?: boolean;
+}
+
 export function assessSignature(
   xml: string,
   document: Document,
   assessmentDate = new Date(),
   dependencies: SignatureAssessmentDependencies = {},
+  options: SignatureAssessmentOptions = {},
 ): SignatureAssessment {
   const checks: CheckResult[] = [];
   const certificates: CertificateSummary[] = [];
@@ -40,12 +46,15 @@ export function assessSignature(
       check("signature.cryptographic_verification_result", "not_checked", "info", "Cryptographic verification has no result because ds:Signature is absent."),
       check("signature.xades_properties_detected", "not_checked", "info", "XAdES properties were not checked because ds:Signature is absent."),
     );
+    if (options.requireFirstListCertificateMatch) {
+      checks.push(...firstListCertificateChecks(document, undefined));
+    }
     return { checks, certificates };
   }
 
   checks.push(check("signature.present", "pass", "info", "ds:Signature element detected."));
 
-  const certificateTexts = texts(signatureNode, ".//*[local-name()='X509Certificate']");
+  const certificateTexts = texts(signatureNode, ".//*[local-name()='KeyInfo']//*[local-name()='X509Certificate']");
   checks.push(check(
     "signature.signing_certificate_present",
     certificateTexts.length > 0 ? "pass" : "fail",
@@ -84,7 +93,7 @@ export function assessSignature(
       check("signature.cryptographic_verification_result", "not_checked", "info", "Cryptographic verification has no result because no parseable embedded signing certificate is available."),
     );
   } else {
-    checks.push(check("signature.cryptographic_verification_attempted", "pass", "info", "Cryptographic verification was attempted with xml-crypto."));
+    checks.push(check("signature.cryptographic_verification_attempted", "pass", "info", "Cryptographic verification was attempted with the first parseable ds:KeyInfo X.509 certificate using xml-crypto."));
     const verification = (dependencies.verifier ?? verifyXmlSignature)(xml, signatureNode, verificationEntry.certificate);
     checks.push(check(
       "signature.cryptographic_verification_result",
@@ -93,6 +102,10 @@ export function assessSignature(
       verification.message,
       verification.evidence,
     ));
+  }
+
+  if (options.requireFirstListCertificateMatch) {
+    checks.push(...firstListCertificateChecks(document, verificationEntry?.certificate));
   }
 
   const xadesDetected = has(document, "//*[local-name()='QualifyingProperties']") || has(document, "//*[local-name()='SignedProperties']");
@@ -106,6 +119,54 @@ export function assessSignature(
   ));
 
   return { checks, certificates };
+}
+
+function firstListCertificateChecks(document: Document, signingCertificate: string | undefined): CheckResult[] {
+  const firstListCertificate = texts(
+    document,
+    "(//*[local-name()='TrustServiceProviderList']//*[local-name()='ServiceDigitalIdentity']//*[local-name()='X509Certificate'] | //*[local-name()='OtherTSLPointer']//*[local-name()='ServiceDigitalIdentity']//*[local-name()='X509Certificate'])[1]",
+  )[0];
+
+  if (!firstListCertificate) {
+    return [check(
+      "signature.first_list_certificate_present",
+      "fail",
+      "error",
+      "The first list ServiceDigitalIdentity certificate is missing; its public key cannot be compared with ds:KeyInfo.",
+    )];
+  }
+
+  if (!signingCertificate) {
+    return [check(
+      "signature.first_list_certificate_public_key_match",
+      "not_checked",
+      "info",
+      "The first list certificate public key was not compared because ds:KeyInfo has no parseable signing certificate.",
+    )];
+  }
+
+  const listPublicKeyFingerprint = certificatePublicKeyFingerprintSha256(firstListCertificate);
+  const signingPublicKeyFingerprint = certificatePublicKeyFingerprintSha256(signingCertificate);
+  if (!listPublicKeyFingerprint || !signingPublicKeyFingerprint) {
+    return [check(
+      "signature.first_list_certificate_public_key_match",
+      "fail",
+      "error",
+      "The first list certificate or ds:KeyInfo signing certificate could not be parsed for public-key comparison.",
+      { listPublicKeyFingerprintSha256: listPublicKeyFingerprint, signingPublicKeyFingerprintSha256: signingPublicKeyFingerprint },
+    )];
+  }
+
+  const matches = listPublicKeyFingerprint === signingPublicKeyFingerprint;
+  return [check(
+    "signature.first_list_certificate_public_key_match",
+    matches ? "pass" : "fail",
+    matches ? "info" : "error",
+    matches
+      ? "The first list ServiceDigitalIdentity certificate has the same public key as the ds:KeyInfo signing certificate."
+      : "The first list ServiceDigitalIdentity certificate public key differs from the ds:KeyInfo signing certificate public key.",
+    { listPublicKeyFingerprintSha256: listPublicKeyFingerprint, signingPublicKeyFingerprintSha256: signingPublicKeyFingerprint },
+  )];
 }
 
 function verifyXmlSignature(xml: string, signatureNode: Element, certificate: string): SignatureVerificationResult {

@@ -54,3 +54,20 @@ export function certificateFingerprintSha256(base64: string): string | undefined
     return undefined;
   }
 }
+
+/**
+ * Returns a stable digest of the SubjectPublicKeyInfo bytes for an X.509
+ * certificate.  This compares the public key itself, rather than requiring
+ * the list certificate and the ds:KeyInfo certificate to be byte-for-byte
+ * identical.
+ */
+export function certificatePublicKeyFingerprintSha256(base64: string): string | undefined {
+  try {
+    const der = Buffer.from(normalizeBase64Certificate(base64), "base64");
+    const certificate = new X509Certificate(der);
+    const spki = certificate.publicKey.export({ format: "der", type: "spki" });
+    return sha256Hex(spki);
+  } catch {
+    return undefined;
+  }
+}

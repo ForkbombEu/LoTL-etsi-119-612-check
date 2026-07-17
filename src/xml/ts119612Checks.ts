@@ -79,7 +79,9 @@ export async function assessTs119612Xml(
 
   push(checks, "parse.schema_location", "parse", hasSchemaLocation(root) ? "pass" : "warn", "warning", "xsi:schemaLocation is present.", schemaLocation(root));
 
-  const signature = assessSignature(xml, document, assessmentDate);
+  const signature = assessSignature(xml, document, assessmentDate, {}, {
+    requireFirstListCertificateMatch: isLotlOrLoteType(text(document, D("TSLType"))),
+  });
   checks.push(...signature.checks);
   certificates.push(...signature.certificates);
   checks.push(await validateXsd(xml, options.xsdPath));
@@ -146,6 +148,10 @@ export async function assessTs119612Xml(
 
 function isLotlTslType(tslType: string | undefined): boolean {
   return /(?:listofthelists|listoflists|lotl)/i.test(tslType ?? "");
+}
+
+function isLotlOrLoteType(tslType: string | undefined): boolean {
+  return /(?:listofthelists|listoflists|lotl|lote)/i.test(tslType ?? "");
 }
 
 function extractMetadata(document: Document): ExtractedMetadata {
