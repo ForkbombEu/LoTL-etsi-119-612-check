@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { parseXml } from "../src/xml/parse.js";
 import { assessSignature } from "../src/xml/signature.js";
 
-const differentCertificate = "MIIDdTCCAl2gAwIBAgIUWxIWY6AwGlj2z6dvU0SPFphtoyowDQYJKoZIhvcNAQELBQAwSjEjMCEGA1UEAwwaRGlmZmVyZW50IFRlc3QgQ2VydGlmaWNhdGUxFjAUBgNVBAoMDVdFIEJVSUxEIFRlc3QxCzAJBgNVBAYTAkVVMB4XDTI2MDcxNzEzNTQxNloXDTM2MDcxNDEzNTQxNlowSjEjMCEGA1UEAwwaRGlmZmVyZW50IFRlc3QgQ2VydGlmaWNhdGUxFjAUBgNVBAoMDVdFIEJVSUxEIFRlc3QxCzAJBgNVBAYTAkVVMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1ZPOYnfD+0ATkOmEWAIKzovFD2xWMJTp7XVkNY4W4EEdYpmcC11jVb3k+PBC3y4IJQoRYx5eG0gHRFMSas5QV7+81mn/ALOrOFws4RQ3dGySew4HJ5PYT5BqOnGRLaXzTcXdT9LfzkMR6PGphhu5iLxa6shU4CvSkxhRbcik8xkSeklXmFtwZCLmGVzq7Pn/zFWB4/lIUCp6kfcwhXVg+dOpVY7QAGXDIkZtlSQjf4W8++v8FlJYkjnhArBzhcRceoNmDlrg8U6DYfCZpTZIHJv4g8ScMCPkNv7FFtYFtDyxm4aRKKazBTekJo+yoUTaOYTF10eiNkNhaTikaPtFDQIDAQABo1MwUTAdBgNVHQ4EFgQUA+PNEqIOP8ctvEHl8vZIRqZeL88wHwYDVR0jBBgwFoAUA+PNEqIOP8ctvEHl8vZIRqZeL88wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAGZ0eDwpN80ADR8oxGvdSC7XF8iElu7AXRlWejKmmtQYENb0bWa/m9lEYXUdrPEUa/6m56PqFsCKijDc4iVcVKW1aBWcJXG7Z946lxWseBnCzpBSNcDV6be+evFDF3Q5NO7qDehV2gXtRtUE4KsncE0pJHJPEwzTFk5GOKEp2kOiAr594O8eoSlxdOpalr5+twoNUessIaHWiu0y21w6uc47p6NAcQaQo0cD6aVIA6YvICaiRh3XolEl+Cw0L55LwxPLnrZvd4ptE2c9X0dyttJsfbW00IEgik7FNDkXy+Dg5Bdbpm5wZMcydgq+fNsBUWUoITKXw5DHlOq1TcUaCsg==";
+const sameKeyFirstCertificate = "MIIDXTCCAkWgAwIBAgIUI7ydpvHZjystVobOoXUh9vK+2wEwDQYJKoZIhvcNAQELBQAwPjEXMBUGA1UEAwwOU2FtZSBLZXkgRmlyc3QxFjAUBgNVBAoMDVdFIEJVSUxEIFRlc3QxCzAJBgNVBAYTAkVVMB4XDTI2MDcxNzE0MTYwNloXDTM2MDcxNDE0MTYwNlowPjEXMBUGA1UEAwwOU2FtZSBLZXkgRmlyc3QxFjAUBgNVBAoMDVdFIEJVSUxEIFRlc3QxCzAJBgNVBAYTAkVVMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1ioHvB5HU0PcFtINk3fXuIbQNwkw6PsFjElNC1hx7FoF41WXLbP8AT2AJXRSLcndKJJgdG3qndWA0I8vN5lQ04svcZKqyPHBBZFaMqCcfrrrSXHng3WEyjM//3dOJWgf3MIQagEG8XT0ethRCyR/xEsN/vO5VI0T9lg8v/sNyKKBSygag0rqBx9ti/37k9L88/WUBgyNpP6TDlBw7y1oYIfMNWlX07mFEjqg/+zsrPka8I4hOq/72PoQx7FwqqHJ3fnU9gpQ0I2tI3F50428PwRcIt5NXRj1MORduPp+vfsb9jvnvLGkmM0pcVyfIlGF4Jw0cczQxat63fx4jv96rwIDAQABo1MwUTAdBgNVHQ4EFgQUIQzka3QV4yjKw2MQMTksShF7iNUwHwYDVR0jBBgwFoAUIQzka3QV4yjKw2MQMTksShF7iNUwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAA6Jk+iACUjLZaUaVNv/PNYqysiJEQcu4VLIiUMWoY1NVF4bAxntwJMznnbhZZhc1dw6rYx/8d1yy++BIfoM2DUGbktk/OJEtmZQeIQDsNtgOrtDtzv0o8AH/fPExmvyiK30Zvas52fHxjJwoyXaSW/vke5Xy7fjv7vVy58tKSJt9WU4o4bnoHyBXUsDzqdFPNHuVjeQHpUwqJ7G3d0Ym9QssXkwwgLM1S9Mm6S6ujTLA63WHbx5aN2CAQChi0qgxJpeNtcdOjgWBctgrcAA9ZjPVTspI92DX7MJK4M4dGrvoJGPcgnyVrlGZ/j3KPUxFx67IIw0fuBXhKDZKa9cQ8A==";
+const sameKeySecondCertificate = "MIIDXzCCAkegAwIBAgIUPWUjAs/F2yNpap9/OdNGVFKBrxMwDQYJKoZIhvcNAQELBQAwPzEYMBYGA1UEAwwPU2FtZSBLZXkgU2Vjb25kMRYwFAYDVQQKDA1XRSBCVUlMRCBUZXN0MQswCQYDVQQGEwJFVTAeFw0yNjA3MTcxNDE2MDZaFw0zNjA3MTQxNDE2MDZaMD8xGDAWBgNVBAMMD1NhbWUgS2V5IFNlY29uZDEWMBQGA1UECgwNV0UgQlVJTEQgVGVzdDELMAkGA1UEBhMCRVUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDWKge8HkdTQ9wW0g2Td9e4htA3CTDo+wWMSU0LWHHsWgXjVZcts/wBPYAldFItyd0okmB0beqd1YDQjy83mVDTiy9xkqrI8cEFkVoyoJx+uutJceeDdYTKMz//d04laB/cwhBqAQbxdPR62FELJH/ESw3+87lUjRP2WDy/+w3IooFLKBqDSuoHH22L/fuT0vzz9ZQGDI2k/pMOUHDvLWhgh8w1aVfTuYUSOqD/7Oys+RrwjiE6r/vY+hDHsXCqocnd+dT2ClDQja0jcXnTjbw/BFwi3k1dGPUw5F24+n69+xv2O+e8saSYzSlxXJ8iUYXgnDRxzNDFq3rd/HiO/3qvAgMBAAGjUzBRMB0GA1UdDgQWBBQhDORrdBXjKMrDYxAxOSxKEXuI1TAfBgNVHSMEGDAWgBQhDORrdBXjKMrDYxAxOSxKEXuI1TAPBgNVHRMBAf8EBTADAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEACJCNnbLSDaMfMn8QPxpywOJ6Zk+l+NVyoEmbKiAiEGpv/4kVxCFJnL04DcC5TPw75Lz8oj3l2gDKt4wj4NVErZrLTxhvSDBwyv2IcjGK17xX2XGtzbmU0FLZKGi29u4gS9lrSOiPJ4ieKo8GCO0e3LTf1XdWanah+4Xjjfj+2ZkjTuKTwNfqycSmnjvs+eZt6UDVYEWDE94TrwntVtRVmpt/gu/Qm7JwLRCf1Qqf1rh20npJm6QHewu9lT8vM19Za0Zyz/4JhvFdqtqAo1jGiHuG+aJM/xFI4ghMzH57dqBqmtuesHiTWxHfwZxPktS3Zt+MOfyA/1asAj6YfJ4SNd";
 
 async function signedFixture(): Promise<string> {
   return readFile("test/fixtures/tsl-signed-unsupported.xml", "utf8");
@@ -67,7 +68,7 @@ describe("assessSignature", () => {
     );
   });
 
-  it("matches the first list certificate public key to the ds:KeyInfo signing certificate", async () => {
+  it("requires the first list certificate to exactly equal the ds:KeyInfo signing certificate", async () => {
     const xml = await signedFixture();
     const signingCertificate = xml.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/)?.[1];
     if (!signingCertificate) throw new Error("Fixture must contain a signing certificate.");
@@ -79,26 +80,27 @@ describe("assessSignature", () => {
     }, { requireFirstListCertificateMatch: true });
 
     expect(result.checks).toContainEqual(expect.objectContaining({
-      id: "signature.first_list_certificate_public_key_match",
+      id: "signature.first_list_certificate_exact_match",
       status: "pass",
       evidence: expect.objectContaining({
-        listPublicKeyFingerprintSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
-        signingPublicKeyFingerprintSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        listCertificateFingerprintSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        signingCertificateFingerprintSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
       }),
     }));
   });
 
-  it("fails when the first list certificate public key differs from ds:KeyInfo", async () => {
+  it("fails when certificates share a public key but differ from ds:KeyInfo", async () => {
     const xml = await signedFixture();
-    const document = parseXml(withFirstListCertificate(xml, differentCertificate)).document;
+    const xmlWithFirstCertificate = xml.replace(/(<ds:X509Certificate>)[^<]+/, `$1${sameKeyFirstCertificate}`);
+    const document = parseXml(withFirstListCertificate(xmlWithFirstCertificate, sameKeySecondCertificate)).document;
     if (!document) throw new Error("Fixture must parse.");
 
-    const result = assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
+    const result = assessSignature(xmlWithFirstCertificate, document, new Date("2026-08-01T00:00:00Z"), {
       verifier: () => ({ status: "pass", message: "Test verifier accepted the signature." }),
     }, { requireFirstListCertificateMatch: true });
 
     expect(result.checks).toContainEqual(expect.objectContaining({
-      id: "signature.first_list_certificate_public_key_match",
+      id: "signature.first_list_certificate_exact_match",
       status: "fail",
     }));
   });

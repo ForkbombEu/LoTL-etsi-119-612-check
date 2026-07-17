@@ -1,5 +1,5 @@
 import { SignedXml } from "xml-crypto";
-import { certificatePublicKeyFingerprintSha256, tryCertificateFromBase64 } from "../certs.js";
+import { certificateFingerprintSha256, tryCertificateFromBase64 } from "../certs.js";
 import type { CertificateSummary, CheckResult } from "../types.js";
 import { has, texts } from "./xpath.js";
 
@@ -21,7 +21,7 @@ export interface SignatureAssessmentDependencies {
 }
 
 export interface SignatureAssessmentOptions {
-  /** Require the first list ServiceDigitalIdentity certificate to identify the XMLDSig signing key. */
+  /** Require the first list ServiceDigitalIdentity certificate to equal the XMLDSig signing certificate. */
   requireFirstListCertificateMatch?: boolean;
 }
 
@@ -132,40 +132,40 @@ function firstListCertificateChecks(document: Document, signingCertificate: stri
       "signature.first_list_certificate_present",
       "fail",
       "error",
-      "The first list ServiceDigitalIdentity certificate is missing; its public key cannot be compared with ds:KeyInfo.",
+      "The first list ServiceDigitalIdentity certificate is missing; it cannot be compared with ds:KeyInfo.",
     )];
   }
 
   if (!signingCertificate) {
     return [check(
-      "signature.first_list_certificate_public_key_match",
+      "signature.first_list_certificate_exact_match",
       "not_checked",
       "info",
-      "The first list certificate public key was not compared because ds:KeyInfo has no parseable signing certificate.",
+      "The first list certificate was not compared because ds:KeyInfo has no parseable signing certificate.",
     )];
   }
 
-  const listPublicKeyFingerprint = certificatePublicKeyFingerprintSha256(firstListCertificate);
-  const signingPublicKeyFingerprint = certificatePublicKeyFingerprintSha256(signingCertificate);
-  if (!listPublicKeyFingerprint || !signingPublicKeyFingerprint) {
+  const listCertificateFingerprint = certificateFingerprintSha256(firstListCertificate);
+  const signingCertificateFingerprint = certificateFingerprintSha256(signingCertificate);
+  if (!listCertificateFingerprint || !signingCertificateFingerprint) {
     return [check(
-      "signature.first_list_certificate_public_key_match",
+      "signature.first_list_certificate_exact_match",
       "fail",
       "error",
-      "The first list certificate or ds:KeyInfo signing certificate could not be parsed for public-key comparison.",
-      { listPublicKeyFingerprintSha256: listPublicKeyFingerprint, signingPublicKeyFingerprintSha256: signingPublicKeyFingerprint },
+      "The first list certificate or ds:KeyInfo signing certificate could not be decoded for exact comparison.",
+      { listCertificateFingerprintSha256: listCertificateFingerprint, signingCertificateFingerprintSha256: signingCertificateFingerprint },
     )];
   }
 
-  const matches = listPublicKeyFingerprint === signingPublicKeyFingerprint;
+  const matches = listCertificateFingerprint === signingCertificateFingerprint;
   return [check(
-    "signature.first_list_certificate_public_key_match",
+    "signature.first_list_certificate_exact_match",
     matches ? "pass" : "fail",
     matches ? "info" : "error",
     matches
-      ? "The first list ServiceDigitalIdentity certificate has the same public key as the ds:KeyInfo signing certificate."
-      : "The first list ServiceDigitalIdentity certificate public key differs from the ds:KeyInfo signing certificate public key.",
-    { listPublicKeyFingerprintSha256: listPublicKeyFingerprint, signingPublicKeyFingerprintSha256: signingPublicKeyFingerprint },
+      ? "The first list ServiceDigitalIdentity certificate exactly equals the ds:KeyInfo signing certificate."
+      : "The first list ServiceDigitalIdentity certificate differs from the ds:KeyInfo signing certificate.",
+    { listCertificateFingerprintSha256: listCertificateFingerprint, signingCertificateFingerprintSha256: signingCertificateFingerprint },
   )];
 }
 
