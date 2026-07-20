@@ -27,7 +27,15 @@ npm run build
 Node.js 20 or newer is required.
 
 Cryptographic XMLDSig verification also requires the `xmlsec1` executable on
-`PATH`. For example, on Debian/Ubuntu:
+`PATH`. On Debian/Ubuntu, the repository's `.mise.toml` declares it as a Mise
+bootstrap package, so the complete development environment can be installed
+with:
+
+```bash
+mise bootstrap
+```
+
+Without Mise, install it directly:
 
 ```bash
 sudo apt-get install xmlsec1
