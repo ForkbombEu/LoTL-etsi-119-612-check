@@ -6,7 +6,13 @@ import { has, nodes, text, texts } from "./xpath.js";
 
 const XML_LOTE_REASON =
   "Artifact is an ETSI TS 119 602 XML Trusted Entities List (LoTE), not an ETSI TS 119 612 XML Trusted List.";
-const INFO = "/*[local-name()='TrustedEntitiesList']/*[local-name()='ListAndSchemeInformation']";
+const ETSI_TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
+const INFO = `./*[local-name()='ListAndSchemeInformation' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`;
+const TRUSTED_ENTITIES =
+  `./*[local-name()='TrustedEntitiesList' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`
+  + `/*[local-name()='TrustedEntity' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`;
+
+type XmlLoteBinding = "etsi_ts_119_602_v1_1_1" | "we_build_compatibility" | "unsupported";
 
 /** Assess the implemented ETSI TS 119 602 XML LoTE data-model evidence. */
 export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected">> {
@@ -17,22 +23,24 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
 
   const document = parsed.document;
   const root = document.documentElement;
-  const issue = text(document, `${INFO}/*[local-name()='ListIssueDateTime']`);
-  const next = text(document, `${INFO}/*[local-name()='NextUpdate']/*[local-name()='dateTime'] | ${INFO}/*[local-name()='NextUpdate']`);
+  const binding = xmlLoteBinding(root);
+  const issue = text(root, `${INFO}/*[local-name()='ListIssueDateTime']`);
+  const next = text(root, `${INFO}/*[local-name()='NextUpdate']/*[local-name()='dateTime'] | ${INFO}/*[local-name()='NextUpdate']`);
   const checks: CheckResult[] = [
     check("parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML LoTE parsed successfully." : "XML LoTE parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined),
     check("profile.ts119612_applicability", "profile", "not_applicable", "info", XML_LOTE_REASON, { rootLocalName: root.localName || root.nodeName, rootNamespace: root.namespaceURI ?? undefined }),
-    check("xml_lote.structure.list_and_scheme_information", "structure", has(document, INFO) ? "pass" : "fail", has(document, INFO) ? "info" : "critical", "ListAndSchemeInformation exists."),
+    xmlBindingCheck(root, binding),
+    check("xml_lote.structure.list_and_scheme_information", "structure", has(root, INFO) ? "pass" : "fail", has(root, INFO) ? "info" : "critical", "ListAndSchemeInformation exists."),
   ];
   for (const [id, name] of Object.entries({
     version_identifier: "LoTEVersionIdentifier", sequence_number: "LoTESequenceNumber", type: "LoTEType", scheme_operator_name: "SchemeOperatorName", scheme_operator_address: "SchemeOperatorAddress", scheme_name: "SchemeName", scheme_information_uri: "SchemeInformationURI", status_determination_approach: "StatusDeterminationApproach", scheme_type_community_rules: "SchemeTypeCommunityRules", scheme_territory: "SchemeTerritory", policy_or_legal_notice: "PolicyOrLegalNotice", list_issue_date_time: "ListIssueDateTime", next_update: "NextUpdate",
   })) {
-    exists(checks, document, `xml_lote.structure.${id}`, `${INFO}/*[local-name()='${name}']`, `${name} exists.`);
+    exists(checks, root, `xml_lote.structure.${id}`, `${INFO}/*[local-name()='${name}']`, `${name} exists.`);
   }
   const signature = await assessSignature(xml, document);
   checks.push(...signature.checks);
   checks.push(...dateChecks(issue, next));
-  const services = assessTrustedEntities(document);
+  const services = assessTrustedEntities(root);
   checks.push(...services.checks);
 
   const certificates = [...signature.certificates, ...services.certificates];
@@ -40,22 +48,46 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
     detected: { format: "xml", artifactKind: "xml_lote" },
     ts119612: notApplicable(checks),
     extracted: {
-      schemeOperatorName: names(document, `${INFO}/*[local-name()='SchemeOperatorName']`),
-      schemeName: names(document, `${INFO}/*[local-name()='SchemeName']`),
-      schemeTerritory: text(document, `${INFO}/*[local-name()='SchemeTerritory']`),
-      statusDeterminationApproach: text(document, `${INFO}/*[local-name()='StatusDeterminationApproach']`),
+      schemeOperatorName: names(root, `${INFO}/*[local-name()='SchemeOperatorName']`),
+      schemeName: names(root, `${INFO}/*[local-name()='SchemeName']`),
+      schemeTerritory: text(root, `${INFO}/*[local-name()='SchemeTerritory']`),
+      statusDeterminationApproach: text(root, `${INFO}/*[local-name()='StatusDeterminationApproach']`),
       listIssueDateTime: issue, nextUpdate: next,
-      distributionPoints: texts(document, `${INFO}/*[local-name()='DistributionPoints']//*[local-name()='URI']`),
+      distributionPoints: texts(root, `${INFO}/*[local-name()='DistributionPoints']//*[local-name()='URI']`),
       trustServiceProviderCount: services.entityCount, serviceCount: services.serviceCount, certificates,
-      jsonLote: { assessmentProfile: "ETSI TS 119 602 XML LoTE evidence checks (not full normative conformance)", LoTEVersionIdentifier: text(document, `${INFO}/*[local-name()='LoTEVersionIdentifier']`), LoTESequenceNumber: text(document, `${INFO}/*[local-name()='LoTESequenceNumber']`), LoTEType: text(document, `${INFO}/*[local-name()='LoTEType']`), TrustedEntityCount: services.entityCount, ServiceCount: services.serviceCount },
+      jsonLote: { assessmentProfile: "ETSI TS 119 602 XML LoTE evidence checks (not full normative conformance)", XmlBinding: binding, LoTEVersionIdentifier: text(root, `${INFO}/*[local-name()='LoTEVersionIdentifier']`), LoTESequenceNumber: text(root, `${INFO}/*[local-name()='LoTESequenceNumber']`), LoTEType: text(root, `${INFO}/*[local-name()='LoTEType']`), TrustedEntityCount: services.entityCount, ServiceCount: services.serviceCount },
     },
   };
 }
 
-function assessTrustedEntities(document: Document): { checks: CheckResult[]; certificates: CertificateSummary[]; entityCount: number; serviceCount: number } {
-  const entities = nodes(document, "/*[local-name()='TrustedEntitiesList']/*[local-name()='TrustedEntity']");
-  const services = nodes(document, "/*[local-name()='TrustedEntitiesList']/*[local-name()='TrustedEntity']//*[local-name()='ServiceInformation']");
-  const checks: CheckResult[] = [check("xml_lote.services.trusted_entity_count", "services", entities.length > 0 ? "pass" : "warn", entities.length > 0 ? "info" : "warning", "TrustedEntity entries counted.", entities.length)];
+function assessTrustedEntities(root: Element): { checks: CheckResult[]; certificates: CertificateSummary[]; entityCount: number; serviceCount: number } {
+  const entities = nodes(root, TRUSTED_ENTITIES);
+  const services = nodes(root, `${TRUSTED_ENTITIES}//*[local-name()='ServiceInformation']`);
+  const containerPresent = has(
+    root,
+    `./*[local-name()='TrustedEntitiesList' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`,
+  );
+  const checks: CheckResult[] = [
+    check(
+      "xml_lote.structure.trusted_entities_container",
+      "structure",
+      containerPresent ? "pass" : "not_checked",
+      containerPresent ? "info" : "warning",
+      containerPresent
+        ? "TrustedEntitiesList container is present directly below the LoTE document root."
+        : "TrustedEntitiesList container is absent; it is optional in the base XML binding.",
+    ),
+    check(
+      "xml_lote.services.trusted_entity_count",
+      "services",
+      entities.length > 0 ? "pass" : "warn",
+      entities.length > 0 ? "info" : "warning",
+      entities.length > 0
+        ? "TrustedEntity entries counted at the selected XML binding path."
+        : "No TrustedEntity entries were found at the selected XML binding path.",
+      entities.length,
+    ),
+  ];
   const certificates: CertificateSummary[] = [];
   entities.forEach((entity, entityIndex) => {
     const prefix = `xml_lote.services.entity.${entityIndex + 1}`;
@@ -71,12 +103,63 @@ function assessTrustedEntities(document: Document): { checks: CheckResult[]; cer
       exists(checks, service, `${servicePrefix}.digital_identity`, ".//*[local-name()='ServiceDigitalIdentity']", "ServiceDigitalIdentity exists.");
     });
   });
-  texts(document, "//*[local-name()='ServiceDigitalIdentity']//*[local-name()='X509Certificate']").forEach((value, index) => {
+  texts(root, ".//*[local-name()='ServiceDigitalIdentity']//*[local-name()='X509Certificate']").forEach((value, index) => {
     const certificate = tryCertificateFromBase64(value, "service_digital_identity", new Date());
     if (!certificate) checks.push(check(`xml_lote.certificates.service.${index + 1}.parse`, "certificates", "fail", "error", "Service digital identity X.509 certificate could not be parsed."));
     else { certificates.push(certificate); checks.push(check(`xml_lote.certificates.service.${index + 1}.parse`, "certificates", "pass", "info", "Service digital identity X.509 certificate parsed.", { subject: certificate.subject, fingerprintSha256: certificate.fingerprintSha256 })); }
   });
   return { checks, certificates, entityCount: entities.length, serviceCount: services.length };
+}
+
+function xmlLoteBinding(root: Element): XmlLoteBinding {
+  if (root.namespaceURI !== ETSI_TS119602_NAMESPACE) return "unsupported";
+  if (root.localName === "ListOfTrustedEntities") return "etsi_ts_119_602_v1_1_1";
+  if (root.localName === "TrustedEntitiesList") return "we_build_compatibility";
+  return "unsupported";
+}
+
+function xmlBindingCheck(root: Element, binding: XmlLoteBinding): CheckResult {
+  const commonEvidence = {
+    observedRootLocalName: root.localName || root.nodeName,
+    observedRootNamespace: root.namespaceURI ?? undefined,
+    expectedRootLocalName: "ListOfTrustedEntities",
+    expectedRootNamespace: ETSI_TS119602_NAMESPACE,
+    normativeEntityPath: "/ListOfTrustedEntities/TrustedEntitiesList/TrustedEntity",
+  };
+  if (binding === "etsi_ts_119_602_v1_1_1") {
+    return check(
+      "xml_lote.structure.xml_binding",
+      "structure",
+      "pass",
+      "info",
+      "XML root matches the ETSI TS 119 602 V1.1.1 scheme-explicit XML binding.",
+      { binding, ...commonEvidence },
+    );
+  }
+  if (binding === "we_build_compatibility") {
+    return check(
+      "xml_lote.structure.xml_binding",
+      "structure",
+      "warn",
+      "warning",
+      "TrustedEntitiesList is accepted as a WE BUILD compatibility root, but it is not conformant with the ETSI TS 119 602 V1.1.1 scheme-explicit XML binding.",
+      {
+        binding,
+        ...commonEvidence,
+        observedEntityPath: "/TrustedEntitiesList/TrustedEntitiesList/TrustedEntity",
+        historicalVersion: "not_established",
+        historicalVersionReason: "No normative ETSI version or published WE BUILD profile defining this alternative root has been identified.",
+      },
+    );
+  }
+  return check(
+    "xml_lote.structure.xml_binding",
+    "structure",
+    "fail",
+    "critical",
+    "XML root does not match an implemented ETSI TS 119 602 XML binding.",
+    { binding, ...commonEvidence },
+  );
 }
 
 function dateChecks(issueValue: string | undefined, nextValue: string | undefined): CheckResult[] {
@@ -88,7 +171,7 @@ function dateChecks(issueValue: string | undefined, nextValue: string | undefine
 }
 
 function parseDate(value: string | undefined): Date | undefined { if (!value) return undefined; const date = new Date(value); return Number.isNaN(date.getTime()) ? undefined : date; }
-function names(document: Document, expression: string): string[] { const named = texts(document, `${expression}/*[local-name()='Name']`); return named.length > 0 ? named : texts(document, expression); }
+function names(context: Node, expression: string): string[] { const named = texts(context, `${expression}/*[local-name()='Name']`); return named.length > 0 ? named : texts(context, expression); }
 function exists(checks: CheckResult[], context: Node, id: string, expression: string, message: string): void { const present = has(context, expression); checks.push(check(id, "structure", present ? "pass" : "fail", present ? "info" : "error", message)); }
 function notApplicable(checks: CheckResult[]): TrustedListAuditResult["ts119612"] { return { applicable: false, conformanceLevel: "not_applicable", score: null, checks, mandatoryFailures: [], warnings: checks.filter((entry) => entry.status === "warn" || entry.status === "not_checked").map((entry) => `${entry.id}: ${entry.message}`) }; }
 function check(id: string, category: CheckResult["category"], status: CheckResult["status"], severity: CheckResult["severity"], message: string, evidence?: unknown): CheckResult { return { id, category, status, severity, message, evidence }; }

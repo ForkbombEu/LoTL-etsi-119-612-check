@@ -309,8 +309,9 @@ The verifier is document-driven rather than fixture-specific: it derives the
 root local name, namespace, `Id`/`ID`/`id` attribute, and Reference URIs from
 each parsed XML document. It invokes `xmlsec1` with the embedded signing
 certificate explicitly and permits only empty or same-document references.
-This supports both ETSI TS 119 612 `TrustServiceStatusList` roots and ETSI TS
-119 602-style `TrustedEntitiesList` roots without hard-coded URLs or IDs.
+This supports ETSI TS 119 612 `TrustServiceStatusList` roots, the ETSI TS
+119 602 V1.1.1 `ListOfTrustedEntities` root, and explicitly reported WE BUILD
+compatibility `TrustedEntitiesList` roots without hard-coded URLs or IDs.
 Cryptographic validity remains separate from certificate trust: an embedded
 certificate is not treated as trusted merely because its signature verifies.
 XAdES detection is evidence only; full XAdES semantic validation is not
@@ -365,6 +366,18 @@ Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; th
 ```
 
 Pass `--include-json-lote-checks` in the CLI or `includeJsonLoteChecks: true` in API options to include TS 119 602-style / JSON LoTE checks. These evidence checks cover list metadata, pointer identities, JSON signature-object presence, and issue/next-update dates; they do not claim full normative TS 119 602 conformance.
+
+For scheme-explicit TS 119 602 XML, the normative entity path implemented by
+the tool is
+`/ListOfTrustedEntities/TrustedEntitiesList/TrustedEntity`. Current WE BUILD
+reference artifacts that instead use
+`/TrustedEntitiesList/TrustedEntitiesList/TrustedEntity` are parsed so their
+evidence is not lost, but receive an `xml_lote.structure.xml_binding` warning.
+The report does not label that compatibility root as an older ETSI version
+because no normative version defining it has been identified. The basis is
+[ETSI TS 119 602 V1.1.1, normative Annex A.2.1](https://www.etsi.org/deliver/etsi_ts/119600_119699/119602/01.01.01_60/ts_119602v010101p.pdf)
+and its referenced
+[ETSI scheme-explicit binding repository](https://forge.etsi.org/rep/esi/x19_60201_lists_of_trusted_entities).
 
 ## Known limitations
 

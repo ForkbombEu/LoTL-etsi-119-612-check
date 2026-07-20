@@ -35,7 +35,15 @@ describe("detectArtifact", () => {
     });
   });
 
-  it("detects ETSI TS 119 602 XML LoTE", () => {
+  it("detects the ETSI TS 119 602 V1.1.1 XML LoTE root", () => {
+    const xml = "<ListOfTrustedEntities xmlns=\"http://uri.etsi.org/019602/v1#\"><ListAndSchemeInformation /></ListOfTrustedEntities>";
+    expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({
+      format: "xml",
+      artifactKind: "xml_lote",
+    });
+  });
+
+  it("detects the WE BUILD compatibility XML LoTE root", () => {
     const xml = "<TrustedEntitiesList xmlns=\"http://uri.etsi.org/019602/v1#\"><ListAndSchemeInformation /></TrustedEntitiesList>";
     expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({
       format: "xml",

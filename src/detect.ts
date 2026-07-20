@@ -45,7 +45,11 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
         artifactKind: isXmlLotl(root) ? "ts119612_xml_lotl" : "ts119612_xml_tsl",
       };
     }
-    if (root && localName === "TrustedEntitiesList" && root.namespaceURI === ETSI_TS119602_NAMESPACE) {
+    if (
+      root
+      && (localName === "ListOfTrustedEntities" || localName === "TrustedEntitiesList")
+      && root.namespaceURI === ETSI_TS119602_NAMESPACE
+    ) {
       return { format: "xml", artifactKind: "xml_lote" };
     }
     if (root && localName === "TrustServiceStatusList") return { format: "xml", artifactKind: "xml_lotl_like" };
