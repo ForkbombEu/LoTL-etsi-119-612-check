@@ -9,7 +9,7 @@ const XML_LOTE_REASON =
 const INFO = "/*[local-name()='TrustedEntitiesList']/*[local-name()='ListAndSchemeInformation']";
 
 /** Assess the implemented ETSI TS 119 602 XML LoTE data-model evidence. */
-export function assessXmlLoteMetadata(xml: string): Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected"> {
+export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected">> {
   const parsed = parseXml(xml);
   if (!parsed.document || parsed.errors.some((error) => error.startsWith("fatal"))) {
     return { detected: { format: "xml", artifactKind: "xml_lote" }, ts119612: notApplicable([check("parse.xml", "parse", "fail", "critical", "XML LoTE parse failed.", parsed.errors)]) };
@@ -29,7 +29,7 @@ export function assessXmlLoteMetadata(xml: string): Pick<TrustedListAuditResult,
   })) {
     exists(checks, document, `xml_lote.structure.${id}`, `${INFO}/*[local-name()='${name}']`, `${name} exists.`);
   }
-  const signature = assessSignature(xml, document);
+  const signature = await assessSignature(xml, document);
   checks.push(...signature.checks);
   checks.push(...dateChecks(issue, next));
   const services = assessTrustedEntities(document);

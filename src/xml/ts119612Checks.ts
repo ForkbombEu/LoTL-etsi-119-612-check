@@ -93,7 +93,7 @@ export async function assessTs119612Xml(
 
   push(checks, "parse.schema_location", "parse", hasSchemaLocation(root) ? "pass" : "warn", "warning", "xsi:schemaLocation is present.", schemaLocation(root));
 
-  const signature = assessSignature(xml, document, assessmentDate, {}, {
+  const signature = await assessSignature(xml, document, assessmentDate, {}, {
     requireFirstListCertificateMatch: isLotlOrLoteType(text(document, D("TSLType"))),
   });
   checks.push(...signature.checks);

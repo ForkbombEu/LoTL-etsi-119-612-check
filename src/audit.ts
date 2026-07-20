@@ -300,7 +300,7 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
   }
 
   if (detected.artifactKind === "xml_lote") {
-    return mergeResult(base, assessXmlLoteMetadata(bytes.toString("utf8")));
+    return mergeResult(base, await assessXmlLoteMetadata(bytes.toString("utf8")));
   }
 
   if (detected.artifactKind === "json_lote" || detected.artifactKind === "json_lotl") {

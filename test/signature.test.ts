@@ -22,7 +22,7 @@ describe("assessSignature", () => {
     const xml = await readFile("test/fixtures/tsl-valid-ish.xml", "utf8");
     const document = parseXml(xml).document;
     if (!document) throw new Error("Fixture must parse.");
-    const result = assessSignature(xml, document);
+    const result = await assessSignature(xml, document);
     expect(result.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "signature.present", status: "fail" }),
@@ -38,7 +38,7 @@ describe("assessSignature", () => {
     const xml = await signedFixture();
     const document = parseXml(xml).document;
     if (!document) throw new Error("Fixture must parse.");
-    const result = assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
+    const result = await assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
       verifier: () => ({
         status: "not_checked",
         message: "Verification unsupported by the test verifier.",
@@ -61,6 +61,8 @@ describe("assessSignature", () => {
         expect.objectContaining({ id: "signature.present", status: "pass" }),
         expect.objectContaining({ id: "signature.signing_certificate_present", status: "pass" }),
         expect.objectContaining({ id: "signature.signing_certificate_parsed", status: "pass" }),
+        expect.objectContaining({ id: "signature.reference_uris", status: "fail" }),
+        expect.objectContaining({ id: "signature.expected_root_reference", status: "fail" }),
         expect.objectContaining({ id: "signature.cryptographic_verification_attempted", status: "pass" }),
         expect.objectContaining({ id: "signature.cryptographic_verification_result", status: "not_checked" }),
         expect.objectContaining({ id: "signature.xades_properties_detected", status: "pass" }),
@@ -75,7 +77,7 @@ describe("assessSignature", () => {
     const document = parseXml(withFirstListCertificate(xml, signingCertificate)).document;
     if (!document) throw new Error("Fixture must parse.");
 
-    const result = assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
+    const result = await assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
       verifier: () => ({ status: "pass", message: "Test verifier accepted the signature." }),
     }, { requireFirstListCertificateMatch: true });
 
@@ -95,7 +97,7 @@ describe("assessSignature", () => {
     const document = parseXml(withFirstListCertificate(xmlWithFirstCertificate, sameKeySecondCertificate)).document;
     if (!document) throw new Error("Fixture must parse.");
 
-    const result = assessSignature(xmlWithFirstCertificate, document, new Date("2026-08-01T00:00:00Z"), {
+    const result = await assessSignature(xmlWithFirstCertificate, document, new Date("2026-08-01T00:00:00Z"), {
       verifier: () => ({ status: "pass", message: "Test verifier accepted the signature." }),
     }, { requireFirstListCertificateMatch: true });
 

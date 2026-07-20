@@ -1,7 +1,7 @@
-import { SignedXml } from "xml-crypto";
 import { certificateFingerprintSha256, tryCertificateFromBase64 } from "../certs.js";
 import type { CertificateSummary, CheckResult } from "../types.js";
 import { has, texts } from "./xpath.js";
+import { inspectReferences, verifyXmlSignatureWithXmlsec } from "./xmlsec.js";
 
 export interface SignatureAssessment {
   checks: CheckResult[];
@@ -12,9 +12,15 @@ export interface SignatureVerificationResult {
   status: Extract<CheckResult["status"], "pass" | "fail" | "not_checked">;
   message: string;
   evidence?: unknown;
+  attempted?: boolean;
 }
 
-export type SignatureVerifier = (xml: string, signatureNode: Element, certificate: string) => SignatureVerificationResult;
+export type SignatureVerifier = (
+  xml: string,
+  document: Document,
+  signatureNode: Element,
+  certificate: string,
+) => SignatureVerificationResult | Promise<SignatureVerificationResult>;
 
 export interface SignatureAssessmentDependencies {
   verifier?: SignatureVerifier;
@@ -25,13 +31,13 @@ export interface SignatureAssessmentOptions {
   requireFirstListCertificateMatch?: boolean;
 }
 
-export function assessSignature(
+export async function assessSignature(
   xml: string,
   document: Document,
   assessmentDate = new Date(),
   dependencies: SignatureAssessmentDependencies = {},
   options: SignatureAssessmentOptions = {},
-): SignatureAssessment {
+): Promise<SignatureAssessment> {
   const checks: CheckResult[] = [];
   const certificates: CertificateSummary[] = [];
   const signatureNode = document.getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#", "Signature")[0]
@@ -87,14 +93,50 @@ export function assessSignature(
   ));
 
   const verificationEntry = parsedCertificateEntries[0];
+  const referenceEvidence = inspectReferences(document, signatureNode);
+  const referencesPresentAndLocal = referenceEvidence.uris.length > 0
+    && referenceEvidence.prohibitedUris.length === 0;
+  checks.push(
+    check(
+      "signature.reference_uris",
+      referencesPresentAndLocal ? "pass" : "fail",
+      referencesPresentAndLocal ? "info" : "error",
+      referenceEvidence.uris.length === 0
+        ? "No XMLDSig Reference element was found in SignedInfo."
+        : referenceEvidence.prohibitedUris.length === 0
+        ? "All XMLDSig Reference URIs are empty or same-document references."
+        : "One or more XMLDSig Reference URIs are external or unsupported.",
+      referenceEvidence,
+    ),
+    check(
+      "signature.expected_root_reference",
+      referenceEvidence.expectedRootCovered ? "pass" : "fail",
+      referenceEvidence.expectedRootCovered ? "info" : "error",
+      referenceEvidence.expectedRootCovered
+        ? "An XMLDSig Reference covers the expected document root."
+        : "No XMLDSig Reference covers the expected document root.",
+      referenceEvidence,
+    ),
+  );
   if (!verificationEntry) {
     checks.push(
       check("signature.cryptographic_verification_attempted", "not_checked", "info", "Cryptographic verification was not attempted because no parseable embedded signing certificate is available."),
       check("signature.cryptographic_verification_result", "not_checked", "info", "Cryptographic verification has no result because no parseable embedded signing certificate is available."),
     );
   } else {
-    checks.push(check("signature.cryptographic_verification_attempted", "pass", "info", "Cryptographic verification was attempted with the first parseable ds:KeyInfo X.509 certificate using xml-crypto."));
-    const verification = (dependencies.verifier ?? verifyXmlSignature)(xml, signatureNode, verificationEntry.certificate);
+    const verifier = dependencies.verifier
+      ?? ((inputXml: string, inputDocument: Document, inputSignature: Element, inputCertificate: string) =>
+        verifyXmlSignatureWithXmlsec(inputXml, inputDocument, inputSignature, inputCertificate));
+    const verification = await verifier(xml, document, signatureNode, verificationEntry.certificate);
+    const attempted = verification.attempted ?? true;
+    checks.push(check(
+      "signature.cryptographic_verification_attempted",
+      attempted ? "pass" : "not_checked",
+      "info",
+      attempted
+        ? "Cryptographic verification was attempted with xmlsec1 and the first parseable ds:KeyInfo X.509 certificate."
+        : "Cryptographic verification was not attempted because the xmlsec1 backend was unavailable or the reference policy rejected the signature.",
+    ));
     checks.push(check(
       "signature.cryptographic_verification_result",
       verification.status,
@@ -169,28 +211,6 @@ function firstListCertificateChecks(document: Document, signingCertificate: stri
   )];
 }
 
-function verifyXmlSignature(xml: string, signatureNode: Element, certificate: string): SignatureVerificationResult {
-  try {
-    const signature = new SignedXml();
-    signature.publicCert = pemFromBase64(certificate);
-    signature.loadSignature(signatureNode);
-    const ok = signature.checkSignature(xml);
-    return ok
-      ? { status: "pass", message: "XMLDSig verification succeeded." }
-      : {
-          status: "fail",
-          message: "XMLDSig verification failed.",
-          evidence: (signature as unknown as { validationErrors?: unknown }).validationErrors,
-        };
-  } catch (error) {
-    return {
-      status: "not_checked",
-      message: "XMLDSig verification could not be completed with xml-crypto; unsupported signature structure, transform, or canonicalization may be involved.",
-      evidence: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
 function check(
   id: string,
   status: CheckResult["status"],
@@ -199,10 +219,4 @@ function check(
   evidence?: unknown,
 ): CheckResult {
   return { id, category: id === "signature.xades_properties_detected" ? "xades" : "signature", status, severity, message, evidence };
-}
-
-function pemFromBase64(base64: string): string {
-  const clean = base64.replace(/\s+/g, "");
-  const lines = clean.match(/.{1,64}/g)?.join("\n") ?? clean;
-  return `-----BEGIN CERTIFICATE-----\n${lines}\n-----END CERTIFICATE-----`;
 }

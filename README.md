@@ -26,6 +26,17 @@ npm run build
 
 Node.js 20 or newer is required.
 
+Cryptographic XMLDSig verification also requires the `xmlsec1` executable on
+`PATH`. For example, on Debian/Ubuntu:
+
+```bash
+sudo apt-get install xmlsec1
+```
+
+If `xmlsec1` is unavailable, the audit still runs and reports cryptographic
+verification as `not_checked`; signature structure and certificate evidence
+checks remain available.
+
 ## CLI examples
 
 Local input:
@@ -268,7 +279,7 @@ For XML artifacts, the tool performs layered best-effort ETSI TS 119 612 checks:
 - XML parse and root element checks;
 - core `SchemeInformation` structure checks;
 - issue/next-update timestamp checks;
-- signature presence, embedded signing certificate extraction, and best-effort `xml-crypto` XMLDSig verification;
+- signature presence, embedded signing certificate extraction, signed-root reference checks, and `xmlsec1` XMLDSig verification;
 - XAdES qualifying-property detection;
 - trust service provider and service metadata checks;
 - service digital identity X.509 extraction and validity warnings;
@@ -284,7 +295,18 @@ The report does not claim full legal or normative ETSI conformance.
 
 XML findings are implemented structural, date, schema, signature, certificate, and service-metadata checks. They are evidence-oriented results rather than a claim of full ETSI TS 119 612 conformance.
 
-For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, whether cryptographic verification was attempted, its result or limitation, and XAdES-property detection. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence. XMLDSig/XAdES results remain best-effort evidence checks, not a trust decision.
+For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, Reference URIs, expected-root coverage, whether cryptographic verification was attempted, its result or limitation, and XAdES-property detection. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence.
+
+The verifier is document-driven rather than fixture-specific: it derives the
+root local name, namespace, `Id`/`ID`/`id` attribute, and Reference URIs from
+each parsed XML document. It invokes `xmlsec1` with the embedded signing
+certificate explicitly and permits only empty or same-document references.
+This supports both ETSI TS 119 612 `TrustServiceStatusList` roots and ETSI TS
+119 602-style `TrustedEntitiesList` roots without hard-coded URLs or IDs.
+Cryptographic validity remains separate from certificate trust: an embedded
+certificate is not treated as trusted merely because its signature verifies.
+XAdES detection is evidence only; full XAdES semantic validation is not
+implemented.
 
 ### Optional local XSD validation
 
@@ -339,7 +361,9 @@ Pass `--include-json-lote-checks` in the CLI or `includeJsonLoteChecks: true` in
 ## Known limitations
 
 - XSD validation depends on `xmllint` and a local schema supplied through CLI `--xsd`; API requests currently do not accept an XSD upload/path.
-- XMLDSig/XAdES verification is best-effort. Unsupported transforms, canonicalization, detached references, or profile-specific rules are reported as `not_checked` or `failed`; success is never faked.
+- XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
+- Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
+- The current signature assessor evaluates the first `ds:Signature` and requires a Reference to cover the expected document root; full XAdES semantic/profile validation is not implemented.
 - Full legal ETSI conformance requires normative interpretation beyond structural checks, schema checks, and cryptographic checks.
 - JSON LoTE artifacts should be assessed under ETSI TS 119 602 / WE BUILD profile rules, not ETSI TS 119 612.
 - The Stoplight docs page uses CDN assets by default; OpenAPI specs are served locally.
