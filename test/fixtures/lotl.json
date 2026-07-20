@@ -11,18 +11,24 @@
       "PointersToOtherLoTE": [
         {
           "LoTELocation": "https://example.test/tl.xml",
-          "MimeType": "application/xml",
-          "LoTEType": "xml"
+          "LoTEQualifiers": [{
+            "LoTEType": "xml",
+            "MimeType": "application/xml"
+          }]
         },
         {
           "LoTELocation": "https://example.test/lote.json",
-          "MimeType": "application/json",
-          "LoTEType": "json"
+          "LoTEQualifiers": [{
+            "LoTEType": "json",
+            "MimeType": "application/json"
+          }]
         },
         {
           "LoTELocation": "https://example.test/unreachable.xml",
-          "MimeType": "application/xml",
-          "LoTEType": "xml"
+          "LoTEQualifiers": [{
+            "LoTEType": "xml",
+            "MimeType": "application/xml"
+          }]
         }
       ]
     }

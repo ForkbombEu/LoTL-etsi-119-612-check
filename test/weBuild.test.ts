@@ -43,8 +43,8 @@ describe("WE BUILD profile", () => {
     const summary = assessWeBuildProfile(lotl, results, new Date("2026-08-01T00:00:00Z"));
     expect(summary).toMatchObject({
       recognized: true,
-      listTypeCounts: { EUWalletProvidersList: 2, EUWRPACProvidersList: 1 },
-      roleCounts: { wallet_provider: 2, wrpac_provider: 1 },
+      listTypeCounts: { EUWalletProvidersList: 1, EUWRPACProvidersList: 1, unknown: 1 },
+      roleCounts: { wallet_provider: 1, wrpac_provider: 1, unknown: 1 },
       pointerConsistency: { declaredMimeMismatches: 1, duplicateLocations: 2, pointersMissingServiceDigitalIdentities: 1, pointersMissingQualifiers: 1, pointerCertificatesParsed: 1, pointerCertificatesInvalidAtAssessment: 0 },
     });
     expect(results[0].ts119612.checks).toEqual(expect.arrayContaining([

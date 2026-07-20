@@ -14,4 +14,18 @@ describe("parseLotlJson", () => {
       "https://example.test/unreachable.xml",
     ]);
   });
+
+  it("extracts declared type and MIME type from LoTEQualifiers", async () => {
+    const text = await readFile("test/fixtures/lotl.json", "utf8");
+    const parsed = parseLotlJson(text);
+
+    expect(parsed.pointers[0]?.declared).toMatchObject({
+      loteType: "xml",
+      mimeType: "application/xml",
+    });
+    expect(parsed.pointers[1]?.declared).toMatchObject({
+      loteType: "json",
+      mimeType: "application/json",
+    });
+  });
 });

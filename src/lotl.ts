@@ -32,12 +32,8 @@ export function parseLotlJson(text: string): ParsedLotl {
         index: zeroIndex + 1,
         location,
         declared: {
-          mimeType: firstString(
-            getPath(pointer, ["MimeType"]),
-            getPath(pointer, ["MIMEType"]),
-            getPath(pointer, ["mimeType"]),
-          ),
-          loteType: firstString(getPath(pointer, ["LoTEType"]), qualifierType(pointer)),
+          mimeType: qualifierValue(pointer, "MimeType"),
+          loteType: qualifierValue(pointer, "LoTEType"),
           schemeOperatorName: firstString(getPath(pointer, ["SchemeOperatorName"])),
           schemeTerritory: firstString(getPath(pointer, ["SchemeTerritory"])),
           pointerCertificateFingerprintsSha256: extractPointerFingerprints(pointer),
@@ -125,13 +121,9 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function qualifierType(pointer: unknown): string | undefined {
+function qualifierValue(pointer: unknown, name: "LoTEType" | "MimeType"): string | undefined {
   for (const qualifier of asArray(getPath(pointer, ["LoTEQualifiers"]))) {
-    const value = firstString(
-      getPath(qualifier, ["LoTEQualifier"]),
-      getPath(qualifier, ["Qualifier"]),
-      getPath(qualifier, ["type"]),
-    );
+    const value = stringValue(getPath(qualifier, [name]));
     if (value) return value;
   }
   return undefined;

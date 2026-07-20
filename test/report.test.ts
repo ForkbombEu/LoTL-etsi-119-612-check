@@ -118,8 +118,8 @@ describe("runAudit", () => {
     }, "0.0.0-test");
     expect(report.weBuildProfile).toMatchObject({
       recognized: true,
-      listTypeCounts: { EUWalletProvidersList: 2, EUWRPACProvidersList: 1 },
-      roleCounts: { wallet_provider: 2, wrpac_provider: 1 },
+      listTypeCounts: { EUWalletProvidersList: 1, EUWRPACProvidersList: 1, unknown: 1 },
+      roleCounts: { wallet_provider: 1, wrpac_provider: 1, unknown: 1 },
       pointerConsistency: { declaredMimeMismatches: 1, duplicateLocations: 2 },
     });
     expect(report.results[0].ts119612.checks).toEqual(expect.arrayContaining([

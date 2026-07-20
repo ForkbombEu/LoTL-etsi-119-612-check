@@ -8,21 +8,15 @@
       "PointersToOtherLoTE": [
         {
           "LoTELocation": "https://example.test/wallet.json",
-          "MimeType": "application/xml",
-          "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
           "ServiceDigitalIdentities": [{ "X509Certificates": [] }],
-          "LoTEQualifiers": [{ "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList" }]
+          "LoTEQualifiers": [{ "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList", "MimeType": "application/xml" }]
         },
         {
           "LoTELocation": "https://example.test/wrpac.xml",
-          "MimeType": "application/xml",
-          "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWRPACProvidersList",
-          "LoTEQualifiers": [{ "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWRPACProvidersList" }]
+          "LoTEQualifiers": [{ "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWRPACProvidersList", "MimeType": "application/xml" }]
         },
         {
           "LoTELocation": "https://example.test/wallet.json",
-          "MimeType": "application/json",
-          "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
           "ServiceDigitalIdentities": [{ "X509Certificates": [] }]
         }
       ]
