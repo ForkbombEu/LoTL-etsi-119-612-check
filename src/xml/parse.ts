@@ -8,7 +8,7 @@ export interface XmlParseResult {
 export function parseXml(text: string): XmlParseResult {
   const errors: string[] = [];
   const document = new DOMParser({
-    errorHandler: (level: "warning" | "error" | "fatalError", message: string) => {
+    onError: (level: "warning" | "error" | "fatalError", message: string) => {
       const prefix = level === "fatalError" ? "fatal" : level;
       errors.push(prefix + ": " + message);
     },

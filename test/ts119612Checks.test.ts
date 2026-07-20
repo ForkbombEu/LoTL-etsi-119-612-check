@@ -16,6 +16,7 @@ describe("assessTs119612Xml", () => {
     expect(result.extracted?.serviceCount).toBeGreaterThan(0);
     expect(result.ts119612.checks).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ id: "parse.xml", status: "pass" }),
         expect.objectContaining({ id: "structure.trust_service_provider_list", status: "pass" }),
       ]),
     );
