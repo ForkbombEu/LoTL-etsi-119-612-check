@@ -28,6 +28,12 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
 
     expect(result.detected.artifactKind).toBe("xml_lote");
     expect(result.ts119612.conformanceLevel).toBe("not_applicable");
+    expect(result.ts119612.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "xml_lote.structure.type", status: "pass" }),
+      expect.objectContaining({ id: "xml_lote.dates.next_after_issue", status: "pass" }),
+      expect.objectContaining({ id: "xml_lote.services.trusted_entity_count", status: "warn" }),
+      expect.objectContaining({ id: "signature.present", status: "fail" }),
+    ]));
     expect(result.extracted).toMatchObject({
       schemeOperatorName: ["NXD Foundation"],
       schemeName: ["NXD EAA Providers"],
