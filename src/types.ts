@@ -9,7 +9,7 @@ export type ConformanceLevel =
   | "fetch_failed"
   | "parse_failed";
 
-export type DetectedFormat = "xml" | "json" | "html" | "text" | "empty" | "unknown";
+export type DetectedFormat = "xml" | "json" | "jws" | "html" | "text" | "empty" | "unknown";
 
 export type ArtifactKind =
   | "ts119612_xml_tsl"
@@ -104,7 +104,7 @@ export interface StandardAssessment {
 }
 
 export interface CertificateSummary {
-  source: "pointer" | "xml_signature" | "service_digital_identity";
+  source: "pointer" | "xml_signature" | "json_signature" | "service_digital_identity";
   subject?: string;
   issuer?: string;
   serialNumber?: string;

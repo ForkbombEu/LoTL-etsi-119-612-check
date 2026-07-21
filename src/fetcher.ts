@@ -54,7 +54,7 @@ export async function saveFetchedArtifact(
 ): Promise<string> {
   const dir = join(outDir, "fetched");
   await mkdir(dir, { recursive: true });
-  const extension = format === "xml" || format === "json" ? format : "txt";
+  const extension = format === "xml" || format === "json" || format === "jws" ? format : "txt";
   const basename = safeFileName(`${String(index).padStart(3, "0")}-${location}`);
   const file = join(dir, `${basename}${extname(basename) ? "" : `.${extension}`}`);
   await writeFile(file, bytes);

@@ -20,7 +20,7 @@ concentrated in the layers that determine normative conformance:
 
 1. official XML Schema validation and TS 119 612 alternative-binding mapping;
 2. clauses 6.1 through 6.8 semantic validation;
-3. JAdES Baseline B and XAdES Baseline B profile validation;
+3. complete profile dispatch around the implemented JAdES/XAdES Baseline B validation;
 4. the six normative EU profiles in Annexes D through I;
 5. cross-document, historical, and dereferencing checks.
 
@@ -30,13 +30,13 @@ entered in a requirements ledger. As a non-normative engineering estimate:
 | Area | Current maturity | Approximate distance |
 | --- | --- | --- |
 | Scheme-explicit TS 119 602 XML evidence | Early partial | The root and some mandatory fields are covered, but most syntax, semantics, profile, and XAdES rules are missing. |
-| Official TS 119 602 JSON binding | Structural validation | The official object/array model is parsed and validated offline; core semantics, profile rules, and compact JAdES remain incomplete. |
+| Official TS 119 602 JSON binding | Structural, semantic, and signature validation | The official model is validated offline and compact JAdES is verified; Annex D-I dispatch and contextual checks remain incomplete. |
 | TS 119 612 alternative XML binding | Classified, mapping missing | Annex A.2.2 applicability is guarded, but Table A.1 component mapping is not implemented. |
 | Annex D-I profile conformance | Classification only | List-type names are recognized, but the normative profile tables are not validated. |
 | Complete TS 119 602 verdict | Not implemented | No artifact can currently receive an evidence-backed complete TS 119 602 conformance verdict. |
 
-The JSON structural layer is now implemented, but the semantic, signature,
-profile, trust, and contextual layers remain the majority of the work. This
+The JSON structural, local semantic, and compact-signature layers are now
+implemented, but profile, configured trust, and contextual layers remain. This
 is a planning observation, not a conformance score.
 
 ## Normative source set
@@ -71,7 +71,7 @@ assuming that schema success proves complete conformance.
 ### Input and artifact evidence
 
 - Bounded URL fetching with HTTP status, content type, byte length, and hash.
-- XML/JSON/HTML/unknown format detection.
+- XML/JSON/compact-JWS/HTML/unknown format detection.
 - Recognition of the official scheme-explicit XML root:
   `/ListOfTrustedEntities`.
 - Namespace-aware entity selection at:
@@ -210,6 +210,10 @@ Required change:
 - report raw unsigned JSON as a failed signature requirement for Annex D-I
   profiles, not as merely missing optional evidence.
 
+Implemented in TS602-10 using attached compact JWS payload recovery; detached
+payload and external certificate resolution limitations are reported
+explicitly rather than inferred.
+
 ### P0.5 Do not make TS 119 602 checks opt-in
 
 `includeJsonLoteChecks` currently allows a TS 119 602 JSON artifact to be
@@ -269,7 +273,7 @@ Required change:
 | 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, and certificate parsing are checked; key/SKI equivalence and profile PKI requirements remain. |
 | 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Partial | History-period coupling, URI/date syntax, and list-issue ordering are implemented; registered profile status sets remain. |
 | 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, retained-history coupling, identity presence, and descending status time are checked; profile-specific retained-key rules remain. |
-| 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | XAdES implemented; JAdES pending | XML LoTEs validate XAdES Baseline B structure, Annex H.4 constraints, signer subject metadata, certificate validity, cryptography, and explicit trust independently; implement compact JAdES next. |
+| 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Local XAdES and JAdES implemented | Both bindings separate structure/payload, cryptography, certificate validity, signer metadata, and explicit trust; contextual chain trust remains. |
 | Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
 | Annex C URIs | Exact registered profile URIs | Classification only | Add a versioned registry and exact comparisons with ambiguity handling. |
@@ -335,16 +339,16 @@ generic verification policy.
 
 ### JSON / JAdES
 
-- [ ] Detect compact JAdES rather than a JSON `signature` property.
-- [ ] Parse protected headers and enforce the JAdES Baseline B serialization
+- [x] Detect compact JAdES rather than a JSON `signature` property.
+- [x] Parse protected headers and enforce the JAdES Baseline B serialization
   and property requirements.
-- [ ] Recover and validate the exact signed LoTE payload.
-- [ ] Verify the signature algorithm and cryptographic signature.
-- [ ] Parse the signing certificate/chain and expose certificate evidence.
-- [ ] Validate signer subject country and organization against scheme data.
-- [ ] Keep embedded certificate evidence separate from trust-anchor
+- [x] Recover and validate the exact signed LoTE payload.
+- [x] Verify the signature algorithm and cryptographic signature.
+- [x] Parse the signing certificate/chain and expose certificate evidence.
+- [x] Validate signer subject country and organization against scheme data.
+- [x] Keep embedded certificate evidence separate from trust-anchor
   validation.
-- [ ] Report unsupported algorithms as `unsupported`, not `warn` or generic
+- [x] Report unsupported algorithms as `unsupported`, not `warn` or generic
   failure.
 
 ### Pointer authentication
@@ -379,12 +383,12 @@ Common Annex D-I requirements include:
 
 | Annex/profile | Allowed binding | Important distinguishing rules | Current support |
 | --- | --- | --- | --- |
-| D — PID providers | Scheme-explicit JSON | No history period, self-pointer, PID issuance/revocation service types, no service status/start time, JAdES B | LoTE type classification only |
-| E — Wallet providers | Scheme-explicit JSON | No history period, self-pointer, wallet issuance/revocation types, service name is wallet solution, mandatory `ServiceUniqueIdentifier`, JAdES B | LoTE type classification only |
-| F — WRPAC providers | Scheme-explicit JSON | No history period, self-pointer, WRPAC issuance/revocation types, certificate-purpose rules, JAdES B | LoTE type classification only |
-| G — WRPRC providers | Scheme-explicit JSON | No history period, self-pointer, WRPRC issuance/revocation types, certificate-purpose rules, JAdES B | LoTE type classification only |
-| H — Pub-EAA providers | Scheme-explicit JSON or XML | History period `65535`, no pointers, notified/withdrawn statuses, history uses SKI and forbids history certificates, JAdES B or tightly profiled XAdES B | Type classification plus partial XML structure/signature evidence |
-| I — Registrars/registers | Scheme-explicit JSON | No history period, self-pointer, only Register service type, no status/start time, mandatory machine-processable service supply point, JAdES B | LoTE type classification only |
+| D — PID providers | Scheme-explicit JSON | No history period, self-pointer, PID issuance/revocation service types, no service status/start time, JAdES B | Type classification plus JAdES evidence |
+| E — Wallet providers | Scheme-explicit JSON | No history period, self-pointer, wallet issuance/revocation types, service name is wallet solution, mandatory `ServiceUniqueIdentifier`, JAdES B | Type classification plus JAdES evidence |
+| F — WRPAC providers | Scheme-explicit JSON | No history period, self-pointer, WRPAC issuance/revocation types, certificate-purpose rules, JAdES B | Type classification plus JAdES evidence |
+| G — WRPRC providers | Scheme-explicit JSON | No history period, self-pointer, WRPRC issuance/revocation types, certificate-purpose rules, JAdES B | Type classification plus JAdES evidence |
+| H — Pub-EAA providers | Scheme-explicit JSON or XML | History period `65535`, no pointers, notified/withdrawn statuses, history uses SKI and forbids history certificates, JAdES B or tightly profiled XAdES B | Type classification plus JAdES/XAdES evidence |
+| I — Registrars/registers | Scheme-explicit JSON | No history period, self-pointer, only Register service type, no status/start time, mandatory machine-processable service supply point, JAdES B | Type classification plus JAdES evidence |
 
 `EUgeneric`/QEAA is not one of the TS 119 602 Annex D-I LoTE profiles. It
 belongs in the separate TS 119 612/WE BUILD assessment path and must not be
@@ -497,8 +501,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Complete |
 | TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Complete |
 | TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Complete |
-| TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Next |
-| TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Pending |
+| TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Complete |
+| TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Next |
 | TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Pending |
 
 TS602-01 establishes result isolation only; it does not claim that any TS
@@ -543,10 +547,10 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 ### Phase 4 — Signature profiles
 
-- [ ] Implement compact JAdES Baseline B parsing and verification.
-- [ ] Implement XAdES Baseline B property validation.
-- [ ] Implement the exact Annex H.4 XML signature constraints.
-- [ ] Match signer subject country/organization to scheme metadata.
+- [x] Implement compact JAdES Baseline B parsing and verification.
+- [x] Implement XAdES Baseline B property validation.
+- [x] Implement the exact Annex H.4 XML signature constraints.
+- [x] Match signer subject country/organization to scheme metadata.
 - [ ] Authenticate target lists using pointer identities.
 
 ### Phase 5 — Annex D-I profiles

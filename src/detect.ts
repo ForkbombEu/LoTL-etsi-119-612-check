@@ -1,4 +1,5 @@
 import { DOMParser } from "@xmldom/xmldom";
+import { parseCompactJades } from "./json/jades.js";
 import type { ArtifactKind, DetectedFormat } from "./types.js";
 
 const CANONICAL_ETSI_TS119612_NAMESPACE = "http://uri.etsi.org/02231/v2#";
@@ -9,6 +10,7 @@ export interface DetectionResult {
   format: DetectedFormat;
   artifactKind: ArtifactKind;
   parsedJson?: unknown;
+  compactJades?: string;
 }
 
 export function detectArtifact(bytes: Buffer | undefined, contentType?: string): DetectionResult {
@@ -17,6 +19,19 @@ export function detectArtifact(bytes: Buffer | undefined, contentType?: string):
   }
   const text = bytes.toString("utf8").trimStart();
   const lowerContentType = contentType?.toLowerCase() ?? "";
+
+  if (looksLikeCompactJws(text) || lowerContentType.includes("jose")) {
+    const compactJades = text.trim();
+    const parsed = parseCompactJades(compactJades);
+    if (parsed.protectedHeader) {
+      return {
+        format: "jws",
+        artifactKind: jsonArtifactKind(parsed.parsedPayload),
+        parsedJson: parsed.parsedPayload,
+        compactJades,
+      };
+    }
+  }
 
   if (lowerContentType.includes("json") || startsJson(text)) {
     try {
@@ -68,6 +83,11 @@ function isTs119612Namespace(namespace: string | null): boolean {
 
 function startsJson(text: string): boolean {
   return text.startsWith("{") || text.startsWith("[");
+}
+
+function looksLikeCompactJws(text: string): boolean {
+  const trimmed = text.trim();
+  return trimmed.split(".").length === 3 && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+$/.test(trimmed);
 }
 
 function jsonArtifactKind(value: unknown): ArtifactKind {

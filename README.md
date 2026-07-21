@@ -15,7 +15,7 @@ The tool reads:
 LoTE.ListAndSchemeInformation.PointersToOtherLoTE[]
 ```
 
-For each `LoTELocation`, it can fetch the artifact, detect XML/JSON/HTML/empty/unknown content, run best-effort ETSI TS 119 612 checks for XML Trusted Lists, and return both a machine-readable JSON report and a Markdown report.
+For each `LoTELocation`, it can fetch the artifact, detect XML/JSON/compact-JWS/HTML/empty/unknown content, run the applicable evidence checks, and return both a machine-readable JSON report and a Markdown report.
 
 ## Install
 
@@ -115,7 +115,7 @@ CLI outputs:
 ```text
 audit-output/report.md
 audit-output/report.json
-audit-output/fetched/<safe-file-name>.xml|json|txt
+audit-output/fetched/<safe-file-name>.xml|json|jws|txt
 ```
 
 `audit-output/` and `tl-audit-output/` are ignored by git.
@@ -253,7 +253,7 @@ curl -s -X POST http://127.0.0.1:3000/api/v1/report/markdown \
   -d @report-wrapper.json | jq -r '.markdown'
 ```
 
-Expanded POST endpoints (also documented in Stoplight) are `/api/audit/lotl`, `/api/audit/artifact`, `/api/audit/certificate-chain`, `/api/audit/fixture-readiness`, and `/api/reports/markdown`. The LoTL endpoint accepts `url`, `lotl`, or raw JSON `content`; the artifact endpoint accepts raw XML/JSON content without fetching it. Certificate-chain and fixture-readiness responses reuse the same core assessment functions as the CLI/API audit flow.
+Expanded POST endpoints (also documented in Stoplight) are `/api/audit/lotl`, `/api/audit/artifact`, `/api/audit/certificate-chain`, `/api/audit/fixture-readiness`, and `/api/reports/markdown`. The LoTL endpoint accepts `url`, `lotl`, or raw JSON `content`; the artifact endpoint accepts raw XML, JSON, or compact JAdES content without fetching it. Certificate-chain and fixture-readiness responses reuse the same core assessment functions as the CLI/API audit flow.
 
 Assessment endpoints return both:
 
@@ -377,7 +377,7 @@ Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoT
 
 JSON LoTE assessment now validates the official object/array model against the pinned V1.1.1 Draft-07 schema entirely offline. URI and date-time formats are enforced, and schema failures report JSON Pointer, schema path/keyword, expected value, observed value/type, and the exact schema source commit and SHA-256. The official `TrustedEntitiesList[]` and nested service arrays are parsed directly. The legacy WE BUILD/TSL-like `TrustedEntitiesList.TrustServiceProvider[]` shape is handled only by an isolated compatibility adapter and receives explicit schema and compatibility failures while retaining extractable evidence.
 
-Compact JAdES Baseline B validation remains `unsupported`; a JSON `signature` property is not accepted as normative signature evidence. Because complete semantic, signature, and Annex D-I profile coverage remain incomplete, schema success cannot produce a TS 119 602 `conformant` verdict.
+Compact JAdES Baseline B is detected as JWS rather than as a JSON `signature` property. The assessor recovers the attached JSON payload, compares it with the assessed LoTE, validates protected Baseline-B headers and certificate references, verifies supported RSA/RSA-PSS/ECDSA/EdDSA signature algorithms with an embedded `x5c` signer certificate, and reports certificate validity, signer subject matching, and explicit trust independently. Detached payloads or externally referenced certificates are reported as unsupported when the required external bytes/material are not supplied. Because complete Annex D-I profile coverage remains incomplete, signature and schema success cannot yet produce a TS 119 602 `conformant` verdict.
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
@@ -400,7 +400,7 @@ and its referenced
 - XSD validation depends on `xmllint` and a local schema supplied through CLI `--xsd`; API requests currently do not accept an XSD upload/path.
 - XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
 - Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
-- The current signature assessor evaluates the first `ds:Signature` and requires a Reference to cover the expected document root; full XAdES semantic/profile validation is not implemented.
+- The XML signature assessor evaluates the first `ds:Signature`; XML XSD validation and contextual signer-chain trust remain separate from the implemented XAdES Baseline B and Annex H.4 findings.
 - Full legal ETSI conformance requires normative interpretation beyond structural checks, schema checks, and cryptographic checks.
 - JSON LoTE artifacts should be assessed under ETSI TS 119 602 / WE BUILD profile rules, not ETSI TS 119 612.
 - The Stoplight docs page uses CDN assets by default; OpenAPI specs are served locally.

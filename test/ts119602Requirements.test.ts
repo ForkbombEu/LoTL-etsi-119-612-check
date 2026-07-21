@@ -60,6 +60,8 @@ describe("ETSI TS 119 602 requirements ledger", () => {
     expect(findTs119602Requirement("ts119602.profile.pub_eaa_providers.signature")?.implementation).toEqual({
       status: "partial",
       existingCheckIds: [
+        "json_lote.signature.jades_baseline_b",
+        "json_lote.signature.jades_cryptographic_verification_result",
         "signature.annex_h4.enveloped",
         "signature.annex_h4.document_reference",
         "signature.annex_h4.transforms",
@@ -85,9 +87,9 @@ describe("ETSI TS 119 602 requirements ledger", () => {
   it("reports coverage without implying complete normative validation", () => {
     expect(summarizeTs119602Requirements()).toMatchObject({
       total: 81,
-      implemented: 3,
-      partial: 44,
-      notImplemented: 34,
+      implemented: 4,
+      partial: 48,
+      notImplemented: 29,
       complete: false,
     });
   });

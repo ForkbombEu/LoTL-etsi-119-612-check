@@ -317,7 +317,9 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
   }
 
   if (detected.artifactKind === "json_lote" || detected.artifactKind === "json_lotl") {
-    const assessed = assessJsonLote(detected.parsedJson, options.includeJsonLoteChecks);
+    const assessed = assessJsonLote(detected.parsedJson, options.includeJsonLoteChecks, new Date(), {
+      compactJades: detected.compactJades,
+    });
     return mergeResult(base, assessed);
   }
 

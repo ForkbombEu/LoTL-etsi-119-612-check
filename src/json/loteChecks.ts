@@ -1,4 +1,5 @@
 import { getPath, isRecord, numberValue, asArray, firstString } from "../lotl.js";
+import { sha256Hex } from "../certs.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
 import {
   buildTs119602EntityFindings,
@@ -23,15 +24,21 @@ import {
   type LocatedSyntaxValue,
 } from "../standards/ts119602SyntaxFindings.js";
 import type { CheckResult, TrustedListAuditResult } from "../types.js";
+import { assessCompactJades, type JadesAssessmentOptions } from "./jades.js";
 import { adaptLegacyTslLikeJsonLote } from "./legacyLoteAdapter.js";
 import { validateTs119602JsonSchema, type Ts119602JsonSchemaValidation } from "./ts119602JsonSchema.js";
 
 type JsonBindingModel = "official_ts119602" | "legacy_we_build_tsl_like" | "unrecognized";
 
+export interface JsonLoteAssessmentOptions extends Omit<JadesAssessmentOptions, "assessmentDate" | "schemeTerritory" | "schemeOperatorNames"> {
+  compactJades?: string;
+}
+
 export function assessJsonLote(
   parsed: unknown,
   _includeChecks: boolean,
   assessmentDate = new Date(),
+  options: JsonLoteAssessmentOptions = {},
 ): Pick<TrustedListAuditResult, "ts119602" | "extracted"> {
   const loteValue = getPath(parsed, ["LoTE"]);
   const legacy = adaptLegacyTslLikeJsonLote(parsed);
@@ -57,6 +64,12 @@ export function assessJsonLote(
     info,
     assessmentDate,
   ));
+  const jadesAssessment = assessCompactJades(options.compactJades, parsed, {
+    assessmentDate,
+    schemeTerritory: firstString(getPath(info, ["SchemeTerritory"])),
+    schemeOperatorNames: stringValues(getPath(info, ["SchemeOperatorName"])),
+    trustedSignerFingerprintsSha256: options.trustedSignerFingerprintsSha256,
+  });
   const checks: CheckResult[] = [
     schemaCheck(schemaValidation),
     compatibilityCheck(model, legacy),
@@ -77,13 +90,7 @@ export function assessJsonLote(
   checks.push(
     check("json_lote.pointers.count", "pass", "info", "PointersToOtherLoTE entries counted.", pointers.length),
     pointerIdentityCheck(pointers),
-    check(
-      "json_lote.signature.jades_baseline_b",
-      "unsupported",
-      "warning",
-      "Compact JAdES Baseline B validation is not implemented; a JSON signature property is not treated as signature evidence.",
-      { legacySignatureObjectPresent: isJsonObject(signature) },
-    ),
+    ...jadesAssessment.checks,
     ...buildTs119602MetadataFindings(collectJsonMetadataInput(metadataInfo, info !== undefined, assessmentDate, loteValue)),
     ...entityAssessment.checks,
     ...buildTs119602SyntaxFindings(collectJsonSyntaxInputs(parsed)),
@@ -107,7 +114,7 @@ export function assessJsonLote(
       listIssueDateTime: issueDateTime,
       nextUpdate,
       distributionPoints: stringValues(getPath(info, ["DistributionPoints"])),
-      certificates: entityAssessment.certificates,
+      certificates: [...jadesAssessment.certificates, ...entityAssessment.certificates],
       jsonLote: {
         assessmentProfile: "ETSI TS 119 602 V1.1.1 JSON binding with offline schema validation (incomplete semantic/profile coverage)",
         jsonBindingModel: model,
@@ -128,6 +135,10 @@ export function assessJsonLote(
         PointersToOtherLoTECount: pointers.length,
         pointersWithServiceDigitalIdentities: pointers.filter(hasServiceDigitalIdentities).length,
         signatureObjectPresent: isJsonObject(signature),
+        compactJadesPresent: Boolean(options.compactJades),
+        compactJadesPayloadSha256: jadesAssessment.parse.payloadBytes
+          ? sha256Hex(jadesAssessment.parse.payloadBytes)
+          : undefined,
         ...(legacy ? { compatibility: { observedPath: legacy.observedPath, normativePath: legacy.normativePath } } : {}),
       },
     },

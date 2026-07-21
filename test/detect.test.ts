@@ -67,6 +67,16 @@ describe("detectArtifact", () => {
     });
   });
 
+  it("detects a compact JAdES LoTE from its recovered JWS payload", async () => {
+    const bytes = await readFile("test/fixtures/ts119602-jades-compact.jws");
+    expect(detectArtifact(bytes, "application/jose")).toMatchObject({
+      format: "jws",
+      artifactKind: "json_lote",
+      parsedJson: { LoTE: expect.any(Object) },
+      compactJades: expect.any(String),
+    });
+  });
+
   it("detects HTML error pages", async () => {
     const bytes = await readFile("test/fixtures/html-error.html");
     expect(detectArtifact(bytes, "text/html")).toMatchObject({

@@ -11,7 +11,7 @@ describe("assessJsonLote", () => {
     const result = assessJsonLote(await fixture("json-lote.json"), true, new Date("2026-02-01T00:00:00Z"));
     expect(result.ts119602).toMatchObject({
       applicable: true,
-      conformanceLevel: "unsupported",
+      conformanceLevel: "non_conformant",
     });
     expect(result.ts119602.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "ts119602.binding.json_schema", status: "pass" }),
@@ -20,7 +20,7 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "json_lote.version_identifier", status: "pass" }),
       expect.objectContaining({ id: "json_lote.scheme_information_uri", status: "pass" }),
       expect.objectContaining({ id: "json_lote.pointers.service_digital_identities", status: "pass" }),
-      expect.objectContaining({ id: "json_lote.signature.jades_baseline_b", status: "unsupported" }),
+      expect.objectContaining({ id: "json_lote.signature.jades_baseline_b", status: "fail" }),
       expect.objectContaining({ id: "json_lote.dates.next_after_issue", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.uri", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.date_time", status: "pass" }),
@@ -211,15 +211,16 @@ describe("assessJsonLote", () => {
     });
   });
 
-  it("does not treat an absent JSON signature object as JAdES evidence", async () => {
+  it("fails unsigned JSON without treating a signature object as JAdES evidence", async () => {
     const result = assessJsonLote(await fixture("json-lote-missing-signature.json"), true);
     expect(result.ts119602.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "ts119602.binding.json_schema", status: "pass" }),
       expect.objectContaining({
         id: "json_lote.signature.jades_baseline_b",
-        status: "unsupported",
-        evidence: { legacySignatureObjectPresent: false },
+        status: "fail",
       }),
+      expect.objectContaining({ id: "json_lote.signature.jades_compact_serialization", status: "fail" }),
+      expect.objectContaining({ id: "json_lote.signature.jades_cryptographic_verification_result", status: "not_checked" }),
     ]));
   });
 

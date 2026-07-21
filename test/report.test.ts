@@ -70,14 +70,15 @@ describe("runAudit", () => {
     expect(report.results[1].ts119612.mandatoryFailures).toEqual([]);
     expect(report.results[1].ts119602).toMatchObject({
       applicable: true,
-      conformanceLevel: "unsupported",
+      conformanceLevel: "non_conformant",
     });
     expect(report.results[1].ts119602Classification).toMatchObject({
       dataModel: "ts119602",
       binding: "scheme_explicit_json",
       bindingStatus: "selected",
     });
-    expect(report.summary.ts119602.unsupported).toBe(1);
+    expect(report.summary.ts119602.nonConformant).toBe(1);
+    expect(report.summary.ts119602.unsupported).toBe(0);
     expect(report.results[1].standardApplicability).toEqual({
       ts119612: "not_applicable",
       ts119602: "applicable",

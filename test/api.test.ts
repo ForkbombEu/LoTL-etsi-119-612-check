@@ -80,7 +80,7 @@ describe("API server", () => {
     expect(body.report.summary.totalPointers).toBe(3);
     expect(body.report.summary.jsonArtifacts).toBe(1);
     expect(body.report.results[1].ts119612.conformanceLevel).toBe("not_applicable");
-    expect(body.report.results[1].ts119602.conformanceLevel).toBe("unsupported");
+    expect(body.report.results[1].ts119602.conformanceLevel).toBe("non_conformant");
     expect(body.report.results[1].ts119602Classification).toMatchObject({
       binding: "scheme_explicit_json",
       bindingStatus: "selected",
@@ -120,9 +120,10 @@ describe("API server", () => {
 
   it("exposes the expanded assessment core through POST endpoints", async () => {
     const app = await buildServer();
-    const [lotl, xml] = await Promise.all([
+    const [lotl, xml, jades] = await Promise.all([
       readFile("test/fixtures/lotl.json", "utf8"),
       readFile("test/fixtures/tsl-valid-ish.xml", "utf8"),
+      readFile("test/fixtures/ts119602-jades-compact.jws", "utf8"),
     ]);
     const lotlResponse = await app.inject({
       method: "POST",
@@ -139,6 +140,22 @@ describe("API server", () => {
     });
     expect(artifactResponse.statusCode).toBe(200);
     expect(artifactResponse.json().result).toMatchObject({ source: "fixture.xml", fetch: { attempted: false }, detected: { format: "xml" } });
+
+    const jadesResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: { content: jades, source: "fixture.jws", contentType: "application/jose", options: { strict: false } },
+    });
+    expect(jadesResponse.statusCode).toBe(200);
+    expect(jadesResponse.json().result).toMatchObject({
+      source: "fixture.jws",
+      detected: { format: "jws", artifactKind: "json_lote" },
+      ts119602: {
+        checks: expect.arrayContaining([
+          expect.objectContaining({ id: "json_lote.signature.jades_cryptographic_verification_result", status: "pass" }),
+        ]),
+      },
+    });
 
     const chainResponse = await app.inject({
       method: "POST",

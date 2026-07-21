@@ -315,7 +315,7 @@ paths:
         '500': { $ref: '#/components/responses/InternalError' }
   /api/audit/artifact:
     post:
-      summary: Assess raw XML or JSON TL/LoTE artifact content without fetching it
+      summary: Assess raw XML, JSON, or compact JAdES TL/LoTE artifact content without fetching it
       requestBody:
         required: true
         content:
@@ -729,7 +729,7 @@ components:
           type: object
           required: [format, artifactKind]
           properties:
-            format: { type: string, enum: [xml, json, html, text, empty, unknown] }
+            format: { type: string, enum: [xml, json, jws, html, text, empty, unknown] }
             artifactKind: { type: string, enum: [ts119612_xml_tsl, ts119612_xml_lotl, xml_lotl_like, xml_lote, json_lote, json_lotl, html_error, unknown] }
         ts119602Classification:
           $ref: '#/components/schemas/Ts119602Classification'
