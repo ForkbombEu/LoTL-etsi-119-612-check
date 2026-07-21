@@ -1,6 +1,12 @@
 import { tryCertificateFromBase64 } from "../certs.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
+import { parseTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
+import {
+  buildTs119602SyntaxFindings,
+  type LocatedMultilingualSet,
+  type LocatedSyntaxValue,
+} from "../standards/ts119602SyntaxFindings.js";
 import type { CertificateSummary, CheckResult, TrustedListAuditResult } from "../types.js";
 import { assessSignature } from "./signature.js";
 import { parseXml } from "./parse.js";
@@ -38,6 +44,7 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
   }
   const signature = await assessSignature(xml, document);
   checks.push(...signature.checks);
+  checks.push(...buildTs119602SyntaxFindings(collectXmlSyntaxInputs(root)));
   checks.push(...dateChecks(issue, next));
   const services = assessTrustedEntities(root);
   checks.push(...services.checks);
@@ -170,14 +177,118 @@ function xmlBindingCheck(root: Element, binding: XmlLoteBinding): CheckResult {
 }
 
 function dateChecks(issueValue: string | undefined, nextValue: string | undefined): CheckResult[] {
-  const issue = parseDate(issueValue); const next = parseDate(nextValue);
-  const checks = [check("xml_lote.dates.issue_valid", "dates", issue ? "pass" : "fail", issue ? "info" : "error", "ListIssueDateTime is a valid ISO timestamp.", issueValue), check("xml_lote.dates.next_update_valid", "dates", next ? "pass" : "fail", next ? "info" : "error", "NextUpdate is a valid ISO timestamp.", nextValue)];
+  const issue = parseTs119602UtcDateTime(issueValue); const next = parseTs119602UtcDateTime(nextValue);
+  const checks = [check("xml_lote.dates.issue_valid", "dates", issue ? "pass" : "fail", issue ? "info" : "error", "ListIssueDateTime uses the strict TS 119 602 UTC lexical form.", issueValue), check("xml_lote.dates.next_update_valid", "dates", next ? "pass" : "fail", next ? "info" : "error", "NextUpdate uses the strict TS 119 602 UTC lexical form.", nextValue)];
   checks.push(check("xml_lote.dates.next_after_issue", "dates", issue && next && next > issue ? "pass" : "fail", issue && next && next > issue ? "info" : "error", "NextUpdate is after ListIssueDateTime.", issue && next ? { issue: issue.toISOString(), nextUpdate: next.toISOString() } : undefined));
   if (issue && next) checks.push(check("xml_lote.dates.update_period_days", "dates", Math.round((next.getTime() - issue.getTime()) / 86_400_000) <= 183 ? "pass" : "warn", "warning", "Update period is not longer than six months.", Math.round((next.getTime() - issue.getTime()) / 86_400_000)));
   return checks;
 }
 
-function parseDate(value: string | undefined): Date | undefined { if (!value) return undefined; const date = new Date(value); return Number.isNaN(date.getTime()) ? undefined : date; }
+const XML_URI_ELEMENTS = new Set([
+  "LoTEType",
+  "StatusDeterminationApproach",
+  "LoTELocation",
+  "URI",
+  "ServiceTypeIdentifier",
+  "ServiceStatus",
+  "ServiceSupplyPoint",
+  "ServiceUniqueIdentifier",
+  "AssociatedBodyTypeIdentifier",
+]);
+const XML_DATE_TIME_ELEMENTS = new Set(["ListIssueDateTime", "dateTime", "StatusStartingTime"]);
+const XML_COUNTRY_ELEMENTS = new Set(["Country", "CountryName", "SchemeTerritory"]);
+const XML_MULTILINGUAL_ELEMENTS = new Set(["Name", "PostalAddress", "URI", "LoTEPolicy", "LoTELegalNotice", "TextualInformation"]);
+const XML_MULTILINGUAL_URI_PARENTS = new Set([
+  "ElectronicAddress",
+  "SchemeInformationURI",
+  "SchemeTypeCommunityRules",
+  "TEInformationURI",
+  "SchemeServiceDefinitionURI",
+  "TEServiceDefinitionURI",
+  "AssociatedBodyInformationURI",
+]);
+
+function collectXmlSyntaxInputs(root: Element): {
+  uris: LocatedSyntaxValue[];
+  dateTimes: LocatedSyntaxValue[];
+  countries: LocatedSyntaxValue[];
+  multilingual: LocatedMultilingualSet[];
+} {
+  const descendants = nodes(root, ".//*").filter((node): node is Element => node.nodeType === 1);
+  const uriByPath = new Map<string, LocatedSyntaxValue>();
+  const dateTimes: LocatedSyntaxValue[] = [];
+  const countries: LocatedSyntaxValue[] = [];
+  const multilingualGroups = new Map<Node, LocatedMultilingualSet>();
+
+  if (root.hasAttribute("LOTETag")) {
+    uriByPath.set(`${xmlNodePath(root)}/@LOTETag`, { path: `${xmlNodePath(root)}/@LOTETag`, value: root.getAttribute("LOTETag") });
+  }
+  for (const element of descendants) {
+    const path = xmlNodePath(element);
+    if (XML_URI_ELEMENTS.has(element.localName)) {
+      uriByPath.set(path, { path, value: element.textContent?.trim() ?? "" });
+    }
+    if (element.localName === "ServiceSupplyPoint" && element.hasAttribute("type")) {
+      uriByPath.set(`${path}/@type`, { path: `${path}/@type`, value: element.getAttribute("type") });
+    }
+    if (XML_DATE_TIME_ELEMENTS.has(element.localName)) {
+      dateTimes.push({ path, value: element.textContent?.trim() ?? "" });
+    }
+    if (XML_COUNTRY_ELEMENTS.has(element.localName)) {
+      countries.push({ path, value: element.textContent?.trim() ?? "" });
+    }
+    if (isXmlMultilingualElement(element)) {
+      const parent = element.parentNode;
+      if (!parent) continue;
+      const group = multilingualGroups.get(parent) ?? { path: xmlNodePath(parent), values: [] };
+      group.values.push({
+        language: element.getAttributeNS("http://www.w3.org/XML/1998/namespace", "lang") || undefined,
+        value: xmlMultilingualContent(element),
+      });
+      multilingualGroups.set(parent, group);
+    }
+  }
+  return {
+    uris: [...uriByPath.values()],
+    dateTimes,
+    countries,
+    multilingual: [...multilingualGroups.values()],
+  };
+}
+
+function isXmlMultilingualElement(element: Element): boolean {
+  if (!XML_MULTILINGUAL_ELEMENTS.has(element.localName)) return false;
+  if (element.localName !== "URI") return true;
+  const parent = element.parentNode;
+  return XML_MULTILINGUAL_URI_PARENTS.has(parent?.nodeType === 1 ? (parent as Element).localName : "");
+}
+
+function xmlMultilingualContent(element: Element): string {
+  if (element.localName !== "PostalAddress") return element.textContent?.trim() ?? "";
+  return Array.from(element.childNodes)
+    .filter((child): child is Element => child.nodeType === 1)
+    .map((child) => child.textContent?.trim() ?? "")
+    .filter(Boolean)
+    .join(" ");
+}
+
+function xmlNodePath(node: Node): string {
+  const segments: string[] = [];
+  let current: Node | null = node;
+  while (current?.nodeType === 1) {
+    const element = current as Element;
+    let position = 1;
+    let sibling = element.previousSibling;
+    while (sibling) {
+      if (sibling.nodeType === 1 && (sibling as Element).localName === element.localName) position += 1;
+      sibling = sibling.previousSibling;
+    }
+    segments.unshift(`${element.localName}[${position}]`);
+    current = element.parentNode;
+  }
+  return `/${segments.join("/")}`;
+}
+
 function names(context: Node, expression: string): string[] { const named = texts(context, `${expression}/*[local-name()='Name']`); return named.length > 0 ? named : texts(context, expression); }
 function exists(checks: CheckResult[], context: Node, id: string, expression: string, message: string): void { const present = has(context, expression); checks.push(check(id, "structure", present ? "pass" : "fail", present ? "info" : "error", message)); }
 function check(id: string, category: CheckResult["category"], status: CheckResult["status"], severity: CheckResult["severity"], message: string, evidence?: unknown): CheckResult { return { id, category, status, severity, message, evidence }; }

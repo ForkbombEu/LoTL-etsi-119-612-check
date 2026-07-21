@@ -22,6 +22,11 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "json_lote.pointers.service_digital_identities", status: "pass" }),
       expect.objectContaining({ id: "json_lote.signature.jades_baseline_b", status: "unsupported" }),
       expect.objectContaining({ id: "json_lote.dates.next_after_issue", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.uri", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.date_time", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.language", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.country_code", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.language.annex_b", status: "not_checked" }),
       expect.objectContaining({
         id: "ts119602.coverage.complete",
         status: "not_checked",
@@ -39,6 +44,31 @@ describe("assessJsonLote", () => {
       pointersWithServiceDigitalIdentities: 1,
       signatureObjectPresent: false,
     });
+  });
+
+  it("reports clause 6.1 failures separately from permissive binding formats", async () => {
+    const result = assessJsonLote(await fixture("ts119602-clause61-invalid.json"), true);
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "ts119602.syntax.uri",
+        status: "fail",
+        evidence: expect.objectContaining({
+          results: expect.arrayContaining([
+            expect.objectContaining({
+              path: "/LoTE/ListAndSchemeInformation/LoTEType",
+              validation: expect.objectContaining({
+                diagnostics: [expect.objectContaining({ code: "uri.absolute" })],
+              }),
+            }),
+          ]),
+        }),
+      }),
+      expect.objectContaining({ id: "ts119602.syntax.date_time", status: "fail" }),
+      expect.objectContaining({ id: "ts119602.syntax.language", status: "fail" }),
+      expect.objectContaining({ id: "ts119602.syntax.country_code", status: "fail" }),
+      expect.objectContaining({ id: "json_lote.dates.issue_valid", status: "fail" }),
+      expect.objectContaining({ id: "json_lote.dates.next_update_valid", status: "fail" }),
+    ]));
   });
 
   it("reports actionable schema errors for missing list information", async () => {

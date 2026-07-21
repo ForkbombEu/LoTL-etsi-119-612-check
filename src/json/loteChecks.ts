@@ -1,6 +1,12 @@
 import { getPath, isRecord, numberValue, asArray, firstString } from "../lotl.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
+import { parseTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
+import {
+  buildTs119602SyntaxFindings,
+  type LocatedMultilingualSet,
+  type LocatedSyntaxValue,
+} from "../standards/ts119602SyntaxFindings.js";
 import type { CheckResult, TrustedListAuditResult } from "../types.js";
 import { adaptLegacyTslLikeJsonLote } from "./legacyLoteAdapter.js";
 import { validateTs119602JsonSchema, type Ts119602JsonSchemaValidation } from "./ts119602JsonSchema.js";
@@ -55,6 +61,7 @@ export function assessJsonLote(
       "Compact JAdES Baseline B validation is not implemented; a JSON signature property is not treated as signature evidence.",
       { legacySignatureObjectPresent: isJsonObject(signature) },
     ),
+    ...buildTs119602SyntaxFindings(collectJsonSyntaxInputs(parsed)),
     ...dateChecks(issueDateTime, nextUpdate, assessmentDate),
     check(
       "ts119602.coverage.complete",
@@ -143,11 +150,11 @@ function compatibilityCheck(
 }
 
 function dateChecks(issueValue: string | undefined, nextValue: string | undefined, assessmentDate: Date): CheckResult[] {
-  const issue = parseDate(issueValue);
-  const next = parseDate(nextValue);
+  const issue = parseTs119602UtcDateTime(issueValue);
+  const next = parseTs119602UtcDateTime(nextValue);
   const checks = [
-    check("json_lote.dates.issue_valid", issue ? "pass" : "warn", issue ? "info" : "warning", "ListIssueDateTime is a valid ISO timestamp.", issueValue),
-    check("json_lote.dates.next_update_valid", next ? "pass" : "warn", next ? "info" : "warning", "NextUpdate is a valid ISO timestamp.", nextValue),
+    check("json_lote.dates.issue_valid", issue ? "pass" : "fail", issue ? "info" : "error", "ListIssueDateTime uses the strict TS 119 602 UTC lexical form.", issueValue),
+    check("json_lote.dates.next_update_valid", next ? "pass" : "fail", next ? "info" : "error", "NextUpdate uses the strict TS 119 602 UTC lexical form.", nextValue),
   ];
   if (!issue || !next) {
     checks.push(
@@ -196,14 +203,84 @@ function stringValues(value: unknown): string[] {
   return asArray(value).flatMap((item) => firstString(item) ?? []);
 }
 
-function parseDate(value: string | undefined): Date | undefined {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
 function isJsonObject(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && !Array.isArray(value);
+}
+
+const JSON_URI_PROPERTIES = new Set([
+  "LoTEType",
+  "StatusDeterminationApproach",
+  "LoTELocation",
+  "encoding",
+  "uriValue",
+  "ServiceTypeIdentifier",
+  "ServiceStatus",
+  "ServiceType",
+  "ServiceUniqueIdentifier",
+  "AssociatedBodyTypeIdentifier",
+]);
+const JSON_URI_ARRAY_PROPERTIES = new Set(["DistributionPoints"]);
+const JSON_DATE_TIME_PROPERTIES = new Set(["ListIssueDateTime", "NextUpdate", "StatusStartingTime"]);
+const JSON_COUNTRY_PROPERTIES = new Set(["Country", "SchemeTerritory"]);
+
+function collectJsonSyntaxInputs(value: unknown): {
+  uris: LocatedSyntaxValue[];
+  dateTimes: LocatedSyntaxValue[];
+  countries: LocatedSyntaxValue[];
+  multilingual: LocatedMultilingualSet[];
+} {
+  const uris: LocatedSyntaxValue[] = [];
+  const dateTimes: LocatedSyntaxValue[] = [];
+  const countries: LocatedSyntaxValue[] = [];
+  const multilingual: LocatedMultilingualSet[] = [];
+
+  function visit(current: unknown, path: string): void {
+    if (Array.isArray(current)) {
+      const multilingualEntries = current.filter(isLanguageBearingRecord);
+      if (multilingualEntries.length > 0) {
+        multilingual.push({
+          path,
+          values: multilingualEntries.map((entry) => ({
+            language: entry.lang,
+            value: multilingualContent(entry),
+          })),
+        });
+      }
+      current.forEach((entry, index) => visit(entry, `${path}/${index}`));
+      return;
+    }
+    if (!isRecord(current)) return;
+    for (const [property, propertyValue] of Object.entries(current)) {
+      const propertyPath = `${path}/${escapeJsonPointer(property)}`;
+      if (JSON_URI_PROPERTIES.has(property)) uris.push({ path: propertyPath, value: propertyValue });
+      if (JSON_DATE_TIME_PROPERTIES.has(property)) dateTimes.push({ path: propertyPath, value: propertyValue });
+      if (JSON_COUNTRY_PROPERTIES.has(property)) countries.push({ path: propertyPath, value: propertyValue });
+      if (JSON_URI_ARRAY_PROPERTIES.has(property) && Array.isArray(propertyValue)) {
+        propertyValue.forEach((entry, index) => uris.push({ path: `${propertyPath}/${index}`, value: entry }));
+      }
+      visit(propertyValue, propertyPath);
+    }
+  }
+
+  visit(value, "");
+  return { uris, dateTimes, countries, multilingual };
+}
+
+function isLanguageBearingRecord(value: unknown): value is Record<string, unknown> & { lang: unknown } {
+  return isRecord(value) && Object.hasOwn(value, "lang");
+}
+
+function multilingualContent(value: Record<string, unknown>): unknown {
+  if (Object.hasOwn(value, "value")) return value.value;
+  if (Object.hasOwn(value, "uriValue")) return value.uriValue;
+  const addressParts = Object.entries(value)
+    .filter(([property, entry]) => property !== "lang" && typeof entry === "string")
+    .map(([, entry]) => entry as string);
+  return addressParts.length > 0 ? addressParts.join(" ") : undefined;
+}
+
+function escapeJsonPointer(value: string): string {
+  return value.replace(/~/g, "~0").replace(/\//g, "~1");
 }
 
 function addRequiredJsonCheck(

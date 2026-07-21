@@ -6,9 +6,9 @@ const schemeInformation = `
     <LoTEVersionIdentifier>1</LoTEVersionIdentifier>
     <LoTESequenceNumber>2</LoTESequenceNumber>
     <LoTEType>http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersList</LoTEType>
-    <SchemeOperatorName><Name>NXD Foundation</Name></SchemeOperatorName>
-    <SchemeOperatorAddress><PostalAddresses><PostalAddress><CountryName>SE</CountryName></PostalAddress></PostalAddresses></SchemeOperatorAddress>
-    <SchemeName><Name>NXD EAA Providers</Name></SchemeName>
+    <SchemeOperatorName><Name xml:lang="en">NXD Foundation</Name></SchemeOperatorName>
+    <SchemeOperatorAddress><PostalAddresses><PostalAddress xml:lang="en"><CountryName>SE</CountryName></PostalAddress></PostalAddresses></SchemeOperatorAddress>
+    <SchemeName><Name xml:lang="en">NXD EAA Providers</Name></SchemeName>
     <SchemeTerritory>EU</SchemeTerritory>
     <StatusDeterminationApproach>http://example.test/status</StatusDeterminationApproach>
     <ListIssueDateTime>2026-07-09T11:30:03Z</ListIssueDateTime>
@@ -19,14 +19,14 @@ function trustedEntity(name: string): string {
   return `
     <TrustedEntity>
       <TrustedEntityInformation>
-        <TEName><Name>${name}</Name></TEName>
-        <TEAddress><PostalAddresses><PostalAddress><CountryName>EU</CountryName></PostalAddress></PostalAddresses></TEAddress>
+        <TEName><Name xml:lang="en">${name}</Name></TEName>
+        <TEAddress><PostalAddresses><PostalAddress xml:lang="en"><CountryName>EU</CountryName></PostalAddress></PostalAddresses></TEAddress>
       </TrustedEntityInformation>
       <TrustedEntityServices>
         <TrustedEntityService>
           <ServiceInformation>
             <ServiceTypeIdentifier>https://example.test/service</ServiceTypeIdentifier>
-            <ServiceName><Name>${name} service</Name></ServiceName>
+            <ServiceName><Name xml:lang="en">${name} service</Name></ServiceName>
             <ServiceDigitalIdentity />
           </ServiceInformation>
         </TrustedEntityService>
@@ -74,6 +74,11 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       }),
       expect.objectContaining({ id: "xml_lote.structure.type", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.dates.next_after_issue", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.uri", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.date_time", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.language", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.syntax.country_code", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.language.annex_b", status: "not_checked" }),
       expect.objectContaining({ id: "xml_lote.structure.trusted_entities_container", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.services.trusted_entity_count", status: "pass", evidence: 1 }),
       expect.objectContaining({ id: "signature.present", status: "fail" }),

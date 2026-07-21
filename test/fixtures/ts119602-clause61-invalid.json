@@ -1,0 +1,15 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEVersionIdentifier": 1,
+      "LoTEType": "relative/lote-type",
+      "LoTESequenceNumber": 1,
+      "SchemeOperatorName": [
+        { "lang": "it-IT", "value": "Operatore" }
+      ],
+      "SchemeTerritory": "GB",
+      "ListIssueDateTime": "2026-01-01T00:00:00.000Z",
+      "NextUpdate": "2026-07-01T01:00:00+01:00"
+    }
+  }
+}

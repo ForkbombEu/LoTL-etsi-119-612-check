@@ -487,8 +487,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Complete |
 | TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Complete |
 | TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Complete |
-| TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Next |
-| TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Pending |
+| TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Complete |
+| TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Next |
 | TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Pending |
 | TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Pending |
 | TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Pending |
@@ -523,8 +523,9 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 ### Phase 3 — Core clauses 6.1-6.7
 
-- [ ] Implement reusable validators for URIs, UTC timestamps, language tags,
-  country codes, multilingual values, and addresses.
+- [x] Implement reusable validators for URIs, UTC timestamps, language tags,
+  country codes, and multilingual values.
+- [ ] Implement reusable address validators.
 - [ ] Implement Table 1 implicit/explicit presence rules.
 - [ ] Implement list metadata, pointers, entities, services, identities,
   statuses, histories, and critical extensions.
