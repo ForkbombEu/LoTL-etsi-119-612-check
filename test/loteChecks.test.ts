@@ -21,7 +21,11 @@ describe("assessJsonLote", () => {
         expect.objectContaining({ id: "json_lote.pointers.service_digital_identities", status: "pass" }),
         expect.objectContaining({ id: "json_lote.signature.jades_baseline_b", status: "unsupported" }),
         expect.objectContaining({ id: "json_lote.dates.next_after_issue", status: "pass" }),
-        expect.objectContaining({ id: "ts119602.coverage.complete", status: "not_checked" }),
+        expect.objectContaining({
+          id: "ts119602.coverage.complete",
+          status: "not_checked",
+          evidence: expect.objectContaining({ total: 81, complete: false }),
+        }),
       ]),
     );
     expect(result.extracted?.jsonLote).toMatchObject({

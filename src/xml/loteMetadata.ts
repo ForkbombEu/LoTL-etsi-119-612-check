@@ -1,5 +1,6 @@
 import { tryCertificateFromBase64 } from "../certs.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
+import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
 import type { CertificateSummary, CheckResult, TrustedListAuditResult } from "../types.js";
 import { assessSignature } from "./signature.js";
 import { parseXml } from "./parse.js";
@@ -46,6 +47,7 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
     "not_checked",
     "warning",
     "Complete ETSI TS 119 602 V1.1.1 schema, semantic, signature, and Annex D-I profile coverage is not implemented.",
+    summarizeTs119602Requirements(),
   ));
 
   const certificates = [...signature.certificates, ...services.certificates];

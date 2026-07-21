@@ -1,5 +1,6 @@
 import { getPath, isRecord, numberValue, asArray, firstString } from "../lotl.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
+import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
 import type { CheckResult, TrustedListAuditResult } from "../types.js";
 
 export function assessJsonLote(
@@ -43,6 +44,7 @@ export function assessJsonLote(
       "not_checked",
       "warning",
       "Complete ETSI TS 119 602 V1.1.1 schema, semantic, signature, and Annex D-I profile coverage is not implemented.",
+      summarizeTs119602Requirements(),
     ),
   );
 

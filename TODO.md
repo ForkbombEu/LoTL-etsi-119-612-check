@@ -473,8 +473,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
 | TS602-01 | Separate TS 119 602/TS 119 612 result objects and summaries; add `unsupported`/`inconclusive`; make local JSON checks unconditional; remove the JSON signature-object pass shortcut. | None | Complete |
-| TS602-02 | Create the clause/table/profile requirements ledger with stable check IDs, applicability, severity, and normative citations. | TS602-01 | Next |
-| TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Pending |
+| TS602-02 | Create the clause/table/profile requirements ledger with stable check IDs, applicability, severity, and normative citations. | TS602-01 | Complete |
+| TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Next |
 | TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Pending |
 | TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Pending |
 | TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Pending |
@@ -493,7 +493,7 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 ### Phase 1 — Result model and requirements ledger
 
 - [x] Add a first-class TS 119 602 result schema.
-- [ ] Create one stable check ID per normative requirement or coherent
+- [x] Create one stable check ID per normative requirement or coherent
   requirement family, with clause/table/profile citations.
 - [x] Add `unsupported` and `inconclusive` statuses.
 - [ ] Define binding, data-model, profile, signature, and trust results
