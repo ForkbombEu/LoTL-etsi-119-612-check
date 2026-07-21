@@ -464,17 +464,41 @@ Required policy:
 - do not normalize a published URI typo without a documented erratum or an
   explicit human-approved compatibility rule.
 
+## Executable task breakdown
+
+The backlog is divided into reviewable tasks below. Each task should be one
+focused implementation prompt and one commit; dependencies are intentionally
+explicit so normative profile work cannot outrun binding and core semantics.
+
+| Task | Scope | Depends on | Status |
+| --- | --- | --- | --- |
+| TS602-01 | Separate TS 119 602/TS 119 612 result objects and summaries; add `unsupported`/`inconclusive`; make local JSON checks unconditional; remove the JSON signature-object pass shortcut. | None | Complete |
+| TS602-02 | Create the clause/table/profile requirements ledger with stable check IDs, applicability, severity, and normative citations. | TS602-01 | Next |
+| TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Pending |
+| TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Pending |
+| TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Pending |
+| TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Pending |
+| TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Pending |
+| TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Pending |
+| TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Pending |
+| TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Pending |
+| TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Pending |
+| TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Pending |
+
+TS602-01 establishes result isolation only; it does not claim that any TS
+119 602 binding or profile is completely validated.
+
 ## Recommended implementation order
 
 ### Phase 1 — Result model and requirements ledger
 
-- [ ] Add a first-class TS 119 602 result schema.
+- [x] Add a first-class TS 119 602 result schema.
 - [ ] Create one stable check ID per normative requirement or coherent
   requirement family, with clause/table/profile citations.
-- [ ] Add `unsupported` and `inconclusive` statuses.
+- [x] Add `unsupported` and `inconclusive` statuses.
 - [ ] Define binding, data-model, profile, signature, and trust results
   separately.
-- [ ] Remove all routes that can imply TS 119 602 conformance from presence
+- [x] Remove all routes that can imply TS 119 602 conformance from presence
   checks alone.
 
 ### Phase 2 — Official binding validation

@@ -21,6 +21,14 @@ function result(index: number, kind: TrustedListAuditResult["detected"]["artifac
       mandatoryFailures: [],
       warnings: [],
     },
+    ts119602: {
+      applicable: !xml,
+      conformanceLevel: xml ? "not_applicable" : "not_checked",
+      score: null,
+      checks: [],
+      mandatoryFailures: [],
+      warnings: [],
+    },
   };
 }
 

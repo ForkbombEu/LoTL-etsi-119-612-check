@@ -236,7 +236,7 @@ paths:
               emptyReport:
                 value:
                   report:
-                    schemaVersion: 2
+                    schemaVersion: 3
                     tool: { name: we-build-tl-audit, version: 0.1.0 }
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
@@ -273,6 +273,15 @@ paths:
                         nonConformant: 0
                         notApplicable: 0
                         notChecked: 0
+                        parseFailed: 0
+                      ts119602:
+                        conformant: 0
+                        partiallyConformant: 0
+                        nonConformant: 0
+                        notApplicable: 0
+                        notChecked: 0
+                        unsupported: 0
+                        inconclusive: 0
                         parseFailed: 0
                     results: []
       responses:
@@ -415,7 +424,7 @@ components:
   schemas:
     ConformanceLevel:
       type: string
-      enum: [conformant, partially_conformant, non_conformant, not_applicable, not_checked, fetch_failed, parse_failed]
+      enum: [conformant, partially_conformant, non_conformant, not_applicable, not_checked, unsupported, inconclusive, fetch_failed, parse_failed]
     AuditOptions:
       type: object
       additionalProperties: false
@@ -423,7 +432,7 @@ components:
         concurrency: { type: integer, minimum: 1, default: 4 }
         timeoutMs: { type: integer, minimum: 1, default: 15000 }
         strict: { type: boolean, default: false }
-        includeJsonLoteChecks: { type: boolean, default: false }
+        includeJsonLoteChecks: { type: boolean, default: false, deprecated: true, description: Retained for compatibility; deterministic local JSON LoTE checks always run. }
         fetch: { type: boolean, default: true }
     LoTLAuditRequest:
       type: object
@@ -479,7 +488,7 @@ components:
       properties:
         timeoutMs: { type: integer, minimum: 1, default: 15000 }
         strict: { type: boolean, default: false }
-        includeJsonLoteChecks: { type: boolean, default: false }
+        includeJsonLoteChecks: { type: boolean, default: false, deprecated: true, description: Retained for compatibility; deterministic local JSON LoTE checks always run. }
     ApiErrorResponse:
       type: object
       required: [error]
@@ -505,7 +514,7 @@ components:
       type: object
       required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors, summary, results]
       properties:
-        schemaVersion: { type: integer, const: 2 }
+        schemaVersion: { type: integer, const: 3 }
         tool:
           type: object
           required: [name, version]
@@ -534,7 +543,7 @@ components:
             $ref: '#/components/schemas/NegativeFixtureDescriptor'
         summary:
           type: object
-          required: [totalPointers, fetched, fetchFailed, xmlArtifacts, jsonArtifacts, unknownArtifacts, ts119612]
+          required: [totalPointers, fetched, fetchFailed, xmlArtifacts, jsonArtifacts, unknownArtifacts, ts119612, ts119602]
           properties:
             totalPointers: { type: integer, minimum: 0 }
             fetched: { type: integer, minimum: 0 }
@@ -551,6 +560,18 @@ components:
                 nonConformant: { type: integer, minimum: 0 }
                 notApplicable: { type: integer, minimum: 0 }
                 notChecked: { type: integer, minimum: 0 }
+                parseFailed: { type: integer, minimum: 0 }
+            ts119602:
+              type: object
+              required: [conformant, partiallyConformant, nonConformant, notApplicable, notChecked, unsupported, inconclusive, parseFailed]
+              properties:
+                conformant: { type: integer, minimum: 0 }
+                partiallyConformant: { type: integer, minimum: 0 }
+                nonConformant: { type: integer, minimum: 0 }
+                notApplicable: { type: integer, minimum: 0 }
+                notChecked: { type: integer, minimum: 0 }
+                unsupported: { type: integer, minimum: 0 }
+                inconclusive: { type: integer, minimum: 0 }
                 parseFailed: { type: integer, minimum: 0 }
         results:
           type: array
@@ -682,7 +703,7 @@ components:
           items: { type: string }
     TrustedListAuditResult:
       type: object
-      required: [id, index, source, location, declared, fetch, detected, standardApplicability, ts119612]
+      required: [id, index, source, location, declared, fetch, detected, standardApplicability, ts119612, ts119602]
       properties:
         id: { type: string }
         index: { type: integer, minimum: 1 }
@@ -719,28 +740,9 @@ components:
             weBuildProfile: { $ref: '#/components/schemas/ApplicabilityStatus' }
             eudiTrustRole: { $ref: '#/components/schemas/ApplicabilityStatus' }
         ts119612:
-          type: object
-          required: [applicable, conformanceLevel, score, checks, mandatoryFailures, warnings]
-          properties:
-            applicable: { type: boolean }
-            conformanceLevel:
-              $ref: '#/components/schemas/ConformanceLevel'
-            score:
-              oneOf:
-                - type: number
-                  minimum: 0
-                  maximum: 100
-                - type: 'null'
-            checks:
-              type: array
-              items:
-                $ref: '#/components/schemas/CheckResult'
-            mandatoryFailures:
-              type: array
-              items: { type: string }
-            warnings:
-              type: array
-              items: { type: string }
+          $ref: '#/components/schemas/StandardAssessment'
+        ts119602:
+          $ref: '#/components/schemas/StandardAssessment'
         extracted:
           type: object
           additionalProperties: true
@@ -770,6 +772,29 @@ components:
             jsonLote:
               type: object
               additionalProperties: true
+    StandardAssessment:
+      type: object
+      required: [applicable, conformanceLevel, score, checks, mandatoryFailures, warnings]
+      properties:
+        applicable: { type: boolean }
+        conformanceLevel:
+          $ref: '#/components/schemas/ConformanceLevel'
+        score:
+          oneOf:
+            - type: number
+              minimum: 0
+              maximum: 100
+            - type: 'null'
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckResult'
+        mandatoryFailures:
+          type: array
+          items: { type: string }
+        warnings:
+          type: array
+          items: { type: string }
     ApplicabilityStatus:
       type: string
       enum: [applicable, not_applicable, unknown]
@@ -783,7 +808,7 @@ components:
           enum: [fetch, parse, schema, structure, dates, signature, xades, services, certificates, profile]
         status:
           type: string
-          enum: [pass, fail, warn, not_applicable, not_checked]
+          enum: [pass, fail, warn, not_applicable, not_checked, unsupported, inconclusive]
         severity:
           type: string
           enum: [info, warning, error, critical]

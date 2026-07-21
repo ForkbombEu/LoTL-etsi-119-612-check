@@ -4,6 +4,8 @@ export type ConformanceLevel =
   | "non_conformant"
   | "not_applicable"
   | "not_checked"
+  | "unsupported"
+  | "inconclusive"
   | "fetch_failed"
   | "parse_failed";
 
@@ -28,7 +30,14 @@ export interface StandardApplicability {
   eudiTrustRole: ApplicabilityStatus;
 }
 
-export type CheckStatus = "pass" | "fail" | "warn" | "not_applicable" | "not_checked";
+export type CheckStatus =
+  | "pass"
+  | "fail"
+  | "warn"
+  | "not_applicable"
+  | "not_checked"
+  | "unsupported"
+  | "inconclusive";
 export type CheckSeverity = "info" | "warning" | "error" | "critical";
 
 export interface CheckResult {
@@ -50,6 +59,15 @@ export interface CheckResult {
   evidence?: unknown;
 }
 
+export interface StandardAssessment {
+  applicable: boolean;
+  conformanceLevel: ConformanceLevel;
+  score: number | null;
+  checks: CheckResult[];
+  mandatoryFailures: string[];
+  warnings: string[];
+}
+
 export interface CertificateSummary {
   source: "pointer" | "xml_signature" | "service_digital_identity";
   subject?: string;
@@ -62,7 +80,7 @@ export interface CertificateSummary {
 }
 
 export interface AuditReport {
-  schemaVersion: 2;
+  schemaVersion: 3;
   tool: {
     name: "we-build-tl-audit";
     version: string;
@@ -116,6 +134,16 @@ export interface AuditReport {
       notChecked: number;
       parseFailed: number;
     };
+    ts119602: {
+      conformant: number;
+      partiallyConformant: number;
+      nonConformant: number;
+      notApplicable: number;
+      notChecked: number;
+      unsupported: number;
+      inconclusive: number;
+      parseFailed: number;
+    };
   };
   results: TrustedListAuditResult[];
 }
@@ -152,14 +180,8 @@ export interface TrustedListAuditResult {
     artifactKind: ArtifactKind;
   };
   standardApplicability: StandardApplicability;
-  ts119612: {
-    applicable: boolean;
-    conformanceLevel: ConformanceLevel;
-    score: number | null;
-    checks: CheckResult[];
-    mandatoryFailures: string[];
-    warnings: string[];
-  };
+  ts119612: StandardAssessment;
+  ts119602: StandardAssessment;
   extracted?: {
     tslVersionIdentifier?: string;
     tslSequenceNumber?: string;

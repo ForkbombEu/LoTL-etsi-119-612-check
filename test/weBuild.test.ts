@@ -15,6 +15,7 @@ function result(index: number, format: TrustedListAuditResult["detected"]["forma
     detected: { format, artifactKind: format === "xml" ? "ts119612_xml_tsl" : "json_lote" },
     standardApplicability: { ts119612: "unknown", ts119602: "unknown", weBuildProfile: "applicable", eudiTrustRole: "unknown" },
     ts119612: { applicable: false, conformanceLevel: "not_applicable", score: null, checks: [], mandatoryFailures: [], warnings: [] },
+    ts119602: { applicable: format === "json", conformanceLevel: format === "json" ? "not_checked" : "not_applicable", score: null, checks: [], mandatoryFailures: [], warnings: [] },
   };
 }
 

@@ -37,7 +37,10 @@ export function assessFixtureReadiness(input: FixtureReadinessInput): FixtureRea
   const signingCertificates = input.results.flatMap((result) => result.extracted?.certificates?.filter((certificate) => certificate.source === "xml_signature") ?? []);
   checks.push(check("fixture_readiness.signing_certificate_evidence", signingCertificates.length > 0 ? "pass" : "warn", signingCertificates.length > 0 ? "info" : "warning", signingCertificates.length > 0 ? "Signing certificate evidence is present in fetched XML artifacts." : "No parsed XML signing certificate evidence is present.", signingCertificates.length));
 
-  const expired = input.results.flatMap((result) => result.ts119612.checks.filter((check) => check.id === "dates.next_update_expired" || check.id === "json_lote.dates.next_update_expired").filter((check) => check.status === "warn"));
+  const expired = input.results.flatMap((result) => [
+    ...result.ts119612.checks,
+    ...result.ts119602.checks,
+  ].filter((check) => check.id === "dates.next_update_expired" || check.id === "json_lote.dates.next_update_expired").filter((check) => check.status === "warn"));
   checks.push(check("fixture_readiness.next_update_current", expired.length === 0 && recognizedArtifacts.length > 0 ? "pass" : "warn", expired.length === 0 && recognizedArtifacts.length > 0 ? "info" : "warning", expired.length === 0 && recognizedArtifacts.length > 0 ? "Recognized artifacts have no reported expired NextUpdate." : "One or more artifacts are expired or no recognized artifact was available.", expired.map((check) => check.id)));
 
   const mimeMismatches = input.weBuildPointerConsistency.declaredMimeMismatches;
@@ -78,7 +81,7 @@ function checkAssessmentCoverage(checks: CheckResult[], results: TrustedListAudi
     return;
   }
   const ran = artifacts.every((result) => format === "json"
-    ? result.ts119612.checks.some((check) => check.id.startsWith("json_lote."))
+    ? result.ts119602.checks.some((check) => check.id.startsWith("json_lote."))
     : result.ts119612.checks.some((check) => check.id === "parse.xml"));
   checks.push(check(id, ran ? "pass" : "warn", ran ? "info" : "warning", ran ? `${label} ran for detected ${format.toUpperCase()} artifacts.` : `${label} did not run for every detected ${format.toUpperCase()} artifact.`, artifacts.length));
 }

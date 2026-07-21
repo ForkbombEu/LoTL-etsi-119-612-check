@@ -62,7 +62,8 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
 
     expect(result.detected.artifactKind).toBe("xml_lote");
     expect(result.ts119612.conformanceLevel).toBe("not_applicable");
-    expect(result.ts119612.checks).toEqual(expect.arrayContaining([
+    expect(result.ts119602.conformanceLevel).toBe("non_conformant");
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: "xml_lote.structure.xml_binding",
         status: "pass",
@@ -106,7 +107,7 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
     });
 
     expect(result.detected.artifactKind).toBe("xml_lote");
-    expect(result.ts119612.checks).toEqual(expect.arrayContaining([
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: "xml_lote.structure.xml_binding",
         status: "warn",
@@ -129,7 +130,7 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
         ServiceCount: 2,
       },
     });
-    expect(result.ts119612.warnings).toContain(
+    expect(result.ts119602.warnings).toContain(
       "xml_lote.structure.xml_binding: TrustedEntitiesList is accepted as a WE BUILD compatibility root, but it is not conformant with the ETSI TS 119 602 V1.1.1 scheme-explicit XML binding.",
     );
   });
@@ -148,7 +149,7 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       includeJsonLoteChecks: false,
     });
 
-    expect(result.ts119612.checks).toEqual(expect.arrayContaining([
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "xml_lote.structure.trusted_entities_container", status: "not_checked" }),
       expect.objectContaining({ id: "xml_lote.services.trusted_entity_count", status: "warn", evidence: 0 }),
     ]));

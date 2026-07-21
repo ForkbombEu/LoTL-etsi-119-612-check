@@ -54,7 +54,7 @@ describe("runAudit", () => {
     expect(report.summary.fetched).toBe(2);
     expect(report.summary.fetchFailed).toBe(1);
     expect(report.summary.jsonArtifacts).toBe(1);
-    expect(report.schemaVersion).toBe(2);
+    expect(report.schemaVersion).toBe(3);
     expect(report.results[0]).toMatchObject({
       id: expect.stringMatching(/^artifact-001-[a-f0-9]{12}$/),
       source: "https://example.test/tl.xml",
@@ -68,6 +68,11 @@ describe("runAudit", () => {
     });
     expect(report.results[1].ts119612.conformanceLevel).toBe("not_applicable");
     expect(report.results[1].ts119612.mandatoryFailures).toEqual([]);
+    expect(report.results[1].ts119602).toMatchObject({
+      applicable: true,
+      conformanceLevel: "unsupported",
+    });
+    expect(report.summary.ts119602.unsupported).toBe(1);
     expect(report.results[1].standardApplicability).toEqual({
       ts119612: "not_applicable",
       ts119602: "applicable",
@@ -87,6 +92,7 @@ describe("runAudit", () => {
     expect(markdown).toContain("### Certificate evidence");
     expect(markdown).toContain("Source: xml_signature");
     expect(markdown).toContain("**json_lote.pointers.service_digital_identities**");
+    expect(markdown).toContain("### ETSI TS 119 602 assessment");
     expect(markdown).toContain("Can this trust-list bundle be used as a wallet trust fixture?");
     expect(markdown).toContain("## FCAF trusted_authorities fixture readiness");
     expect(report.fcafTrustedAuthorities.scenarios).toHaveLength(8);

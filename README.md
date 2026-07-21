@@ -365,7 +365,9 @@ When a fetched artifact is JSON and contains a `LoTE` root, the tool classifies 
 Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; this artifact should be assessed under ETSI TS 119 602 / WE BUILD profile rules instead.
 ```
 
-Pass `--include-json-lote-checks` in the CLI or `includeJsonLoteChecks: true` in API options to include TS 119 602-style / JSON LoTE checks. These evidence checks cover list metadata, pointer identities, JSON signature-object presence, and issue/next-update dates; they do not claim full normative TS 119 602 conformance.
+Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v3 also has a separate `summary.ts119602`.
+
+Current JSON evidence checks cover list metadata, pointer identities, and issue/next-update dates. Compact JAdES Baseline B validation is reported as `unsupported`; a JSON `signature` property is not accepted as normative signature evidence. Because official schema, complete semantic, signature, and Annex D-I profile coverage remain incomplete, passing presence checks cannot produce a TS 119 602 `conformant` verdict.
 
 For scheme-explicit TS 119 602 XML, the normative entity path implemented by
 the tool is

@@ -1,59 +1,53 @@
 import { getPath, isRecord, numberValue, asArray, firstString } from "../lotl.js";
+import { buildStandardAssessment } from "../standards/assessment.js";
 import type { CheckResult, TrustedListAuditResult } from "../types.js";
-
-const JSON_LOTE_REASON =
-  "Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; this artifact should be assessed under implemented TS 119 602-style / JSON LoTE checks and applicable WE BUILD profile checks.";
 
 export function assessJsonLote(
   parsed: unknown,
-  includeChecks: boolean,
+  _includeChecks: boolean,
   assessmentDate = new Date(),
-): Pick<TrustedListAuditResult, "ts119612" | "extracted"> {
+): Pick<TrustedListAuditResult, "ts119602" | "extracted"> {
   const info = getPath(parsed, ["LoTE", "ListAndSchemeInformation"]);
   const pointers = asArray(getPath(info, ["PointersToOtherLoTE"]));
   const trustedEntities = asArray(getPath(parsed, ["LoTE", "TrustedEntitiesList", "TrustServiceProvider"]));
   const signature = getPath(parsed, ["signature"]) ?? getPath(parsed, ["LoTE", "signature"]) ?? getPath(parsed, ["LoTE", "Signature"]);
   const issueDateTime = firstString(getPath(info, ["ListIssueDateTime"]));
   const nextUpdate = firstString(getPath(info, ["NextUpdate"]));
-  const checks: CheckResult[] = [
-    check("profile.ts119612_applicability", "not_applicable", "info", JSON_LOTE_REASON),
-  ];
+  const checks: CheckResult[] = [];
 
-  if (includeChecks) {
-    addJsonCheck(checks, "json_lote.root", Boolean(getPath(parsed, ["LoTE"])), "JSON root contains LoTE.");
-    addJsonCheck(checks, "json_lote.list_and_scheme_information", isRecord(info), "LoTE.ListAndSchemeInformation exists.");
-    addJsonCheck(checks, "json_lote.version_identifier", Boolean(firstString(getPath(info, ["LoTEVersionIdentifier"]))), "LoTEVersionIdentifier exists.");
-    addJsonCheck(checks, "json_lote.sequence_number", numberValue(getPath(info, ["LoTESequenceNumber"])) !== undefined, "LoTESequenceNumber exists.");
-    addJsonCheck(checks, "json_lote.type", Boolean(firstString(getPath(info, ["LoTEType"]))), "LoTEType exists.");
-    addJsonCheck(checks, "json_lote.scheme_operator_name", Boolean(firstString(getPath(info, ["SchemeOperatorName"]))), "SchemeOperatorName exists.");
-    addJsonCheck(checks, "json_lote.scheme_information_uri", Boolean(firstString(getPath(info, ["SchemeInformationURI"]))), "SchemeInformationURI exists.");
-    addJsonCheck(checks, "json_lote.status_determination_approach", Boolean(firstString(getPath(info, ["StatusDeterminationApproach"]))), "StatusDeterminationApproach exists.");
-    addJsonCheck(checks, "json_lote.scheme_territory", Boolean(firstString(getPath(info, ["SchemeTerritory"]))), "SchemeTerritory exists.");
-    addJsonCheck(checks, "json_lote.list_issue_date_time", Boolean(issueDateTime), "ListIssueDateTime exists.");
-    addJsonCheck(checks, "json_lote.next_update", Boolean(nextUpdate), "NextUpdate exists.");
-    addJsonCheck(checks, "json_lote.distribution_points", Boolean(getPath(info, ["DistributionPoints"])), "DistributionPoints exists.");
-    checks.push(
-      check("json_lote.pointers.count", "pass", "info", "PointersToOtherLoTE entries counted.", pointers.length),
-      pointerIdentityCheck(pointers),
-      check(
-        "json_lote.signature_object_present",
-        isJsonObject(signature) ? "pass" : "warn",
-        isJsonObject(signature) ? "info" : "warning",
-        isJsonObject(signature) ? "JSON signature object is present." : "JSON signature object is absent.",
-      ),
-      ...dateChecks(issueDateTime, nextUpdate, assessmentDate),
-    );
-  }
+  addJsonCheck(checks, "json_lote.root", Boolean(getPath(parsed, ["LoTE"])), "JSON root contains LoTE.");
+  addJsonCheck(checks, "json_lote.list_and_scheme_information", isRecord(info), "LoTE.ListAndSchemeInformation exists.");
+  addJsonCheck(checks, "json_lote.version_identifier", Boolean(firstString(getPath(info, ["LoTEVersionIdentifier"]))), "LoTEVersionIdentifier exists.");
+  addJsonCheck(checks, "json_lote.sequence_number", numberValue(getPath(info, ["LoTESequenceNumber"])) !== undefined, "LoTESequenceNumber exists.");
+  addJsonCheck(checks, "json_lote.type", Boolean(firstString(getPath(info, ["LoTEType"]))), "LoTEType exists.");
+  addJsonCheck(checks, "json_lote.scheme_operator_name", Boolean(firstString(getPath(info, ["SchemeOperatorName"]))), "SchemeOperatorName exists.");
+  addJsonCheck(checks, "json_lote.scheme_information_uri", Boolean(firstString(getPath(info, ["SchemeInformationURI"]))), "SchemeInformationURI exists.");
+  addJsonCheck(checks, "json_lote.status_determination_approach", Boolean(firstString(getPath(info, ["StatusDeterminationApproach"]))), "StatusDeterminationApproach exists.");
+  addJsonCheck(checks, "json_lote.scheme_territory", Boolean(firstString(getPath(info, ["SchemeTerritory"]))), "SchemeTerritory exists.");
+  addJsonCheck(checks, "json_lote.list_issue_date_time", Boolean(issueDateTime), "ListIssueDateTime exists.");
+  addJsonCheck(checks, "json_lote.next_update", Boolean(nextUpdate), "NextUpdate exists.");
+  addJsonCheck(checks, "json_lote.distribution_points", Boolean(getPath(info, ["DistributionPoints"])), "DistributionPoints exists.");
+  checks.push(
+    check("json_lote.pointers.count", "pass", "info", "PointersToOtherLoTE entries counted.", pointers.length),
+    pointerIdentityCheck(pointers),
+    check(
+      "json_lote.signature.jades_baseline_b",
+      "unsupported",
+      "warning",
+      "Compact JAdES Baseline B validation is not implemented; a JSON signature property is not treated as signature evidence.",
+      { legacySignatureObjectPresent: isJsonObject(signature) },
+    ),
+    ...dateChecks(issueDateTime, nextUpdate, assessmentDate),
+    check(
+      "ts119602.coverage.complete",
+      "not_checked",
+      "warning",
+      "Complete ETSI TS 119 602 V1.1.1 schema, semantic, signature, and Annex D-I profile coverage is not implemented.",
+    ),
+  );
 
   return {
-    ts119612: {
-      applicable: false,
-      conformanceLevel: "not_applicable",
-      score: null,
-      checks,
-      mandatoryFailures: [],
-      warnings: checks.filter((check) => check.status === "warn" || check.status === "not_checked").map((check) => `${check.id}: ${check.message}`),
-    },
+    ts119602: buildStandardAssessment(checks, { coverageComplete: false }),
     extracted: {
       schemeOperatorName: [firstString(getPath(info, ["SchemeOperatorName"]))].filter((v): v is string => Boolean(v)),
       schemeName: [firstString(getPath(info, ["SchemeName"]))].filter((v): v is string => Boolean(v)),

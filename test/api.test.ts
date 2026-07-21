@@ -80,6 +80,7 @@ describe("API server", () => {
     expect(body.report.summary.totalPointers).toBe(3);
     expect(body.report.summary.jsonArtifacts).toBe(1);
     expect(body.report.results[1].ts119612.conformanceLevel).toBe("not_applicable");
+    expect(body.report.results[1].ts119602.conformanceLevel).toBe("unsupported");
     expect(body.markdown).toContain("# WE BUILD Trusted List Audit");
     await app.close();
   });
@@ -160,7 +161,7 @@ describe("API server", () => {
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       tool: { name: "we-build-tl-audit", version: "0.1.0" },
       generatedAt: "2026-07-16T00:00:00.000Z",
       input: { source: "request-body", kind: "json" },
@@ -200,6 +201,16 @@ describe("API server", () => {
           nonConformant: 0,
           notApplicable: 0,
           notChecked: 0,
+          parseFailed: 0,
+        },
+        ts119602: {
+          conformant: 0,
+          partiallyConformant: 0,
+          nonConformant: 0,
+          notApplicable: 0,
+          notChecked: 0,
+          unsupported: 0,
+          inconclusive: 0,
           parseFailed: 0,
         },
       },

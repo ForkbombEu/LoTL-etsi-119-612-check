@@ -10,6 +10,7 @@ import { assessWeBuildProfile } from "./profiles/weBuild.js";
 import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
 import { assessFcafTrustedAuthorities } from "./fcaf/trustedAuthorities.js";
 import { generateNegativeFixtureDescriptors, writeNegativeFixtureDescriptors } from "./fixtures/negativeDescriptors.js";
+import { buildStandardAssessment } from "./standards/assessment.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
@@ -228,6 +229,7 @@ export async function assessArtifactContent(options: AssessArtifactContentOption
     detected: { format: "unknown", artifactKind: "unknown" },
     standardApplicability: unknownApplicability(),
     ts119612: { applicable: false, conformanceLevel: "not_checked", score: null, checks: [check("input.raw_artifact", "parse", "pass", "info", "Raw artifact content was supplied directly; no network request was made.")], mandatoryFailures: [], warnings: [] },
+    ts119602: unassessedStandard(),
   };
   return assessArtifactBytes(base, bytes, options.contentType, options);
 }
@@ -256,6 +258,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
       mandatoryFailures: [],
       warnings: [],
     },
+    ts119602: unassessedStandard(),
   };
 
   if (!options.fetch) {
@@ -290,6 +293,7 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
     artifactKind: detected.artifactKind,
   };
   base.standardApplicability = applicabilityFor(detected.artifactKind);
+  routeStandardChecks(base);
 
   if (detected.artifactKind === "ts119612_xml_tsl" || detected.artifactKind === "ts119612_xml_lotl") {
     const assessed = await assessTs119612Xml(bytes.toString("utf8"), {
@@ -324,6 +328,34 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
     warnings: [],
   };
   return base;
+}
+
+function routeStandardChecks(result: TrustedListAuditResult): void {
+  const transportChecks = result.ts119612.checks;
+  if (["xml_lote", "json_lote", "json_lotl"].includes(result.detected.artifactKind)) {
+    result.ts119602 = buildStandardAssessment(transportChecks, { coverageComplete: false });
+    result.ts119612 = buildStandardAssessment([
+      check(
+        "profile.ts119612_applicability",
+        "profile",
+        "not_applicable",
+        "info",
+        "Artifact uses a JSON or scheme-explicit XML LoTE binding, not the ETSI TS 119 612 XML Trusted List binding.",
+      ),
+    ], { applicable: false });
+    return;
+  }
+  if (["ts119612_xml_tsl", "ts119612_xml_lotl"].includes(result.detected.artifactKind)) {
+    result.ts119602 = buildStandardAssessment([
+      check(
+        "profile.ts119602_applicability",
+        "profile",
+        "not_applicable",
+        "info",
+        "TS 119 602 alternative-binding mapping and profile evidence have not selected this TS 119 612 artifact as a TS 119 602 LoTE.",
+      ),
+    ], { applicable: false });
+  }
 }
 
 function resultId(pointer: PointerInfo): string {
@@ -380,27 +412,38 @@ function normalizeDeclared(declared?: Partial<TrustedListAuditResult["declared"]
 
 function mergeResult(
   base: TrustedListAuditResult,
-  assessed: Pick<TrustedListAuditResult, "ts119612" | "extracted"> & Partial<Pick<TrustedListAuditResult, "detected">>,
+  assessed: Partial<Pick<TrustedListAuditResult, "ts119612" | "ts119602" | "extracted" | "detected">>,
 ): TrustedListAuditResult {
-  const checks = [...base.ts119612.checks, ...assessed.ts119612.checks];
-  const mandatoryFailures = [
-    ...base.ts119612.mandatoryFailures,
-    ...assessed.ts119612.mandatoryFailures,
-  ];
-  const warnings = [
-    ...base.ts119612.warnings,
-    ...assessed.ts119612.warnings,
-  ];
   return {
     ...base,
     detected: assessed.detected ?? base.detected,
-    ts119612: {
-      ...assessed.ts119612,
-      checks,
-      mandatoryFailures,
-      warnings,
-    },
+    ts119612: mergeStandardAssessment(base.ts119612, assessed.ts119612),
+    ts119602: mergeStandardAssessment(base.ts119602, assessed.ts119602),
     extracted: assessed.extracted,
+  };
+}
+
+function mergeStandardAssessment(
+  base: TrustedListAuditResult["ts119612"],
+  assessed: TrustedListAuditResult["ts119612"] | undefined,
+): TrustedListAuditResult["ts119612"] {
+  if (!assessed) return base;
+  return {
+    ...assessed,
+    checks: [...base.checks, ...assessed.checks],
+    mandatoryFailures: [...base.mandatoryFailures, ...assessed.mandatoryFailures],
+    warnings: [...base.warnings, ...assessed.warnings],
+  };
+}
+
+function unassessedStandard(): TrustedListAuditResult["ts119602"] {
+  return {
+    applicable: false,
+    conformanceLevel: "not_checked",
+    score: null,
+    checks: [],
+    mandatoryFailures: [],
+    warnings: [],
   };
 }
 

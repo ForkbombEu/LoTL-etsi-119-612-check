@@ -15,6 +15,7 @@ function result(index: number, format: "xml" | "json"): TrustedListAuditResult {
     detected: { format, artifactKind: format === "xml" ? "ts119612_xml_tsl" : "json_lote" },
     standardApplicability: { ts119612: format === "xml" ? "applicable" : "not_applicable", ts119602: format === "json" ? "applicable" : "not_applicable", weBuildProfile: "applicable", eudiTrustRole: "unknown" },
     ts119612: { applicable: format === "xml", conformanceLevel: format === "xml" ? "partially_conformant" : "not_applicable", score: null, checks: [{ id: "dates.next_update_valid", category: "dates", status: "pass", severity: "info", message: "test" }], mandatoryFailures: [], warnings: [] },
+    ts119602: { applicable: format === "json", conformanceLevel: format === "json" ? "not_checked" : "not_applicable", score: null, checks: format === "json" ? [{ id: "json_lote.root", category: "structure", status: "pass", severity: "info", message: "test" }] : [], mandatoryFailures: [], warnings: [] },
     extracted: format === "xml" ? { certificates: [{ source: "xml_signature", subject: "CN=Signer" }] } : undefined,
   };
 }

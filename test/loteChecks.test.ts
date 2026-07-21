@@ -9,20 +9,19 @@ async function fixture(name: string): Promise<unknown> {
 describe("assessJsonLote", () => {
   it("reports granular TS 119 602-style / JSON LoTE checks for a valid-ish artifact", async () => {
     const result = assessJsonLote(await fixture("json-lote.json"), true, new Date("2026-02-01T00:00:00Z"));
-    expect(result.ts119612).toMatchObject({
-      applicable: false,
-      conformanceLevel: "not_applicable",
-      mandatoryFailures: [],
+    expect(result.ts119602).toMatchObject({
+      applicable: true,
+      conformanceLevel: "unsupported",
     });
-    expect(result.ts119612.checks).toEqual(
+    expect(result.ts119602.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "profile.ts119612_applicability", status: "not_applicable" }),
         expect.objectContaining({ id: "json_lote.list_and_scheme_information", status: "pass" }),
         expect.objectContaining({ id: "json_lote.version_identifier", status: "pass" }),
         expect.objectContaining({ id: "json_lote.scheme_information_uri", status: "pass" }),
         expect.objectContaining({ id: "json_lote.pointers.service_digital_identities", status: "pass" }),
-        expect.objectContaining({ id: "json_lote.signature_object_present", status: "pass" }),
+        expect.objectContaining({ id: "json_lote.signature.jades_baseline_b", status: "unsupported" }),
         expect.objectContaining({ id: "json_lote.dates.next_after_issue", status: "pass" }),
+        expect.objectContaining({ id: "ts119602.coverage.complete", status: "not_checked" }),
       ]),
     );
     expect(result.extracted?.jsonLote).toMatchObject({
@@ -35,8 +34,8 @@ describe("assessJsonLote", () => {
 
   it("reports a missing ListAndSchemeInformation structure without a TS 119 612 failure", async () => {
     const result = assessJsonLote(await fixture("json-lote-missing-list-information.json"), true);
-    expect(result.ts119612.conformanceLevel).toBe("not_applicable");
-    expect(result.ts119612.checks).toEqual(
+    expect(result.ts119602.conformanceLevel).toBe("unsupported");
+    expect(result.ts119602.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "json_lote.list_and_scheme_information", status: "warn" }),
         expect.objectContaining({ id: "json_lote.type", status: "warn" }),
@@ -46,9 +45,13 @@ describe("assessJsonLote", () => {
 
   it("reports a missing JSON signature object", async () => {
     const result = assessJsonLote(await fixture("json-lote-missing-signature.json"), true);
-    expect(result.ts119612.checks).toEqual(
+    expect(result.ts119602.checks).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: "json_lote.signature_object_present", status: "warn" }),
+        expect.objectContaining({
+          id: "json_lote.signature.jades_baseline_b",
+          status: "unsupported",
+          evidence: { legacySignatureObjectPresent: false },
+        }),
       ]),
     );
   });
@@ -59,12 +62,20 @@ describe("assessJsonLote", () => {
       true,
       new Date("2026-02-01T00:00:00Z"),
     );
-    expect(result.ts119612.checks).toEqual(
+    expect(result.ts119602.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "json_lote.dates.issue_valid", status: "pass" }),
         expect.objectContaining({ id: "json_lote.dates.next_update_valid", status: "pass" }),
         expect.objectContaining({ id: "json_lote.dates.next_update_expired", status: "warn" }),
       ]),
     );
+  });
+
+  it("runs local TS 119 602 evidence checks even when the legacy opt-in flag is false", async () => {
+    const result = assessJsonLote(await fixture("json-lote.json"), false);
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "json_lote.root", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.coverage.complete", status: "not_checked" }),
+    ]));
   });
 });

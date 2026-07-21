@@ -13,7 +13,7 @@ export function buildAuditReport(args: {
 }): AuditReport {
   const results = args.results;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     tool: { name: "we-build-tl-audit", version: args.version },
     generatedAt: args.generatedAt,
     input: args.input,
@@ -30,18 +30,32 @@ export function buildAuditReport(args: {
       jsonArtifacts: results.filter((r) => r.detected.format === "json").length,
       unknownArtifacts: results.filter((r) => ["unknown", "text", "empty", "html"].includes(r.detected.format)).length,
       ts119612: {
-        conformant: countLevel(results, "conformant"),
-        partiallyConformant: countLevel(results, "partially_conformant"),
-        nonConformant: countLevel(results, "non_conformant"),
-        notApplicable: countLevel(results, "not_applicable"),
-        notChecked: countLevel(results, "not_checked"),
-        parseFailed: countLevel(results, "parse_failed"),
+        conformant: countLevel(results, "ts119612", "conformant"),
+        partiallyConformant: countLevel(results, "ts119612", "partially_conformant"),
+        nonConformant: countLevel(results, "ts119612", "non_conformant"),
+        notApplicable: countLevel(results, "ts119612", "not_applicable"),
+        notChecked: countLevel(results, "ts119612", "not_checked"),
+        parseFailed: countLevel(results, "ts119612", "parse_failed"),
+      },
+      ts119602: {
+        conformant: countLevel(results, "ts119602", "conformant"),
+        partiallyConformant: countLevel(results, "ts119602", "partially_conformant"),
+        nonConformant: countLevel(results, "ts119602", "non_conformant"),
+        notApplicable: countLevel(results, "ts119602", "not_applicable"),
+        notChecked: countLevel(results, "ts119602", "not_checked"),
+        unsupported: countLevel(results, "ts119602", "unsupported"),
+        inconclusive: countLevel(results, "ts119602", "inconclusive"),
+        parseFailed: countLevel(results, "ts119602", "parse_failed"),
       },
     },
     results,
   };
 }
 
-function countLevel(results: TrustedListAuditResult[], level: string): number {
-  return results.filter((result) => result.ts119612.conformanceLevel === level).length;
+function countLevel(
+  results: TrustedListAuditResult[],
+  standard: "ts119612" | "ts119602",
+  level: string,
+): number {
+  return results.filter((result) => result[standard].conformanceLevel === level).length;
 }

@@ -59,11 +59,11 @@ export function renderMarkdownReport(report: AuditReport): string {
   lines.push("");
   lines.push("## Summary");
   lines.push("");
-  lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | Level |");
-  lines.push("|---:|---|---|---|---|---|---|---|---|");
+  lines.push("| # | Artifact ID | Source | Detected artifact | TS 119 612 | TS 119 602 | WE BUILD | EUDI role | TS 119 612 level | TS 119 602 level |");
+  lines.push("|---:|---|---|---|---|---|---|---|---|---|");
   for (const result of report.results) {
     lines.push(
-      `| ${result.index} | ${result.id} | ${escapeCell(result.source)} | ${result.detected.artifactKind} (${result.detected.format}) | ${result.standardApplicability.ts119612} | ${result.standardApplicability.ts119602} | ${result.standardApplicability.weBuildProfile} | ${result.standardApplicability.eudiTrustRole} | ${result.ts119612.conformanceLevel} |`,
+      `| ${result.index} | ${result.id} | ${escapeCell(result.source)} | ${result.detected.artifactKind} (${result.detected.format}) | ${result.standardApplicability.ts119612} | ${result.standardApplicability.ts119602} | ${result.standardApplicability.weBuildProfile} | ${result.standardApplicability.eudiTrustRole} | ${result.ts119612.conformanceLevel} | ${result.ts119602.conformanceLevel} |`,
     );
   }
 
@@ -88,15 +88,31 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   lines.push(`- Detected artifact: ${result.detected.artifactKind} (${result.detected.format})`);
   lines.push(`- SHA-256: ${value(result.fetch.sha256)}`);
   lines.push(`- Standard applicability: TS 119 612=${result.standardApplicability.ts119612}; TS 119 602=${result.standardApplicability.ts119602}; WE BUILD=${result.standardApplicability.weBuildProfile}; EUDI trust role=${result.standardApplicability.eudiTrustRole}`);
-  lines.push(`- TS 119 612 legacy applicability: ${result.ts119612.applicable ? "applicable" : "not applicable"}`);
-  lines.push(`- Conformance level: ${result.ts119612.conformanceLevel}`);
-  lines.push(`- Score: ${value(result.ts119612.score)}`);
-  lines.push("");
-  renderChecks(lines, "Passed checks", result.ts119612.checks.filter((c) => c.status === "pass"));
-  renderChecks(lines, "Failures", result.ts119612.checks.filter((c) => c.status === "fail"));
-  renderChecks(lines, "Warnings", result.ts119612.checks.filter((c) => c.status === "warn" || c.status === "not_checked"));
+  renderStandardAssessment(lines, "ETSI TS 119 612", result.ts119612);
+  renderStandardAssessment(lines, "ETSI TS 119 602", result.ts119602);
   renderMetadata(lines, result);
   renderCertificateEvidence(lines, result);
+}
+
+function renderStandardAssessment(
+  lines: string[],
+  title: string,
+  assessment: TrustedListAuditResult["ts119612"],
+): void {
+  lines.push("");
+  lines.push(`### ${title} assessment`);
+  lines.push("");
+  lines.push(`- Applicability: ${assessment.applicable ? "applicable" : "not applicable"}`);
+  lines.push(`- Conformance level: ${assessment.conformanceLevel}`);
+  lines.push(`- Score: ${value(assessment.score)}`);
+  lines.push("");
+  renderChecks(lines, "Passed checks", assessment.checks.filter((check) => check.status === "pass"));
+  renderChecks(lines, "Failures", assessment.checks.filter((check) => check.status === "fail"));
+  renderChecks(
+    lines,
+    "Warnings and limitations",
+    assessment.checks.filter((check) => ["warn", "not_checked", "unsupported", "inconclusive"].includes(check.status)),
+  );
 }
 
 function renderCertificateEvidence(lines: string[], result: TrustedListAuditResult): void {

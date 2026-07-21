@@ -1,11 +1,10 @@
 import { tryCertificateFromBase64 } from "../certs.js";
+import { buildStandardAssessment } from "../standards/assessment.js";
 import type { CertificateSummary, CheckResult, TrustedListAuditResult } from "../types.js";
 import { assessSignature } from "./signature.js";
 import { parseXml } from "./parse.js";
 import { has, nodes, text, texts } from "./xpath.js";
 
-const XML_LOTE_REASON =
-  "Artifact is an ETSI TS 119 602 XML Trusted Entities List (LoTE), not an ETSI TS 119 612 XML Trusted List.";
 const ETSI_TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
 const INFO = `./*[local-name()='ListAndSchemeInformation' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`;
 const TRUSTED_ENTITIES =
@@ -15,10 +14,10 @@ const TRUSTED_ENTITIES =
 type XmlLoteBinding = "etsi_ts_119_602_v1_1_1" | "we_build_compatibility" | "unsupported";
 
 /** Assess the implemented ETSI TS 119 602 XML LoTE data-model evidence. */
-export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected">> {
+export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
   const parsed = parseXml(xml);
   if (!parsed.document || parsed.errors.some((error) => error.startsWith("fatal"))) {
-    return { detected: { format: "xml", artifactKind: "xml_lote" }, ts119612: notApplicable([check("parse.xml", "parse", "fail", "critical", "XML LoTE parse failed.", parsed.errors)]) };
+    return { detected: { format: "xml", artifactKind: "xml_lote" }, ts119602: buildStandardAssessment([check("parse.xml", "parse", "fail", "critical", "XML LoTE parse failed.", parsed.errors)]) };
   }
 
   const document = parsed.document;
@@ -28,7 +27,6 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
   const next = text(root, `${INFO}/*[local-name()='NextUpdate']/*[local-name()='dateTime'] | ${INFO}/*[local-name()='NextUpdate']`);
   const checks: CheckResult[] = [
     check("parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML LoTE parsed successfully." : "XML LoTE parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined),
-    check("profile.ts119612_applicability", "profile", "not_applicable", "info", XML_LOTE_REASON, { rootLocalName: root.localName || root.nodeName, rootNamespace: root.namespaceURI ?? undefined }),
     xmlBindingCheck(root, binding),
     check("xml_lote.structure.list_and_scheme_information", "structure", has(root, INFO) ? "pass" : "fail", has(root, INFO) ? "info" : "critical", "ListAndSchemeInformation exists."),
   ];
@@ -42,11 +40,18 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
   checks.push(...dateChecks(issue, next));
   const services = assessTrustedEntities(root);
   checks.push(...services.checks);
+  checks.push(check(
+    "ts119602.coverage.complete",
+    "profile",
+    "not_checked",
+    "warning",
+    "Complete ETSI TS 119 602 V1.1.1 schema, semantic, signature, and Annex D-I profile coverage is not implemented.",
+  ));
 
   const certificates = [...signature.certificates, ...services.certificates];
   return {
     detected: { format: "xml", artifactKind: "xml_lote" },
-    ts119612: notApplicable(checks),
+    ts119602: buildStandardAssessment(checks, { coverageComplete: false }),
     extracted: {
       schemeOperatorName: names(root, `${INFO}/*[local-name()='SchemeOperatorName']`),
       schemeName: names(root, `${INFO}/*[local-name()='SchemeName']`),
@@ -173,5 +178,4 @@ function dateChecks(issueValue: string | undefined, nextValue: string | undefine
 function parseDate(value: string | undefined): Date | undefined { if (!value) return undefined; const date = new Date(value); return Number.isNaN(date.getTime()) ? undefined : date; }
 function names(context: Node, expression: string): string[] { const named = texts(context, `${expression}/*[local-name()='Name']`); return named.length > 0 ? named : texts(context, expression); }
 function exists(checks: CheckResult[], context: Node, id: string, expression: string, message: string): void { const present = has(context, expression); checks.push(check(id, "structure", present ? "pass" : "fail", present ? "info" : "error", message)); }
-function notApplicable(checks: CheckResult[]): TrustedListAuditResult["ts119612"] { return { applicable: false, conformanceLevel: "not_applicable", score: null, checks, mandatoryFailures: [], warnings: checks.filter((entry) => entry.status === "warn" || entry.status === "not_checked").map((entry) => `${entry.id}: ${entry.message}`) }; }
 function check(id: string, category: CheckResult["category"], status: CheckResult["status"], severity: CheckResult["severity"], message: string, evidence?: unknown): CheckResult { return { id, category, status, severity, message, evidence }; }

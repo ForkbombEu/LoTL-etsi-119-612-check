@@ -11,6 +11,7 @@ const result: TrustedListAuditResult = {
   detected: { format: "xml", artifactKind: "ts119612_xml_tsl" },
   standardApplicability: { ts119612: "applicable", ts119602: "not_applicable", weBuildProfile: "applicable", eudiTrustRole: "applicable" },
   ts119612: { applicable: true, conformanceLevel: "partially_conformant", score: null, checks: [], mandatoryFailures: [], warnings: [] },
+  ts119602: { applicable: false, conformanceLevel: "not_applicable", score: null, checks: [], mandatoryFailures: [], warnings: [] },
 };
 
 const fcaf: FcafTrustedAuthoritiesReadiness = { scenarios: [
