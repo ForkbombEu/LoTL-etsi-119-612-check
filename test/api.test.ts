@@ -80,8 +80,11 @@ describe("API server", () => {
     expect(body.report.summary.totalPointers).toBe(3);
     expect(body.report.summary.jsonArtifacts).toBe(1);
     expect(body.report.results[1].ts119612.conformanceLevel).toBe("not_applicable");
-    expect(body.report.results[1].ts119602.conformanceLevel).toBe("non_conformant");
-    expect(body.report.results[1].ts119602Classification).toMatchObject({ bindingStatus: "unsupported" });
+    expect(body.report.results[1].ts119602.conformanceLevel).toBe("unsupported");
+    expect(body.report.results[1].ts119602Classification).toMatchObject({
+      binding: "scheme_explicit_json",
+      bindingStatus: "selected",
+    });
     expect(body.markdown).toContain("# WE BUILD Trusted List Audit");
     await app.close();
   });

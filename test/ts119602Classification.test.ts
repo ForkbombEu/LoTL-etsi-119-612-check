@@ -28,7 +28,7 @@ describe("TS 119 602 artifact classification", () => {
   });
 
   it("keeps legacy object-shaped JSON as an unsupported compatibility binding", async () => {
-    const bytes = await readFile("test/fixtures/json-lote.json");
+    const bytes = await readFile("test/fixtures/json-lote-legacy.json");
     const result = classifyTs119602Artifact({ bytes, detection: detectArtifact(bytes, "application/json") });
     expect(result).toMatchObject({
       dataModel: "ts119602",

@@ -1,26 +1,80 @@
 {
   "LoTE": {
     "ListAndSchemeInformation": {
-      "LoTEVersionIdentifier": "1",
+      "LoTEVersionIdentifier": 1,
       "LoTEType": "http://example.test/LoTEType/TrustedEntities",
       "LoTESequenceNumber": 3,
-      "SchemeOperatorName": "JSON Operator",
-      "SchemeInformationURI": "https://example.test/info",
+      "SchemeOperatorName": [
+        { "lang": "en", "value": "JSON Operator" }
+      ],
+      "SchemeOperatorAddress": {
+        "SchemeOperatorPostalAddress": [
+          { "lang": "en", "StreetAddress": "1 Example Street", "Locality": "Example City", "Country": "EU" }
+        ],
+        "SchemeOperatorElectronicAddress": [
+          { "lang": "en", "uriValue": "https://example.test/contact" }
+        ]
+      },
+      "SchemeName": [
+        { "lang": "en", "value": "EU:Example trusted entities" }
+      ],
+      "SchemeInformationURI": [
+        { "lang": "en", "uriValue": "https://example.test/info" }
+      ],
       "StatusDeterminationApproach": "http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate",
       "SchemeTerritory": "EU",
       "ListIssueDateTime": "2026-01-01T00:00:00Z",
-      "NextUpdate": "2026-08-01T00:00:00Z",
+      "NextUpdate": "2026-07-01T00:00:00Z",
       "DistributionPoints": ["https://example.test/lote.json"],
       "PointersToOtherLoTE": [
         {
           "LoTELocation": "https://example.test/referenced-lote.json",
-          "ServiceDigitalIdentities": [{ "X509Certificates": [] }]
+          "ServiceDigitalIdentities": [
+            { "OtherIds": ["urn:example:pointer-identity"] }
+          ],
+          "LoTEQualifiers": [
+            {
+              "LoTEType": "http://example.test/LoTEType/Referenced",
+              "SchemeOperatorName": [
+                { "lang": "en", "value": "Referenced operator" }
+              ],
+              "MimeType": "application/json"
+            }
+          ]
         }
       ]
     },
-    "TrustedEntitiesList": {
-      "TrustServiceProvider": [{ "name": "Provider" }]
-    }
-  },
-  "signature": {}
+    "TrustedEntitiesList": [
+      {
+        "TrustedEntityInformation": {
+          "TEName": [
+            { "lang": "en", "value": "Example Provider" }
+          ],
+          "TEAddress": {
+            "TEPostalAddress": [
+              { "lang": "en", "StreetAddress": "2 Provider Street", "Locality": "Example City", "Country": "EU" }
+            ],
+            "TEElectronicAddress": [
+              { "lang": "en", "uriValue": "https://provider.example.test/contact" }
+            ]
+          },
+          "TEInformationURI": [
+            { "lang": "en", "uriValue": "https://provider.example.test/info" }
+          ]
+        },
+        "TrustedEntityServices": [
+          {
+            "ServiceInformation": {
+              "ServiceName": [
+                { "lang": "en", "value": "Example trust service" }
+              ],
+              "ServiceDigitalIdentity": {
+                "OtherIds": ["urn:example:service-identity"]
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
 }

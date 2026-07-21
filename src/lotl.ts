@@ -89,7 +89,7 @@ export function asArray(value: unknown): unknown[] {
 export function stringValue(value: unknown): string | undefined {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (isRecord(value)) {
-    for (const key of ["value", "#text", "_", "$t"]) {
+    for (const key of ["value", "uriValue", "#text", "_", "$t"]) {
       const nested = value[key];
       if (typeof nested === "string" && nested.trim()) return nested.trim();
     }

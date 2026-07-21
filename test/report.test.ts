@@ -70,14 +70,14 @@ describe("runAudit", () => {
     expect(report.results[1].ts119612.mandatoryFailures).toEqual([]);
     expect(report.results[1].ts119602).toMatchObject({
       applicable: true,
-      conformanceLevel: "non_conformant",
+      conformanceLevel: "unsupported",
     });
     expect(report.results[1].ts119602Classification).toMatchObject({
       dataModel: "ts119602",
-      binding: "unknown",
-      bindingStatus: "unsupported",
+      binding: "scheme_explicit_json",
+      bindingStatus: "selected",
     });
-    expect(report.summary.ts119602.nonConformant).toBe(1);
+    expect(report.summary.ts119602.unsupported).toBe(1);
     expect(report.results[1].standardApplicability).toEqual({
       ts119612: "not_applicable",
       ts119602: "applicable",
@@ -88,6 +88,7 @@ describe("runAudit", () => {
     expect(reportJson).toContain("\"structure.scheme_information\"");
     expect(reportJson).toContain("\"schema.xsd\"");
     expect(reportJson).toContain("\"json_lote.version_identifier\"");
+    expect(reportJson).toContain("\"ts119602.binding.json_schema\"");
     const markdown = await readFile(join(outDir, "report.md"), "utf8");
     expect(markdown).toContain("TS 119 602");
     expect(markdown).toContain("**structure.scheme_information**");
@@ -98,7 +99,7 @@ describe("runAudit", () => {
     expect(markdown).toContain("Source: xml_signature");
     expect(markdown).toContain("**json_lote.pointers.service_digital_identities**");
     expect(markdown).toContain("### ETSI TS 119 602 assessment");
-    expect(markdown).toContain("TS 119 602 classification: data model=ts119602; binding=unknown (unsupported)");
+    expect(markdown).toContain("TS 119 602 classification: data model=ts119602; binding=scheme_explicit_json (selected)");
     expect(markdown).toContain("Can this trust-list bundle be used as a wallet trust fixture?");
     expect(markdown).toContain("## FCAF trusted_authorities fixture readiness");
     expect(report.fcafTrustedAuthorities.scenarios).toHaveLength(8);

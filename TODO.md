@@ -12,18 +12,17 @@ The current implementation is an evidence-oriented LoTE inspector. It is not
 yet a complete ETSI TS 119 602 conformance checker and must not produce a
 "conformant" TS 119 602 verdict.
 
-The implementation currently covers artifact recognition, some top-level
-presence checks, basic dates, entity/service counting, X.509 parsing, and
-generic XMLDSig cryptographic verification. The missing work is concentrated
-in the layers that determine normative conformance:
+The implementation currently covers artifact recognition, independent
+binding/profile classification, official offline JSON Schema validation,
+some top-level semantic evidence, basic dates, entity/service counting, X.509
+parsing, and generic XMLDSig cryptographic verification. The missing work is
+concentrated in the layers that determine normative conformance:
 
-1. official JSON Schema and XML Schema validation;
-2. correct classification of all three standardized bindings;
-3. clauses 6.1 through 6.8 semantic validation;
-4. JAdES Baseline B and XAdES Baseline B profile validation;
-5. the six normative EU profiles in Annexes D through I;
-6. cross-document, historical, and dereferencing checks;
-7. a separate TS 119 602 report and verdict model.
+1. official XML Schema validation and TS 119 612 alternative-binding mapping;
+2. clauses 6.1 through 6.8 semantic validation;
+3. JAdES Baseline B and XAdES Baseline B profile validation;
+4. the six normative EU profiles in Annexes D through I;
+5. cross-document, historical, and dereferencing checks.
 
 An exact percentage would be misleading until every normative requirement is
 entered in a requirements ledger. As a non-normative engineering estimate:
@@ -31,15 +30,14 @@ entered in a requirements ledger. As a non-normative engineering estimate:
 | Area | Current maturity | Approximate distance |
 | --- | --- | --- |
 | Scheme-explicit TS 119 602 XML evidence | Early partial | The root and some mandatory fields are covered, but most syntax, semantics, profile, and XAdES rules are missing. |
-| Official TS 119 602 JSON binding | Prototype only | The official entity shape is not parsed, JSON Schema is not run, and compact JAdES is not supported. |
-| TS 119 612 alternative XML binding | Misclassified | Annex A.2.2 applicability and component mapping are not implemented. |
+| Official TS 119 602 JSON binding | Structural validation | The official object/array model is parsed and validated offline; core semantics, profile rules, and compact JAdES remain incomplete. |
+| TS 119 612 alternative XML binding | Classified, mapping missing | Annex A.2.2 applicability is guarded, but Table A.1 component mapping is not implemented. |
 | Annex D-I profile conformance | Classification only | List-type names are recognized, but the normative profile tables are not validated. |
 | Complete TS 119 602 verdict | Not implemented | No artifact can currently receive an evidence-backed complete TS 119 602 conformance verdict. |
 
-The practical estimate is therefore roughly one structural/evidence layer out
-of five required layers. For XML this is perhaps 15-25% implementation
-maturity; for normative JSON and Annex D-I profiles it is below 10%. These
-numbers are planning estimates, not conformance scores.
+The JSON structural layer is now implemented, but the semantic, signature,
+profile, trust, and contextual layers remain the majority of the work. This
+is a planning observation, not a conformance score.
 
 ## Normative source set
 
@@ -96,6 +94,14 @@ assuming that schema success proves complete conformance.
 
 ### Current JSON LoTE evidence
 
+- Offline validation against the pinned official V1.1.1 Draft-07 schema with
+  URI and date-time format checks.
+- Error evidence containing JSON Pointer, schema path/keyword, expected value,
+  observed value/type, and pinned schema identity.
+- Parsing and counting of the official `TrustedEntitiesList[]`,
+  `TrustedEntityInformation`, and `TrustedEntityServices[]` structure.
+- Explicit non-conformance plus evidence extraction for the isolated legacy
+  `TrustedEntitiesList.TrustServiceProvider[]` compatibility adapter.
 - Presence checks for a subset of list and scheme fields.
 - Basic date parsing and ordering.
 - Pointer and pointer-identity counting.
@@ -150,7 +156,7 @@ relevant TS 119 602 profile rules. A normal TS 119 612 trusted list must not be
 silently reclassified as a TS 119 602 profile without matching profile
 evidence.
 
-### P0.3 Replace the current JSON model with the official binding
+### P0.3 Replace the current JSON model with the official binding — complete
 
 The official JSON Schema defines:
 
@@ -164,17 +170,19 @@ LoTE
       ServiceHistory[]                  optional
 ```
 
-The current code reads:
+The normative parser now reads this official object/array structure. The old
+shape:
 
 ```text
 LoTE.TrustedEntitiesList.TrustServiceProvider[]
 ```
 
-That is not the official TS 119 602 V1.1.1 JSON shape. The current
-`json-lote.json` test fixture also models this legacy/TSL-like shape and is not
-a positive normative fixture.
+is isolated in `legacyLoteAdapter.ts`, fails schema/binding conformance, and is
+retained only for compatibility evidence. `json-lote.json` is now a
+schema-valid official positive fixture; `json-lote-legacy.json` is the named
+negative compatibility fixture.
 
-Required change:
+Implemented in TS602-05:
 
 - parse the official array/object structure;
 - validate exact types, cardinalities, required properties, and
@@ -262,7 +270,7 @@ Required change:
 | 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Missing | Implement status URI sets, absence rules, list-issue consistency, and profile-specific behavior. |
 | 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Missing | Parse and validate every history instance, status transition, ordering, and retained key identity. |
 | 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Partial XML only | Implement full XAdES/JAdES Baseline B and signer subject matching. |
-| Annex A schemas | Official base and extension schemas | Pinned, validation missing | The v1.1.1 bundle, dependencies, hashes, licenses, catalog, and offline resolvers are pinned; integrate binding validation while preserving separate semantic checks where the PDF prevails. |
+| Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
 | Annex C URIs | Exact registered profile URIs | Classification only | Add a versioned registry and exact comparisons with ambiguity handling. |
 | Annexes D-I | Six complete EU profiles | Missing | Implement profile dispatch and every additional table requirement. |
@@ -275,11 +283,11 @@ Required change:
   `1960201_json_schema.json`, `_sie.json`, `_tie.json`, and RFC 7517
   dependencies.
 - [x] Record source URL, tag, commit, SHA-256, and license.
-- [ ] Use a Draft-07 validator with URI and date-time format enforcement.
+- [x] Use a Draft-07 validator with URI and date-time format enforcement.
 - [x] Resolve extension schemas without hidden network access.
-- [ ] Report each error with JSON Pointer, schema keyword, expected value, and
+- [x] Report each error with JSON Pointer, schema keyword, expected value, and
   observed value.
-- [ ] Validate `additionalProperties`, `minItems`, exact primitive types, and
+- [x] Validate `additionalProperties`, `minItems`, exact primitive types, and
   all nested required fields.
 - [ ] Add positive and negative fixtures for each object and extension type.
 
@@ -478,8 +486,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-02 | Create the clause/table/profile requirements ledger with stable check IDs, applicability, severity, and normative citations. | TS602-01 | Complete |
 | TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Complete |
 | TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Complete |
-| TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Next |
-| TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Pending |
+| TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Complete |
+| TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Next |
 | TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Pending |
 | TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Pending |
 | TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Pending |
@@ -506,11 +514,11 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 ### Phase 2 — Official binding validation
 
 - [x] Pin the official v1.1.1 JSON/XSD schema bundle and hashes.
-- [ ] Implement offline JSON Schema validation.
+- [x] Implement offline JSON Schema validation.
 - [ ] Implement offline XML Schema validation for scheme-explicit XML.
 - [ ] Implement TS 119 612 alternative-binding mapping.
-- [ ] Correct official JSON parsing and fixtures.
-- [ ] Keep WE BUILD legacy structures as explicitly non-conformant
+- [x] Correct official JSON parsing and fixtures.
+- [x] Keep WE BUILD legacy structures as explicitly non-conformant
   compatibility inputs.
 
 ### Phase 3 — Core clauses 6.1-6.7
