@@ -1,0 +1,7 @@
+# Preserve pinned upstream schema and license bytes exactly. Their hashes are
+# reviewed through the adjacent manifest; disabling textual diffs also avoids
+# treating upstream CRLF terminators and retained spaces as local whitespace.
+schemas/etsi-ts-119-602/v1.1.1/1960201_json_schema/** -text -diff
+schemas/etsi-ts-119-602/v1.1.1/1960201_xml_schema/** -text -diff
+schemas/etsi-ts-119-602/v1.1.1/dependencies/w3c/** -text -diff
+schemas/etsi-ts-119-602/v1.1.1/LICENSE -text -diff

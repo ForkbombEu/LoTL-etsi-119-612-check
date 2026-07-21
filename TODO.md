@@ -262,7 +262,7 @@ Required change:
 | 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Missing | Implement status URI sets, absence rules, list-issue consistency, and profile-specific behavior. |
 | 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Missing | Parse and validate every history instance, status transition, ordering, and retained key identity. |
 | 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Partial XML only | Implement full XAdES/JAdES Baseline B and signer subject matching. |
-| Annex A schemas | Official base and extension schemas | Missing | Bundle/pin schemas and validate offline; preserve separate semantic checks where the PDF prevails. |
+| Annex A schemas | Official base and extension schemas | Pinned, validation missing | The v1.1.1 bundle, dependencies, hashes, licenses, catalog, and offline resolvers are pinned; integrate binding validation while preserving separate semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
 | Annex C URIs | Exact registered profile URIs | Classification only | Add a versioned registry and exact comparisons with ambiguity handling. |
 | Annexes D-I | Six complete EU profiles | Missing | Implement profile dispatch and every additional table requirement. |
@@ -271,12 +271,12 @@ Required change:
 
 ### JSON
 
-- [ ] Bundle or reproducibly fetch the v1.1.1 Draft-07 schemas:
+- [x] Bundle or reproducibly fetch the v1.1.1 Draft-07 schemas:
   `1960201_json_schema.json`, `_sie.json`, `_tie.json`, and RFC 7517
   dependencies.
-- [ ] Record source URL, tag, commit, SHA-256, and license.
+- [x] Record source URL, tag, commit, SHA-256, and license.
 - [ ] Use a Draft-07 validator with URI and date-time format enforcement.
-- [ ] Resolve extension schemas without hidden network access.
+- [x] Resolve extension schemas without hidden network access.
 - [ ] Report each error with JSON Pointer, schema keyword, expected value, and
   observed value.
 - [ ] Validate `additionalProperties`, `minItems`, exact primitive types, and
@@ -285,11 +285,13 @@ Required change:
 
 ### XML
 
-- [ ] Bundle or reproducibly fetch `1960201_xsd_schema.xsd`, `_sie.xsd`, and
+- [x] Bundle or reproducibly fetch `1960201_xsd_schema.xsd`, `_sie.xsd`, and
   `_tie.xsd`, plus pinned XMLDSig dependencies.
 - [ ] Route the `--xsd`/schema validator through `xml_lote`; it currently only
   runs for TS 119 612 XML.
-- [ ] Use an offline XML catalog and prohibit schema-driven network access.
+- [ ] Route scheme-explicit XML validation through the pinned offline XML
+  catalog; generic `xmllint` validation now prohibits network access with
+  `--nonet`.
 - [ ] Report XPath/line diagnostics and schema source identity.
 - [ ] Validate the TS 119 612 alternative binding with the correct TS 119 612
   schema before applying Table A.1 mappings.
@@ -475,8 +477,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-01 | Separate TS 119 602/TS 119 612 result objects and summaries; add `unsupported`/`inconclusive`; make local JSON checks unconditional; remove the JSON signature-object pass shortcut. | None | Complete |
 | TS602-02 | Create the clause/table/profile requirements ledger with stable check IDs, applicability, severity, and normative citations. | TS602-01 | Complete |
 | TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Complete |
-| TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Next |
-| TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Pending |
+| TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Complete |
+| TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Next |
 | TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Pending |
 | TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Pending |
 | TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Pending |
@@ -503,7 +505,7 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 ### Phase 2 — Official binding validation
 
-- [ ] Pin the official v1.1.1 JSON/XSD schema bundle and hashes.
+- [x] Pin the official v1.1.1 JSON/XSD schema bundle and hashes.
 - [ ] Implement offline JSON Schema validation.
 - [ ] Implement offline XML Schema validation for scheme-explicit XML.
 - [ ] Implement TS 119 612 alternative-binding mapping.

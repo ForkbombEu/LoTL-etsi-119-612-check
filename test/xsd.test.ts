@@ -34,7 +34,7 @@ describe("validateXsd", () => {
     expect(result).toMatchObject({ status: "pass", severity: "info" });
     expect(runner).toHaveBeenLastCalledWith(
       "xmllint",
-      expect.arrayContaining(["--schema", xsdPath, "--noout"]),
+      expect.arrayContaining(["--nonet", "--schema", xsdPath, "--noout"]),
     );
   });
 

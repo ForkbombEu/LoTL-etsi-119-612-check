@@ -79,7 +79,7 @@ export async function validateXsd(
   const xmlPath = join(dir, "artifact.xml");
   try {
     await writeFile(xmlPath, xml);
-    const result = await commandRunner("xmllint", ["--schema", xsdPath, xmlPath, "--noout"]);
+    const result = await commandRunner("xmllint", ["--nonet", "--schema", xsdPath, xmlPath, "--noout"]);
     return {
       id: "schema.xsd",
       category: "schema",

@@ -1,0 +1,183 @@
+{
+  "manifestVersion": 1,
+  "standard": "ETSI TS 119 602",
+  "standardVersion": "1.1.1",
+  "bindingSchemaDraft": "http://json-schema.org/draft-07/schema#",
+  "retrievedAt": "2026-07-21",
+  "sources": {
+    "etsiForge": {
+      "repository": "https://forge.etsi.org/rep/esi/x19_60201_lists_of_trusted_entities",
+      "tag": "v1.1.1",
+      "commit": "e84f427f0cde99513b574ef4b5a155ac4a38eab6",
+      "archive": "https://forge.etsi.org/rep/esi/x19_60201_lists_of_trusted_entities/-/archive/v1.1.1/x19_60201_lists_of_trusted_entities-v1.1.1.tar.gz",
+      "license": "BSD-3-Clause",
+      "licensePath": "LICENSE"
+    },
+    "w3c": {
+      "license": "W3C-19980720",
+      "licenseUrl": "https://www.w3.org/Consortium/Legal/copyright-software-19980720",
+      "licensePath": "dependencies/w3c/LICENSE-W3C-19980720.html"
+    }
+  },
+  "entrypoints": {
+    "json": {
+      "base": "1960201_json_schema/1960201_json_schema.json",
+      "serviceInformationExtension": "1960201_json_schema/1960201_json_schema_sie.json",
+      "trustedEntityInformationExtension": "1960201_json_schema/1960201_json_schema_tie.json"
+    },
+    "xml": {
+      "base": "1960201_xml_schema/1960201_xsd_schema.xsd",
+      "serviceInformationExtension": "1960201_xml_schema/1960201_xsd_schema_sie.xsd",
+      "trustedEntityInformationExtension": "1960201_xml_schema/1960201_xsd_schema_tie.xsd",
+      "catalog": "catalog.xml"
+    }
+  },
+  "resolvers": {
+    "json": {
+      "1960201-jsonSchema.json": "1960201_json_schema/1960201_json_schema.json",
+      "1960201_json_schema.json": "1960201_json_schema/1960201_json_schema.json",
+      "rfcs/rfc7517.json": "1960201_json_schema/rfcs/rfc7517.json"
+    },
+    "xml": {
+      "http://www.w3.org/2001/xml.xsd": "dependencies/w3c/xml.xsd",
+      "https://www.w3.org/2001/xml.xsd": "dependencies/w3c/xml.xsd",
+      "http://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd": "dependencies/w3c/xmldsig-core-schema.xsd",
+      "https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd": "dependencies/w3c/xmldsig-core-schema.xsd",
+      "http://www.w3.org/2001/XMLSchema.dtd": "dependencies/w3c/XMLSchema.dtd",
+      "https://www.w3.org/2001/XMLSchema.dtd": "dependencies/w3c/XMLSchema.dtd",
+      "datatypes.dtd": "dependencies/w3c/datatypes.dtd"
+    }
+  },
+  "notes": [
+    "The published TIE JSON schema references 1960201-jsonSchema.json; the offline resolver maps that exact published reference to 1960201_json_schema.json without modifying the upstream file.",
+    "The ETSI XML schema imports W3C resources over HTTP; the XML catalog and resolver map every imported resource and XMLSchema DTD dependency to pinned local files.",
+    "Schema validity is evidence only. ETSI TS 119 602 states that the normative specification prevails if an electronic schema conflicts with its text."
+  ],
+  "files": [
+    {
+      "path": "LICENSE",
+      "source": "etsiForge",
+      "sourcePath": "LICENSE",
+      "sha256": "cd32930241fa038f81fc6fc170d6ece74d44f563a575d98cf2d0667f1a50ed0a",
+      "bytes": 1476,
+      "role": "license",
+      "mediaType": "text/plain"
+    },
+    {
+      "path": "1960201_json_schema/1960201_json_schema.json",
+      "source": "etsiForge",
+      "sourcePath": "1960201_json_schema/1960201_json_schema.json",
+      "sha256": "f16d60477359b936cefe0c74d5f1c598e3346daf84a6bad1846c712381ca36b4",
+      "bytes": 16734,
+      "role": "json-base-schema",
+      "mediaType": "application/schema+json"
+    },
+    {
+      "path": "1960201_json_schema/1960201_json_schema_sie.json",
+      "source": "etsiForge",
+      "sourcePath": "1960201_json_schema/1960201_json_schema_sie.json",
+      "sha256": "a95cfbe3857bc4546d89bfed5248240bbeb7c3adf2fed068be953b2d468dacd4",
+      "bytes": 172,
+      "role": "json-service-information-extension-schema",
+      "mediaType": "application/schema+json"
+    },
+    {
+      "path": "1960201_json_schema/1960201_json_schema_tie.json",
+      "source": "etsiForge",
+      "sourcePath": "1960201_json_schema/1960201_json_schema_tie.json",
+      "sha256": "bf96ee260f784f8ab8de22a3cdda166c95e19ffe81ac51aca8712855bcba3520",
+      "bytes": 2386,
+      "role": "json-trusted-entity-information-extension-schema",
+      "mediaType": "application/schema+json"
+    },
+    {
+      "path": "1960201_json_schema/rfcs/rfc7517.json",
+      "source": "etsiForge",
+      "sourcePath": "1960201_json_schema/rfcs/rfc7517.json",
+      "sha256": "02799ec31e4383eb39c93b86070e48022e665ac5996c14500a3da913a08c522c",
+      "bytes": 1065,
+      "role": "json-rfc7517-dependency",
+      "mediaType": "application/schema+json"
+    },
+    {
+      "path": "1960201_xml_schema/1960201_xsd_schema.xsd",
+      "source": "etsiForge",
+      "sourcePath": "1960201_xml_schema/1960201_xsd_schema.xsd",
+      "sha256": "61def65d304ca5357d745f273c3db2efae8b00de8d857abbaba78725bf690d4e",
+      "bytes": 23663,
+      "role": "xml-base-schema",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "1960201_xml_schema/1960201_xsd_schema_sie.xsd",
+      "source": "etsiForge",
+      "sourcePath": "1960201_xml_schema/1960201_xsd_schema_sie.xsd",
+      "sha256": "ae7e7e7191e2e60b599b47c351885f089d5a766f4b1a9572382ac25001bdb3d8",
+      "bytes": 949,
+      "role": "xml-service-information-extension-schema",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "1960201_xml_schema/1960201_xsd_schema_tie.xsd",
+      "source": "etsiForge",
+      "sourcePath": "1960201_xml_schema/1960201_xsd_schema_tie.xsd",
+      "sha256": "2c346e93ba3fa274d259e91991141b08cecbc4f9d546aa7a898d4c91296e0356",
+      "bytes": 2415,
+      "role": "xml-trusted-entity-information-extension-schema",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/w3c/xml.xsd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/2001/xml.xsd",
+      "sha256": "61960fb3131e38022caad5360e2f33a3382578ab3c80cd58bd74320ede61b20c",
+      "bytes": 8836,
+      "role": "xml-namespace-schema-dependency",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/w3c/xmldsig-core-schema.xsd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd",
+      "sha256": "35cf8197da812c85e40d57891b35c94187569ed474a2dac813ce5090dafcd35c",
+      "bytes": 10293,
+      "role": "xmldsig-schema-dependency",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/w3c/XMLSchema.dtd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/2001/XMLSchema.dtd",
+      "sha256": "2032ead9fd47a61b22fe56aa02be1840bd9bb9015b0c0d3f1e8aac75dd91c3b9",
+      "bytes": 16075,
+      "role": "xml-schema-dtd-dependency",
+      "mediaType": "application/xml-dtd"
+    },
+    {
+      "path": "dependencies/w3c/datatypes.dtd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/2001/datatypes.dtd",
+      "sha256": "6946432ca7af2e9584f91b48564111fd2c73c8debbbcd9a0e3f5ddd382eeb51c",
+      "bytes": 6357,
+      "role": "xml-schema-datatypes-dtd-dependency",
+      "mediaType": "application/xml-dtd"
+    },
+    {
+      "path": "dependencies/w3c/LICENSE-W3C-19980720.html",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/Consortium/Legal/copyright-software-19980720",
+      "sha256": "d4eedcb04dc16687b6d56b49ed06e1b55f599b8bd8e518af9773d1b7d2cf5c76",
+      "bytes": 4261,
+      "role": "license",
+      "mediaType": "text/html"
+    },
+    {
+      "path": "catalog.xml",
+      "source": "local",
+      "sha256": "c81fd6695534c1c233e24c203951de30179d05e9486de23776baf64027d71608",
+      "bytes": 1392,
+      "role": "offline-xml-catalog",
+      "mediaType": "application/xml"
+    }
+  ]
+}

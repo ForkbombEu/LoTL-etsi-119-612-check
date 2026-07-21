@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog" prefer="system">
+  <system systemId="http://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+  <system systemId="https://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+  <uri name="http://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+  <uri name="https://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+
+  <system systemId="http://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+  <system systemId="https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+  <uri name="http://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+  <uri name="https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+
+  <public publicId="-//W3C//DTD XMLSchema 200102//EN" uri="dependencies/w3c/XMLSchema.dtd"/>
+  <system systemId="http://www.w3.org/2001/XMLSchema.dtd" uri="dependencies/w3c/XMLSchema.dtd"/>
+  <system systemId="https://www.w3.org/2001/XMLSchema.dtd" uri="dependencies/w3c/XMLSchema.dtd"/>
+  <system systemId="datatypes.dtd" uri="dependencies/w3c/datatypes.dtd"/>
+</catalog>

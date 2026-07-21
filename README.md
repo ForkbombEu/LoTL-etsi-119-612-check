@@ -319,7 +319,15 @@ implemented.
 
 ### Optional local XSD validation
 
-Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint`. The tool does not download schemas. If no schema is supplied, the schema check is `not_checked`; if `xmllint` is unavailable, it is also `not_checked` with an actionable message. An `xmllint` validation failure is reported as a schema finding in both JSON and Markdown output.
+Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint`. The tool does not download schemas, and invokes `xmllint` with `--nonet` to prohibit schema-driven network access. If no schema is supplied, the schema check is `not_checked`; if `xmllint` is unavailable, it is also `not_checked` with an actionable message. An `xmllint` validation failure is reported as a schema finding in both JSON and Markdown output.
+
+### Pinned ETSI TS 119 602 schemas
+
+The official ETSI TS 119 602 V1.1.1 JSON and XML binding schemas are pinned under `schemas/etsi-ts-119-602/v1.1.1/`. `manifest.json` records the ETSI Forge tag and immutable commit, source paths, byte lengths, SHA-256 hashes, and BSD-3-Clause license. It also records the pinned W3C XML namespace, XMLDSig, and DTD dependencies and their W3C license.
+
+`src/standards/ts119602Schemas.ts` verifies bundle integrity and resolves only allowlisted local references. The accompanying `catalog.xml` maps the HTTP/HTTPS W3C imports to local files. The resolver explicitly handles the published TIE schema reference `1960201-jsonSchema.json`, whose spelling differs from the published base filename, without modifying either upstream file. Unknown remote, absolute, and traversal references are rejected.
+
+This task pins and resolves the schemas; TS 119 602 JSON/XML schema validation and binding-specific report findings are implemented separately. Schema success alone will not imply normative conformance because the ETSI specification prevails over conflicting electronic schemas.
 
 ## Report schema v2
 
