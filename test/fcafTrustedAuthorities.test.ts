@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assessFcafTrustedAuthorities } from "../src/fcaf/trustedAuthorities.js";
+import { createUnknownTs119602Classification } from "../src/standards/ts119602Classification.js";
 import type { FixtureReadiness, TrustedListAuditResult } from "../src/types.js";
 
 function result(index: number, kind: TrustedListAuditResult["detected"]["artifactKind"], signingCertificate = false): TrustedListAuditResult {
@@ -12,6 +13,7 @@ function result(index: number, kind: TrustedListAuditResult["detected"]["artifac
     declared: { pointerCertificateFingerprintsSha256: [] },
     fetch: { attempted: true, ok: true },
     detected: { format: xml ? "xml" : "json", artifactKind: kind },
+    ts119602Classification: createUnknownTs119602Classification(),
     standardApplicability: { ts119612: xml ? "applicable" : "not_applicable", ts119602: xml ? "not_applicable" : "applicable", weBuildProfile: "applicable", eudiTrustRole: "applicable" },
     ts119612: {
       applicable: xml,

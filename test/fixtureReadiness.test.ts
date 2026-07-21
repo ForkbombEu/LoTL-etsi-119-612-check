@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { assessFixtureReadiness } from "../src/eudi/fixtureReadiness.js";
 import { parseLotlJson } from "../src/lotl.js";
+import { createUnknownTs119602Classification } from "../src/standards/ts119602Classification.js";
 import type { TrustedListAuditResult } from "../src/types.js";
 
 function result(index: number, format: "xml" | "json"): TrustedListAuditResult {
@@ -13,6 +14,7 @@ function result(index: number, format: "xml" | "json"): TrustedListAuditResult {
     declared: { pointerCertificateFingerprintsSha256: [] },
     fetch: { attempted: true, ok: true },
     detected: { format, artifactKind: format === "xml" ? "ts119612_xml_tsl" : "json_lote" },
+    ts119602Classification: createUnknownTs119602Classification(),
     standardApplicability: { ts119612: format === "xml" ? "applicable" : "not_applicable", ts119602: format === "json" ? "applicable" : "not_applicable", weBuildProfile: "applicable", eudiTrustRole: "unknown" },
     ts119612: { applicable: format === "xml", conformanceLevel: format === "xml" ? "partially_conformant" : "not_applicable", score: null, checks: [{ id: "dates.next_update_valid", category: "dates", status: "pass", severity: "info", message: "test" }], mandatoryFailures: [], warnings: [] },
     ts119602: { applicable: format === "json", conformanceLevel: format === "json" ? "not_checked" : "not_applicable", score: null, checks: format === "json" ? [{ id: "json_lote.root", category: "structure", status: "pass", severity: "info", message: "test" }] : [], mandatoryFailures: [], warnings: [] },

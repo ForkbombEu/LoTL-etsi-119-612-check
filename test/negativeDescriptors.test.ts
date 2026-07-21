@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { generateNegativeFixtureDescriptors, renderNegativeFixtureDescriptorsMarkdown, writeNegativeFixtureDescriptors } from "../src/fixtures/negativeDescriptors.js";
+import { createUnknownTs119602Classification } from "../src/standards/ts119602Classification.js";
 import type { FcafTrustedAuthoritiesReadiness, FixtureReadiness, TrustedListAuditResult } from "../src/types.js";
 
 const result: TrustedListAuditResult = {
   id: "artifact-1", index: 1, source: "https://example.test/tl.xml", location: "https://example.test/tl.xml",
   declared: { pointerCertificateFingerprintsSha256: [] }, fetch: { attempted: true, ok: true },
   detected: { format: "xml", artifactKind: "ts119612_xml_tsl" },
+  ts119602Classification: createUnknownTs119602Classification(),
   standardApplicability: { ts119612: "applicable", ts119602: "not_applicable", weBuildProfile: "applicable", eudiTrustRole: "applicable" },
   ts119612: { applicable: true, conformanceLevel: "partially_conformant", score: null, checks: [], mandatoryFailures: [], warnings: [] },
   ts119602: { applicable: false, conformanceLevel: "not_applicable", score: null, checks: [], mandatoryFailures: [], warnings: [] },

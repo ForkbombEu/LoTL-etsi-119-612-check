@@ -236,7 +236,7 @@ paths:
               emptyReport:
                 value:
                   report:
-                    schemaVersion: 3
+                    schemaVersion: 4
                     tool: { name: we-build-tl-audit, version: 0.1.0 }
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
@@ -514,7 +514,7 @@ components:
       type: object
       required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors, summary, results]
       properties:
-        schemaVersion: { type: integer, const: 3 }
+        schemaVersion: { type: integer, const: 4 }
         tool:
           type: object
           required: [name, version]
@@ -703,7 +703,7 @@ components:
           items: { type: string }
     TrustedListAuditResult:
       type: object
-      required: [id, index, source, location, declared, fetch, detected, standardApplicability, ts119612, ts119602]
+      required: [id, index, source, location, declared, fetch, detected, ts119602Classification, standardApplicability, ts119612, ts119602]
       properties:
         id: { type: string }
         index: { type: integer, minimum: 1 }
@@ -731,6 +731,8 @@ components:
           properties:
             format: { type: string, enum: [xml, json, html, text, empty, unknown] }
             artifactKind: { type: string, enum: [ts119612_xml_tsl, ts119612_xml_lotl, xml_lotl_like, xml_lote, json_lote, json_lotl, html_error, unknown] }
+        ts119602Classification:
+          $ref: '#/components/schemas/Ts119602Classification'
         standardApplicability:
           type: object
           required: [ts119612, ts119602, weBuildProfile, eudiTrustRole]
@@ -795,6 +797,44 @@ components:
         warnings:
           type: array
           items: { type: string }
+    Ts119602Classification:
+      type: object
+      required: [dataModel, binding, bindingStatus, profile, profileStatus, applicability, reasons, evidence]
+      properties:
+        dataModel:
+          type: string
+          enum: [ts119602, ts119612, unknown]
+        binding:
+          type: string
+          enum: [scheme_explicit_json, scheme_explicit_xml, ts119612_alternative_xml, unknown]
+        bindingStatus:
+          type: string
+          enum: [selected, candidate, unsupported, not_applicable]
+        profile:
+          type: string
+          enum: [pid_providers, wallet_providers, wrpac_providers, wrprc_providers, pub_eaa_providers, registrars_and_registers, unknown]
+        profileStatus:
+          type: string
+          enum: [selected, not_selected, conflict]
+        applicability:
+          $ref: '#/components/schemas/ApplicabilityStatus'
+        reasons:
+          type: array
+          items: { type: string }
+        evidence:
+          type: object
+          additionalProperties: false
+          properties:
+            rootLocalName: { type: string }
+            rootNamespace: { type: string }
+            embeddedType: { type: string }
+            declaredType: { type: string }
+            embeddedProfile:
+              type: string
+              enum: [pid_providers, wallet_providers, wrpac_providers, wrprc_providers, pub_eaa_providers, registrars_and_registers, unknown]
+            declaredProfile:
+              type: string
+              enum: [pid_providers, wallet_providers, wrpac_providers, wrprc_providers, pub_eaa_providers, registrars_and_registers, unknown]
     ApplicabilityStatus:
       type: string
       enum: [applicable, not_applicable, unknown]

@@ -86,6 +86,8 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   lines.push(`- Scheme territory: ${value(result.declared.schemeTerritory)}`);
   lines.push(`- Fetch status: ${result.fetch.attempted ? fetchStatus(result) : "not attempted"}`);
   lines.push(`- Detected artifact: ${result.detected.artifactKind} (${result.detected.format})`);
+  lines.push(`- TS 119 602 classification: data model=${result.ts119602Classification.dataModel}; binding=${result.ts119602Classification.binding} (${result.ts119602Classification.bindingStatus}); profile=${result.ts119602Classification.profile} (${result.ts119602Classification.profileStatus})`);
+  lines.push(`- TS 119 602 classification reasons: ${result.ts119602Classification.reasons.join("; ")}`);
   lines.push(`- SHA-256: ${value(result.fetch.sha256)}`);
   lines.push(`- Standard applicability: TS 119 612=${result.standardApplicability.ts119612}; TS 119 602=${result.standardApplicability.ts119602}; WE BUILD=${result.standardApplicability.weBuildProfile}; EUDI trust role=${result.standardApplicability.eudiTrustRole}`);
   renderStandardAssessment(lines, "ETSI TS 119 612", result.ts119612);

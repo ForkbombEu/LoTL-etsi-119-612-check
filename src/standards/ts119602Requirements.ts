@@ -1,4 +1,8 @@
-import type { CheckSeverity } from "../types.js";
+import type {
+  CheckSeverity,
+  Ts119602Binding as ClassifiedTs119602Binding,
+  Ts119602Profile as ClassifiedTs119602Profile,
+} from "../types.js";
 
 export const TS119602_SOURCE = Object.freeze({
   document: "ETSI TS 119 602",
@@ -10,18 +14,8 @@ export const TS119602_SOURCE = Object.freeze({
   schemaPrecedenceCitation: "Annex A.1 and Annex A.2.1",
 } as const);
 
-export type Ts119602Binding =
-  | "scheme_explicit_json"
-  | "scheme_explicit_xml"
-  | "ts119612_alternative_xml";
-
-export type Ts119602Profile =
-  | "pid_providers"
-  | "wallet_providers"
-  | "wrpac_providers"
-  | "wrprc_providers"
-  | "pub_eaa_providers"
-  | "registrars_and_registers";
+export type Ts119602Binding = Exclude<ClassifiedTs119602Binding, "unknown">;
+export type Ts119602Profile = Exclude<ClassifiedTs119602Profile, "unknown">;
 
 export type Ts119602RequirementCategory =
   | "binding"
@@ -83,7 +77,7 @@ const BOTH_SCHEME_MODES = ["implicit", "explicit"] as const;
 const EXPLICIT_SCHEME_MODE = ["explicit"] as const;
 
 const CORE_REQUIREMENTS = [
-  requirement("ts119602.binding.supported", "Normative binding selection", "Identify a supported Annex A JSON or XML binding before applying data-model or profile checks.", "binding", "shall", "critical", "local", [citation("6.1.1"), citation("Annex A", "Bindings")]),
+  requirement("ts119602.binding.supported", "Normative binding selection", "Identify a supported Annex A JSON or XML binding before applying data-model or profile checks.", "binding", "shall", "critical", "local", [citation("6.1.1"), citation("Annex A", "Bindings")], "implemented", ["ts119602.binding.supported"]),
   requirement("ts119602.syntax.uri", "URI syntax", "Validate URI-valued components using RFC 3986 and any component-specific URI scheme rules.", "syntax", "shall", "error", "local", [citation("6.1.2")]),
   requirement("ts119602.syntax.date_time", "Date-time lexical form", "Validate the exact ISO 8601 UTC form with seconds, no decimal fraction, and the Z designator.", "syntax", "shall", "error", "local", [citation("6.1.3")], "partial", ["json_lote.dates.issue_valid", "json_lote.dates.next_update_valid", "xml_lote.dates.issue_valid", "xml_lote.dates.next_update_valid"]),
   requirement("ts119602.syntax.language", "Language and multilingual values", "Validate English coverage, lower-case RFC 5646 tags, multilingual strings/pointers, transliteration, and character restrictions.", "syntax", "mixed", "error", "mixed", [citation("6.1.4"), citation("Annex B", "Implementation requirements for multilingual support")]),

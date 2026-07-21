@@ -30,6 +30,41 @@ export interface StandardApplicability {
   eudiTrustRole: ApplicabilityStatus;
 }
 
+export type Ts119602DataModel = "ts119602" | "ts119612" | "unknown";
+export type Ts119602Binding =
+  | "scheme_explicit_json"
+  | "scheme_explicit_xml"
+  | "ts119612_alternative_xml"
+  | "unknown";
+export type Ts119602Profile =
+  | "pid_providers"
+  | "wallet_providers"
+  | "wrpac_providers"
+  | "wrprc_providers"
+  | "pub_eaa_providers"
+  | "registrars_and_registers"
+  | "unknown";
+export type Ts119602BindingStatus = "selected" | "candidate" | "unsupported" | "not_applicable";
+export type Ts119602ProfileStatus = "selected" | "not_selected" | "conflict";
+
+export interface Ts119602Classification {
+  dataModel: Ts119602DataModel;
+  binding: Ts119602Binding;
+  bindingStatus: Ts119602BindingStatus;
+  profile: Ts119602Profile;
+  profileStatus: Ts119602ProfileStatus;
+  applicability: ApplicabilityStatus;
+  reasons: string[];
+  evidence: {
+    rootLocalName?: string;
+    rootNamespace?: string;
+    embeddedType?: string;
+    declaredType?: string;
+    embeddedProfile?: Ts119602Profile;
+    declaredProfile?: Ts119602Profile;
+  };
+}
+
 export type CheckStatus =
   | "pass"
   | "fail"
@@ -80,7 +115,7 @@ export interface CertificateSummary {
 }
 
 export interface AuditReport {
-  schemaVersion: 3;
+  schemaVersion: 4;
   tool: {
     name: "we-build-tl-audit";
     version: string;
@@ -179,6 +214,7 @@ export interface TrustedListAuditResult {
     format: DetectedFormat;
     artifactKind: ArtifactKind;
   };
+  ts119602Classification: Ts119602Classification;
   standardApplicability: StandardApplicability;
   ts119612: StandardAssessment;
   ts119602: StandardAssessment;

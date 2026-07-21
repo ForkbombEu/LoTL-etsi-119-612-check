@@ -11,6 +11,8 @@ import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
 import { assessFcafTrustedAuthorities } from "./fcaf/trustedAuthorities.js";
 import { generateNegativeFixtureDescriptors, writeNegativeFixtureDescriptors } from "./fixtures/negativeDescriptors.js";
 import { buildStandardAssessment } from "./standards/assessment.js";
+import { classifyTs119602Artifact, createUnknownTs119602Classification } from "./standards/ts119602Classification.js";
+import { summarizeTs119602Requirements } from "./standards/ts119602Requirements.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
@@ -227,6 +229,7 @@ export async function assessArtifactContent(options: AssessArtifactContentOption
     declared: normalizeDeclared(options.declared),
     fetch: { attempted: false, ok: true, contentType: options.contentType, bytes: bytes.length, sha256: sha256Hex(bytes) },
     detected: { format: "unknown", artifactKind: "unknown" },
+    ts119602Classification: createUnknownTs119602Classification(options.declared?.loteType),
     standardApplicability: unknownApplicability(),
     ts119612: { applicable: false, conformanceLevel: "not_checked", score: null, checks: [check("input.raw_artifact", "parse", "pass", "info", "Raw artifact content was supplied directly; no network request was made.")], mandatoryFailures: [], warnings: [] },
     ts119602: unassessedStandard(),
@@ -249,6 +252,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
       format: "unknown",
       artifactKind: "unknown",
     },
+    ts119602Classification: createUnknownTs119602Classification(pointer.declared.loteType),
     standardApplicability: unknownApplicability(),
     ts119612: {
       applicable: false,
@@ -292,7 +296,12 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
     format: detected.format,
     artifactKind: detected.artifactKind,
   };
-  base.standardApplicability = applicabilityFor(detected.artifactKind);
+  base.ts119602Classification = classifyTs119602Artifact({
+    bytes,
+    detection: detected,
+    declaredType: base.declared.loteType,
+  });
+  base.standardApplicability = applicabilityFor(detected.artifactKind, base.ts119602Classification.applicability);
   routeStandardChecks(base);
 
   if (detected.artifactKind === "ts119612_xml_tsl" || detected.artifactKind === "ts119612_xml_lotl") {
@@ -333,7 +342,10 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
 function routeStandardChecks(result: TrustedListAuditResult): void {
   const transportChecks = result.ts119612.checks;
   if (["xml_lote", "json_lote", "json_lotl"].includes(result.detected.artifactKind)) {
-    result.ts119602 = buildStandardAssessment(transportChecks, { coverageComplete: false });
+    result.ts119602 = buildStandardAssessment([
+      ...transportChecks,
+      ...ts119602ClassificationChecks(result),
+    ], { coverageComplete: false });
     result.ts119612 = buildStandardAssessment([
       check(
         "profile.ts119612_applicability",
@@ -346,16 +358,88 @@ function routeStandardChecks(result: TrustedListAuditResult): void {
     return;
   }
   if (["ts119612_xml_tsl", "ts119612_xml_lotl"].includes(result.detected.artifactKind)) {
+    if (result.ts119602Classification.applicability === "applicable") {
+      result.ts119602 = buildStandardAssessment([
+        ...ts119602ClassificationChecks(result),
+        check(
+          "ts119602.binding.ts119612_mapping",
+          "schema",
+          "not_checked",
+          "warning",
+          "Table A.1 component mapping is not implemented for the selected TS 119 612 alternative XML binding.",
+        ),
+        check(
+          "ts119602.coverage.complete",
+          "profile",
+          "not_checked",
+          "warning",
+          "Complete ETSI TS 119 602 V1.1.1 coverage is not implemented for the alternative XML binding.",
+          summarizeTs119602Requirements(),
+        ),
+      ], { coverageComplete: false });
+      return;
+    }
+    if (result.ts119602Classification.applicability === "unknown") {
+      const checks = ts119602ClassificationChecks(result);
+      result.ts119602 = {
+        applicable: false,
+        conformanceLevel: "inconclusive",
+        score: null,
+        checks,
+        mandatoryFailures: [],
+        warnings: checks.map((entry) => `${entry.id}: ${entry.message}`),
+      };
+      return;
+    }
     result.ts119602 = buildStandardAssessment([
       check(
         "profile.ts119602_applicability",
         "profile",
         "not_applicable",
         "info",
-        "TS 119 602 alternative-binding mapping and profile evidence have not selected this TS 119 612 artifact as a TS 119 602 LoTE.",
+        "Embedded profile evidence has not selected this TS 119 612 artifact as a TS 119 602 alternative-binding LoTE.",
+        result.ts119602Classification,
       ),
     ], { applicable: false });
   }
+}
+
+function ts119602ClassificationChecks(result: TrustedListAuditResult): CheckResult[] {
+  const classification = result.ts119602Classification;
+  const bindingStatus = classification.bindingStatus === "selected"
+    ? "pass"
+    : classification.bindingStatus === "unsupported"
+      ? "fail"
+      : classification.bindingStatus === "candidate"
+        ? "not_checked"
+        : "not_applicable";
+  const profileStatus = classification.profileStatus === "selected"
+    ? "pass"
+    : classification.profileStatus === "conflict"
+      ? "inconclusive"
+      : "not_checked";
+  return [
+    check(
+      "ts119602.binding.supported",
+      "profile",
+      bindingStatus,
+      bindingStatus === "fail" ? "critical" : bindingStatus === "pass" ? "info" : "warning",
+      bindingStatus === "pass"
+        ? `Selected TS 119 602 binding: ${classification.binding}.`
+        : classification.reasons[0],
+      classification,
+    ),
+    check(
+      "ts119602.profile.selection",
+      "profile",
+      profileStatus,
+      profileStatus === "inconclusive" ? "error" : profileStatus === "pass" ? "info" : "warning",
+      profileStatus === "pass"
+        ? `Selected TS 119 602 profile: ${classification.profile}.`
+        : classification.reasons.at(-1) ?? "No TS 119 602 profile was selected.",
+      classification.evidence,
+    ),
+  ];
 }
 
 function resultId(pointer: PointerInfo): string {
@@ -371,11 +455,11 @@ function unknownApplicability(): StandardApplicability {
   };
 }
 
-function applicabilityFor(artifactKind: ArtifactKind): StandardApplicability {
+function applicabilityFor(artifactKind: ArtifactKind, ts119602: StandardApplicability["ts119602"]): StandardApplicability {
   if (artifactKind === "ts119612_xml_tsl" || artifactKind === "ts119612_xml_lotl") {
     return {
       ts119612: "applicable",
-      ts119602: "not_applicable",
+      ts119602,
       weBuildProfile: "unknown",
       eudiTrustRole: "unknown",
     };
@@ -383,7 +467,7 @@ function applicabilityFor(artifactKind: ArtifactKind): StandardApplicability {
   if (artifactKind === "xml_lote" || artifactKind === "json_lote" || artifactKind === "json_lotl") {
     return {
       ts119612: "not_applicable",
-      ts119602: "applicable",
+      ts119602,
       weBuildProfile: "applicable",
       eudiTrustRole: "unknown",
     };
@@ -428,11 +512,24 @@ function mergeStandardAssessment(
   assessed: TrustedListAuditResult["ts119612"] | undefined,
 ): TrustedListAuditResult["ts119612"] {
   if (!assessed) return base;
+  const checks = [...base.checks, ...assessed.checks];
+  const mandatoryFailures = checks
+    .filter((entry) => entry.status === "fail" && (entry.severity === "critical" || entry.severity === "error"))
+    .map((entry) => `${entry.id}: ${entry.message}`);
+  const warnings = checks
+    .filter((entry) => ["warn", "not_checked", "unsupported", "inconclusive"].includes(entry.status))
+    .map((entry) => `${entry.id}: ${entry.message}`);
+  const conformanceLevel = assessed.conformanceLevel === "parse_failed" || assessed.conformanceLevel === "fetch_failed"
+    ? assessed.conformanceLevel
+    : mandatoryFailures.length > 0
+      ? "non_conformant"
+      : assessed.conformanceLevel;
   return {
     ...assessed,
-    checks: [...base.checks, ...assessed.checks],
-    mandatoryFailures: [...base.mandatoryFailures, ...assessed.mandatoryFailures],
-    warnings: [...base.warnings, ...assessed.warnings],
+    conformanceLevel,
+    checks,
+    mandatoryFailures,
+    warnings,
   };
 }
 

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { parseLotlJson } from "../src/lotl.js";
 import { assessWeBuildProfile, classifyWeBuildListType } from "../src/profiles/weBuild.js";
+import { createUnknownTs119602Classification } from "../src/standards/ts119602Classification.js";
 import type { TrustedListAuditResult } from "../src/types.js";
 
 function result(index: number, format: TrustedListAuditResult["detected"]["format"]): TrustedListAuditResult {
@@ -13,6 +14,7 @@ function result(index: number, format: TrustedListAuditResult["detected"]["forma
     declared: { pointerCertificateFingerprintsSha256: [] },
     fetch: { attempted: true, ok: true },
     detected: { format, artifactKind: format === "xml" ? "ts119612_xml_tsl" : "json_lote" },
+    ts119602Classification: createUnknownTs119602Classification(),
     standardApplicability: { ts119612: "unknown", ts119602: "unknown", weBuildProfile: "applicable", eudiTrustRole: "unknown" },
     ts119612: { applicable: false, conformanceLevel: "not_applicable", score: null, checks: [], mandatoryFailures: [], warnings: [] },
     ts119602: { applicable: format === "json", conformanceLevel: format === "json" ? "not_checked" : "not_applicable", score: null, checks: [], mandatoryFailures: [], warnings: [] },
