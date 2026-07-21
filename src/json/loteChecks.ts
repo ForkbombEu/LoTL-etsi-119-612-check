@@ -1,12 +1,22 @@
 import { getPath, isRecord, numberValue, asArray, firstString } from "../lotl.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
 import {
+  buildTs119602EntityFindings,
+  TS119602_ENTITY_EXTENSION_REGISTRY,
+  TS119602_SERVICE_EXTENSION_REGISTRY,
+  type Ts119602EntitiesInput,
+  type Ts119602IdentityObservation,
+  type Ts119602ServiceExtensionObservation,
+  type Ts119602ServiceObservation,
+} from "../standards/ts119602Entities.js";
+import {
   buildTs119602MetadataFindings,
   TS119602_SCHEME_FIELDS,
+  type Ts119602AddressObservation,
   type Ts119602MetadataInput,
 } from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
-import { parseTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
+import { parseTs119602UtcDateTime, validateTs119602Uri } from "../standards/ts119602Syntax.js";
 import {
   buildTs119602SyntaxFindings,
   type LocatedMultilingualSet,
@@ -41,6 +51,12 @@ export function assessJsonLote(
   const nextUpdateValue = getPath(info, ["NextUpdate"]);
   const nextUpdate = firstString(nextUpdateValue);
   const schemaValidation = validateTs119602JsonSchema(parsed);
+  const entityAssessment = buildTs119602EntityFindings(collectJsonEntitiesInput(
+    trustedEntities,
+    isRecord(loteValue) && Object.hasOwn(loteValue, "TrustedEntitiesList"),
+    info,
+    assessmentDate,
+  ));
   const checks: CheckResult[] = [
     schemaCheck(schemaValidation),
     compatibilityCheck(model, legacy),
@@ -69,6 +85,7 @@ export function assessJsonLote(
       { legacySignatureObjectPresent: isJsonObject(signature) },
     ),
     ...buildTs119602MetadataFindings(collectJsonMetadataInput(metadataInfo, info !== undefined, assessmentDate, loteValue)),
+    ...entityAssessment.checks,
     ...buildTs119602SyntaxFindings(collectJsonSyntaxInputs(parsed)),
     ...dateChecks(issueDateTime, nextUpdateValue, assessmentDate),
     check(
@@ -90,6 +107,7 @@ export function assessJsonLote(
       listIssueDateTime: issueDateTime,
       nextUpdate,
       distributionPoints: stringValues(getPath(info, ["DistributionPoints"])),
+      certificates: entityAssessment.certificates,
       jsonLote: {
         assessmentProfile: "ETSI TS 119 602 V1.1.1 JSON binding with offline schema validation (incomplete semantic/profile coverage)",
         jsonBindingModel: model,
@@ -114,6 +132,153 @@ export function assessJsonLote(
       },
     },
   };
+}
+
+function collectJsonEntitiesInput(
+  entities: unknown[],
+  containerPresent: boolean,
+  schemeInfo: Record<string, unknown> | undefined,
+  assessmentDate: Date,
+): Ts119602EntitiesInput {
+  return {
+    containerPresent,
+    entities: entities.map((entity, entityIndex) => {
+      const path = `/LoTE/TrustedEntitiesList/${entityIndex}`;
+      const informationValue = getPath(entity, ["TrustedEntityInformation"]);
+      const information = isRecord(informationValue) ? informationValue : {};
+      const servicesValue = getPath(entity, ["TrustedEntityServices"]);
+      const services = asArray(servicesValue);
+      return {
+        path,
+        informationPresent: isRecord(informationValue),
+        servicesContainerPresent: Array.isArray(servicesValue),
+        name: jsonMultilingual(information.TEName),
+        tradeNamePresent: Object.hasOwn(information, "TETradeName"),
+        tradeName: jsonMultilingual(information.TETradeName),
+        address: jsonAddress(information.TEAddress, `${path}/TrustedEntityInformation/TEAddress`, "TEPostalAddress", "TEElectronicAddress"),
+        informationUris: jsonUriValues(information.TEInformationURI),
+        extensionsPresent: Object.hasOwn(information, "TEInformationExtensions"),
+        extensions: jsonExtensions(information.TEInformationExtensions, `${path}/TrustedEntityInformation/TEInformationExtensions`, "entity"),
+        services: services.map((service, serviceIndex) => jsonService(service, `${path}/TrustedEntityServices/${serviceIndex}`)),
+      };
+    }),
+    historyPeriod: schemeInfo?.HistoricalInformationPeriod,
+    listIssueDateTime: schemeInfo?.ListIssueDateTime,
+    assessmentDate,
+  };
+}
+
+function jsonService(value: unknown, path: string): Ts119602ServiceObservation {
+  const informationValue = getPath(value, ["ServiceInformation"]);
+  const information = isRecord(informationValue) ? informationValue : {};
+  const historyValue = getPath(value, ["ServiceHistory"]);
+  return {
+    path,
+    informationPresent: isRecord(informationValue),
+    name: jsonMultilingual(information.ServiceName),
+    identity: jsonIdentity(information.ServiceDigitalIdentity, `${path}/ServiceInformation/ServiceDigitalIdentity`),
+    typeIdentifier: { present: Object.hasOwn(information, "ServiceTypeIdentifier"), value: information.ServiceTypeIdentifier },
+    status: { present: Object.hasOwn(information, "ServiceStatus"), value: information.ServiceStatus },
+    statusStartingTime: { present: Object.hasOwn(information, "StatusStartingTime"), value: information.StatusStartingTime },
+    schemeDefinitionPresent: Object.hasOwn(information, "SchemeServiceDefinitionURI"),
+    schemeDefinitionUris: jsonUriValues(information.SchemeServiceDefinitionURI),
+    supplyPointsPresent: Object.hasOwn(information, "ServiceSupplyPoints"),
+    supplyPoints: asArray(information.ServiceSupplyPoints).map((point, index) => ({ path: `${path}/ServiceInformation/ServiceSupplyPoints/${index}`, uri: getPath(point, ["uriValue"]) ?? point, type: getPath(point, ["ServiceType"]) })),
+    teDefinitionPresent: Object.hasOwn(information, "ServiceDefinitionURI") || Object.hasOwn(information, "TEServiceDefinitionURI"),
+    teDefinitionUris: jsonUriValues(information.ServiceDefinitionURI ?? information.TEServiceDefinitionURI),
+    extensionsPresent: Object.hasOwn(information, "ServiceInformationExtensions"),
+    extensions: jsonExtensions(information.ServiceInformationExtensions, `${path}/ServiceInformation/ServiceInformationExtensions`, "service"),
+    historyPresent: historyValue !== undefined,
+    history: asArray(historyValue).map((entry, index) => {
+      const history = isRecord(entry) ? entry : {};
+      const historyPath = `${path}/ServiceHistory/${index}`;
+      return {
+        path: historyPath,
+        name: jsonMultilingual(history.ServiceName),
+        identity: jsonIdentity(history.ServiceDigitalIdentity, `${historyPath}/ServiceDigitalIdentity`),
+        status: { present: Object.hasOwn(history, "ServiceStatus"), value: history.ServiceStatus },
+        statusStartingTime: { present: Object.hasOwn(history, "StatusStartingTime"), value: history.StatusStartingTime },
+        typeIdentifier: history.ServiceTypeIdentifier,
+        extensions: jsonExtensions(history.ServiceInformationExtensions, `${historyPath}/ServiceInformationExtensions`, "service"),
+      };
+    }),
+  };
+}
+
+function jsonIdentity(value: unknown, path: string): Ts119602IdentityObservation {
+  const identity = isRecord(value) ? value : {};
+  return {
+    path,
+    present: isRecord(value),
+    certificates: asArray(identity.X509Certificates).map((entry, index) => ({ path: `${path}/X509Certificates/${index}`, value: getPath(entry, ["val"]) ?? entry })),
+    subjectNames: asArray(identity.X509SubjectNames).map((entry, index) => ({ path: `${path}/X509SubjectNames/${index}`, value: entry })),
+    publicKeys: asArray(identity.PublicKeyValues).map((entry, index) => ({ path: `${path}/PublicKeyValues/${index}`, value: entry })),
+    skis: asArray(identity.X509SKIs).map((entry, index) => ({ path: `${path}/X509SKIs/${index}`, value: entry })),
+    otherIds: asArray(identity.OtherIds).map((entry, index) => ({ path: `${path}/OtherIds/${index}`, value: entry })),
+  };
+}
+
+function jsonAddress(value: unknown, path: string, postalProperty: string, electronicProperty: string): Ts119602AddressObservation {
+  const address = isRecord(value) ? value : {};
+  return {
+    present: isRecord(value),
+    postalAddresses: asArray(address[postalProperty]).map((entry, index) => ({
+      path: `${path}/${postalProperty}/${index}`,
+      streetPresent: typeof getPath(entry, ["StreetAddress"]) === "string" && Boolean(firstString(getPath(entry, ["StreetAddress"]))),
+      countryPresent: typeof getPath(entry, ["Country"]) === "string" && Boolean(firstString(getPath(entry, ["Country"]))),
+    })),
+    electronicUris: asArray(address[electronicProperty]).map((entry, index) => ({ path: `${path}/${electronicProperty}/${index}/uriValue`, value: getPath(entry, ["uriValue"]) ?? entry })),
+  };
+}
+
+function jsonMultilingual(value: unknown): Array<{ language: unknown; value: unknown }> {
+  return asArray(value).map((entry) => ({ language: getPath(entry, ["lang"]), value: getPath(entry, ["value"]) ?? getPath(entry, ["uriValue"]) }));
+}
+
+function jsonUriValues(value: unknown): unknown[] {
+  return asArray(value).map((entry) => getPath(entry, ["uriValue"]) ?? entry);
+}
+
+function jsonExtensions(value: unknown, path: string, kind: "entity" | "service"): Ts119602ServiceExtensionObservation[] {
+  const registry = kind === "entity" ? TS119602_ENTITY_EXTENSION_REGISTRY : TS119602_SERVICE_EXTENSION_REGISTRY;
+  return asArray(value).map((entry, index) => {
+    const identifier = jsonExtensionIdentifier(entry);
+    const payload = identifier && isRecord(entry) ? entry[identifier] : undefined;
+    return {
+      path: `${path}/${index}`,
+      critical: getPath(entry, ["Critical"]),
+      identifier,
+      recognized: Boolean(identifier && registry.recognizedIdentifiers.some((candidate) => candidate === identifier)),
+      payloadValid: identifier === "ServiceUniqueIdentifier"
+        ? validateExtensionUri(payload)
+        : identifier === "OtherAssociatedBodies"
+          ? validAssociatedBodies(payload)
+          : true,
+      payloadEvidence: payload,
+    };
+  });
+}
+
+function validateExtensionUri(value: unknown): boolean {
+  const candidate = isRecord(value) ? value.uriValue ?? value.value : value;
+  return typeof candidate === "string" && /^[A-Za-z][A-Za-z0-9+.-]*:/.test(candidate);
+}
+
+function validAssociatedBodies(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0 && value.every((body) => {
+    if (!isRecord(body) || asArray(body.AssociatedBodyName).length === 0) return false;
+    if (Object.hasOwn(body, "AssociatedBodyTradeName") && asArray(body.AssociatedBodyTradeName).length === 0) return false;
+    if (Object.hasOwn(body, "AssociatedBodyAddress")) {
+      const address = jsonAddress(body.AssociatedBodyAddress, "/AssociatedBodyAddress", "AssociatedBodyPostalAddress", "AssociatedBodyElectronicAddress");
+      const schemes = address.electronicUris.map((entry) => validateTs119602Uri(entry.value).classification);
+      if (address.postalAddresses.length === 0 || address.postalAddresses.some((entry) => !entry.streetPresent || !entry.countryPresent) || !schemes.includes("mailto") || (!schemes.includes("http") && !schemes.includes("https"))) return false;
+    }
+    if (Object.hasOwn(body, "AssociatedBodyInformationURI")) {
+      const uris = jsonUriValues(body.AssociatedBodyInformationURI);
+      if (uris.length === 0 || uris.some((uri) => validateTs119602Uri(uri).outcome !== "valid")) return false;
+    }
+    return !Object.hasOwn(body, "AssociatedBodyTypeIdentifier") || validateTs119602Uri(body.AssociatedBodyTypeIdentifier).outcome === "valid";
+  });
 }
 
 function schemaCheck(validation: Ts119602JsonSchemaValidation): CheckResult {

@@ -26,14 +26,18 @@ function trustedEntity(name: string): string {
     <TrustedEntity>
       <TrustedEntityInformation>
         <TEName><Name xml:lang="en">${name}</Name></TEName>
-        <TEAddress><PostalAddresses><PostalAddress xml:lang="en"><CountryName>EU</CountryName></PostalAddress></PostalAddresses></TEAddress>
+        <TEAddress>
+          <PostalAddresses><PostalAddress xml:lang="en"><StreetAddress>2 Provider Street</StreetAddress><CountryName>EU</CountryName></PostalAddress></PostalAddresses>
+          <ElectronicAddress><URI xml:lang="en">mailto:support@example.test</URI><URI xml:lang="en">https://example.test/contact</URI></ElectronicAddress>
+        </TEAddress>
+        <TEInformationURI><URI xml:lang="en">https://example.test/provider</URI></TEInformationURI>
       </TrustedEntityInformation>
       <TrustedEntityServices>
         <TrustedEntityService>
           <ServiceInformation>
             <ServiceTypeIdentifier>https://example.test/service</ServiceTypeIdentifier>
             <ServiceName><Name xml:lang="en">${name} service</Name></ServiceName>
-            <ServiceDigitalIdentity />
+            <ServiceDigitalIdentity><DigitalId><OtherId>urn:example:service-identity</OtherId></DigitalId></ServiceDigitalIdentity>
           </ServiceInformation>
         </TrustedEntityService>
       </TrustedEntityServices>
@@ -96,6 +100,11 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       expect.objectContaining({ id: "ts119602.scheme.policy_or_legal_notice", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.structure.trusted_entities_container", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.services.trusted_entity_count", status: "pass", evidence: 1 }),
+      expect.objectContaining({ id: "ts119602.entities.list", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entity.information", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entity.address", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.information", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.digital_identity", status: "pass" }),
       expect.objectContaining({ id: "signature.present", status: "fail" }),
     ]));
     expect(result.extracted).toMatchObject({

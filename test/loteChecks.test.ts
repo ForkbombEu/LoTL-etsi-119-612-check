@@ -40,6 +40,14 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "ts119602.scheme.policy_or_legal_notice", status: "pass" }),
       expect.objectContaining({ id: "ts119602.scheme.pointers.structure", status: "pass" }),
       expect.objectContaining({ id: "ts119602.scheme.distribution_points", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entities.list", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entities.structure", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entity.information", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entity.address", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.entity.information_uri", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.information", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.digital_identity", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.history", status: "not_applicable" }),
       expect.objectContaining({
         id: "ts119602.coverage.complete",
         status: "not_checked",
@@ -143,6 +151,19 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "ts119602.syntax.country_code", status: "fail" }),
       expect.objectContaining({ id: "json_lote.dates.issue_valid", status: "fail" }),
       expect.objectContaining({ id: "json_lote.dates.next_update_valid", status: "fail" }),
+    ]));
+  });
+
+  it("catches schema-permitted empty identities and missing status required by retained history", async () => {
+    const result = assessJsonLote(
+      await fixture("ts119602-entities-invalid.json"),
+      true,
+      new Date("2026-07-21T00:00:00Z"),
+    );
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ts119602.binding.json_schema", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.digital_identity", status: "fail", severity: "critical" }),
+      expect.objectContaining({ id: "ts119602.service.status", status: "fail" }),
     ]));
   });
 

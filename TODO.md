@@ -258,17 +258,17 @@ Required change:
 | 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Partial | Local positive-integer validation is implemented; compare with prior list instances when supplied or fetched. |
 | 6.3.3 LoTE type | URI and profile discriminator | Classification only | Require exact registered values and reject binding/profile mismatches. |
 | 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Partial | Local address, `CC:name`, email/web, and policy-choice checks are implemented; Annex B and profile-specific semantics remain. |
-| 6.3.12 history period | Integer with semantics including `65535` | Partial | Local non-negative integer and `65535` retention semantics are implemented; validate consequences for service statuses and histories. |
+| 6.3.12 history period | Integer with semantics including `65535` | Partial | Local value, retention, service-status, and history-presence consequences are implemented; contextual retention-window completeness remains. |
 | 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Partial | Local shape and qualifier checks are implemented; verify that at least one pointer identity authenticates the fetched target. |
 | 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Partial | Local lexical, ordering, expiry, and closed-list checks are implemented; enforce calendar-month limits only after profile dispatch. |
 | 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Partial | Local cardinality and URI checks are implemented; fetch/hash all locations only under bounded contextual checks. |
-| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | A versioned scheme-extension registry rejects unknown critical scheme extensions; entity/service registries remain. |
-| 6.4 entity list | Absent only when no entity is/was approved; otherwise one-or-more entities | Partial | XSD/JSON schema plus semantic presence logic; distinguish empty scheme from malformed empty container. |
-| 6.4.1-6.5 entity information | Information, services, name, address, and information URI are mandatory | Partial | Current XML checks omit mandatory `TEInformationURI`, exact wrappers/cardinality, trade-name semantics, and associated-body extensions. |
-| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Validate exact nesting, identity alternatives, statuses, supply points, definitions, and extensions. |
-| 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Certificate parsing only | Validate Base64 strictly, DN syntax, key/SKI equality, PKI minimums, and profile-specific certificate semantics. |
-| 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Missing | Implement status URI sets, absence rules, list-issue consistency, and profile-specific behavior. |
-| 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Missing | Parse and validate every history instance, status transition, ordering, and retained key identity. |
+| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | Versioned scheme, entity, and service registries reject unknown critical extensions; profile-specific registrations remain. |
+| 6.4 entity list | Absent only when no entity is/was approved; otherwise one-or-more entities | Partial | Present containers and local cardinalities are validated; absence is inconclusive without external approval evidence. |
+| 6.4.1-6.5 entity information | Information, services, name, address, and information URI are mandatory | Partial | JSON/XML mandatory structure, contacts, multilingual names, information URIs, and known extension payloads are checked; official-record claims remain contextual. |
+| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Local nesting, identifiers, statuses, supply points, definition URIs, and extensions are checked; exact profile semantics remain. |
+| 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, and certificate parsing are checked; key/SKI equivalence and profile PKI requirements remain. |
+| 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Partial | History-period coupling, URI/date syntax, and list-issue ordering are implemented; registered profile status sets remain. |
+| 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, retained-history coupling, identity presence, and descending status time are checked; profile-specific retained-key rules remain. |
 | 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Partial XML only | Implement full XAdES/JAdES Baseline B and signer subject matching. |
 | Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
@@ -415,7 +415,7 @@ used as evidence that a TS 119 602 profile passed.
 - [ ] For Pub-EAA history, require at least one SKI and forbid
   `X509Certificate`.
 - [x] Reject unknown critical scheme extensions with a versioned registry.
-- [ ] Validate unknown critical TE and service extensions.
+- [x] Reject unknown critical TE and service extensions with versioned registries.
 
 Certificate expiry is valuable audit evidence, but the implementation must
 identify whether a validity rule is normative for the selected component and
@@ -494,8 +494,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Complete |
 | TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Complete |
 | TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Complete |
-| TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Next |
-| TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Pending |
+| TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Complete |
+| TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Next |
 | TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Pending |
 | TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Pending |
 | TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Pending |
@@ -534,9 +534,11 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 - [x] Implement Table 1 implicit/explicit presence rules.
 - [x] Implement list metadata, local pointer structure, dates, distribution
   point structure, and critical scheme extensions.
-- [ ] Implement entities, services, identities, statuses, histories, and
-  critical entity/service extensions.
-- [ ] Add cross-field consistency checks.
+- [x] Implement local entities, services, identities, statuses, histories,
+  and critical entity/service extensions.
+- [x] Add local history-period, status-time, and history-order consistency
+  checks.
+- [ ] Add contextual and profile-specific cross-field consistency checks.
 
 ### Phase 4 — Signature profiles
 

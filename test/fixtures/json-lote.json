@@ -62,6 +62,7 @@
               { "lang": "en", "StreetAddress": "2 Provider Street", "Locality": "Example City", "Country": "EU" }
             ],
             "TEElectronicAddress": [
+              { "lang": "en", "uriValue": "mailto:support@provider.example.test" },
               { "lang": "en", "uriValue": "https://provider.example.test/contact" }
             ]
           },

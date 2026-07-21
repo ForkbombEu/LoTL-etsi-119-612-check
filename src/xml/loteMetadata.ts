@@ -1,5 +1,13 @@
-import { tryCertificateFromBase64 } from "../certs.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
+import {
+  buildTs119602EntityFindings,
+  TS119602_ENTITY_EXTENSION_REGISTRY,
+  TS119602_SERVICE_EXTENSION_REGISTRY,
+  type Ts119602EntitiesInput,
+  type Ts119602IdentityObservation,
+  type Ts119602ServiceExtensionObservation,
+  type Ts119602ServiceObservation,
+} from "../standards/ts119602Entities.js";
 import {
   buildTs119602MetadataFindings,
   inferTs119602SchemeMode,
@@ -8,13 +16,13 @@ import {
   type Ts119602MetadataInput,
 } from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
-import { parseTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
+import { parseTs119602UtcDateTime, validateTs119602Uri } from "../standards/ts119602Syntax.js";
 import {
   buildTs119602SyntaxFindings,
   type LocatedMultilingualSet,
   type LocatedSyntaxValue,
 } from "../standards/ts119602SyntaxFindings.js";
-import type { CertificateSummary, CheckResult, TrustedListAuditResult } from "../types.js";
+import type { CheckResult, TrustedListAuditResult } from "../types.js";
 import { assessSignature } from "./signature.js";
 import { parseXml } from "./parse.js";
 import { firstNode, has, nodes, text, texts } from "./xpath.js";
@@ -45,6 +53,8 @@ export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Da
     ? text(nextNode, "./*[local-name()='dateTime']") ?? (nextNode.textContent?.trim() || undefined)
     : undefined;
   const metadataInput = collectXmlMetadataInput(root, metadataContext, Boolean(infoNode), assessmentDate);
+  const entityInput = collectXmlEntitiesInput(root, metadataInput.historyPeriod, metadataInput.issueDateTime, assessmentDate);
+  const entityAssessment = buildTs119602EntityFindings(entityInput);
   const checks: CheckResult[] = [
     check("parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML LoTE parsed successfully." : "XML LoTE parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined),
     xmlBindingCheck(root, binding),
@@ -72,6 +82,7 @@ export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Da
   checks.push(...dateChecks(issue, nextNode !== undefined, next, assessmentDate));
   const services = assessTrustedEntities(root);
   checks.push(...services.checks);
+  checks.push(...entityAssessment.checks);
   checks.push(check(
     "ts119602.coverage.complete",
     "profile",
@@ -81,7 +92,7 @@ export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Da
     summarizeTs119602Requirements(),
   ));
 
-  const certificates = [...signature.certificates, ...services.certificates];
+  const certificates = [...signature.certificates, ...entityAssessment.certificates];
   return {
     detected: { format: "xml", artifactKind: "xml_lote" },
     ts119602: buildStandardAssessment(checks, { coverageComplete: false }),
@@ -98,7 +109,7 @@ export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Da
   };
 }
 
-function assessTrustedEntities(root: Element): { checks: CheckResult[]; certificates: CertificateSummary[]; entityCount: number; serviceCount: number } {
+function assessTrustedEntities(root: Element): { checks: CheckResult[]; entityCount: number; serviceCount: number } {
   const entities = nodes(root, TRUSTED_ENTITIES);
   const services = nodes(root, `${TRUSTED_ENTITIES}//*[local-name()='ServiceInformation']`);
   const containerPresent = has(
@@ -126,7 +137,6 @@ function assessTrustedEntities(root: Element): { checks: CheckResult[]; certific
       entities.length,
     ),
   ];
-  const certificates: CertificateSummary[] = [];
   entities.forEach((entity, entityIndex) => {
     const prefix = `xml_lote.services.entity.${entityIndex + 1}`;
     exists(checks, entity, `${prefix}.information`, ".//*[local-name()='TrustedEntityInformation']", "TrustedEntityInformation exists.");
@@ -141,12 +151,7 @@ function assessTrustedEntities(root: Element): { checks: CheckResult[]; certific
       exists(checks, service, `${servicePrefix}.digital_identity`, ".//*[local-name()='ServiceDigitalIdentity']", "ServiceDigitalIdentity exists.");
     });
   });
-  texts(root, ".//*[local-name()='ServiceDigitalIdentity']//*[local-name()='X509Certificate']").forEach((value, index) => {
-    const certificate = tryCertificateFromBase64(value, "service_digital_identity", new Date());
-    if (!certificate) checks.push(check(`xml_lote.certificates.service.${index + 1}.parse`, "certificates", "fail", "error", "Service digital identity X.509 certificate could not be parsed."));
-    else { certificates.push(certificate); checks.push(check(`xml_lote.certificates.service.${index + 1}.parse`, "certificates", "pass", "info", "Service digital identity X.509 certificate parsed.", { subject: certificate.subject, fingerprintSha256: certificate.fingerprintSha256 })); }
-  });
-  return { checks, certificates, entityCount: entities.length, serviceCount: services.length };
+  return { checks, entityCount: entities.length, serviceCount: services.length };
 }
 
 function xmlLoteBinding(root: Element): XmlLoteBinding {
@@ -318,6 +323,154 @@ function xmlExtensionObservation(element: Element): Ts119602MetadataInput["exten
     recognized: false,
   };
 }
+
+function collectXmlEntitiesInput(
+  root: Element,
+  historyPeriod: unknown,
+  listIssueDateTime: unknown,
+  assessmentDate: Date,
+): Ts119602EntitiesInput {
+  const container = firstNode(root, `./*[local-name()='TrustedEntitiesList' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`);
+  const entityNodes = nodes(root, TRUSTED_ENTITIES);
+  return {
+    containerPresent: Boolean(container),
+    entities: entityNodes.map((entity) => {
+      const path = xmlNodePath(entity);
+      const information = firstNode(entity, "./*[local-name()='TrustedEntityInformation']");
+      const servicesContainer = firstNode(entity, "./*[local-name()='TrustedEntityServices']");
+      const extensionContainer = information && firstNode(information, "./*[local-name()='TEInformationExtensions']");
+      return {
+        path,
+        informationPresent: Boolean(information),
+        servicesContainerPresent: Boolean(servicesContainer),
+        name: information ? xmlMultilingual(information, "./*[local-name()='TEName']/*[local-name()='Name']") : [],
+        tradeNamePresent: Boolean(information && firstNode(information, "./*[local-name()='TETradeName']")),
+        tradeName: information ? xmlMultilingual(information, "./*[local-name()='TETradeName']/*[local-name()='Name']") : [],
+        address: xmlAddress(information && firstNode(information, "./*[local-name()='TEAddress']")),
+        informationUris: information ? nodes(information, "./*[local-name()='TEInformationURI']/*[local-name()='URI']").map(nodeText) : [],
+        extensionsPresent: Boolean(extensionContainer),
+        extensions: extensionContainer ? nodes(extensionContainer, "./*[local-name()='Extension']").map((extension) => xmlTypedExtension(extension as Element, "entity")) : [],
+        services: servicesContainer ? nodes(servicesContainer, "./*[local-name()='TrustedEntityService']").map((service) => xmlService(service)) : [],
+      };
+    }),
+    historyPeriod,
+    listIssueDateTime,
+    assessmentDate,
+  };
+}
+
+function xmlService(node: Node): Ts119602ServiceObservation {
+  const path = xmlNodePath(node);
+  const information = firstNode(node, "./*[local-name()='ServiceInformation']");
+  const historyContainer = firstNode(node, "./*[local-name()='ServiceHistory']");
+  const extensions = information && firstNode(information, "./*[local-name()='ServiceInformationExtensions']");
+  const supplyPoints = information ? nodes(information, "./*[local-name()='ServiceSupplyPoints']/*[local-name()='ServiceSupplyPoint']") : [];
+  return {
+    path,
+    informationPresent: Boolean(information),
+    name: information ? xmlMultilingual(information, "./*[local-name()='ServiceName']/*[local-name()='Name']") : [],
+    identity: xmlIdentity(information && firstNode(information, "./*[local-name()='ServiceDigitalIdentity']"), `${path}/ServiceInformation/ServiceDigitalIdentity`),
+    typeIdentifier: { present: Boolean(information && firstNode(information, "./*[local-name()='ServiceTypeIdentifier']")), value: information ? text(information, "./*[local-name()='ServiceTypeIdentifier']") : undefined },
+    status: { present: Boolean(information && firstNode(information, "./*[local-name()='ServiceStatus']")), value: information ? text(information, "./*[local-name()='ServiceStatus']") : undefined },
+    statusStartingTime: { present: Boolean(information && firstNode(information, "./*[local-name()='StatusStartingTime']")), value: information ? text(information, "./*[local-name()='StatusStartingTime']") : undefined },
+    schemeDefinitionPresent: Boolean(information && firstNode(information, "./*[local-name()='SchemeServiceDefinitionURI']")),
+    schemeDefinitionUris: information ? nodes(information, "./*[local-name()='SchemeServiceDefinitionURI']/*[local-name()='URI']").map(nodeText) : [],
+    supplyPointsPresent: Boolean(information && firstNode(information, "./*[local-name()='ServiceSupplyPoints']")),
+    supplyPoints: supplyPoints.map((point) => ({ path: xmlNodePath(point), uri: nodeText(point), type: (point as Element).getAttribute("type") || undefined })),
+    teDefinitionPresent: Boolean(information && firstNode(information, "./*[local-name()='TEServiceDefinitionURI' or local-name()='ServiceDefinitionURI']")),
+    teDefinitionUris: information ? nodes(information, "./*[local-name()='TEServiceDefinitionURI' or local-name()='ServiceDefinitionURI']/*[local-name()='URI']").map(nodeText) : [],
+    extensionsPresent: Boolean(extensions),
+    extensions: extensions ? nodes(extensions, "./*[local-name()='Extension']").map((extension) => xmlTypedExtension(extension as Element, "service")) : [],
+    historyPresent: Boolean(historyContainer),
+    history: historyContainer ? nodes(historyContainer, "./*[local-name()='ServiceHistoryInstance']").map((entry) => {
+      const entryPath = xmlNodePath(entry);
+      const entryExtensions = firstNode(entry, "./*[local-name()='ServiceInformationExtensions']");
+      return {
+        path: entryPath,
+        name: xmlMultilingual(entry, "./*[local-name()='ServiceName']/*[local-name()='Name']"),
+        identity: xmlIdentity(firstNode(entry, "./*[local-name()='ServiceDigitalIdentity']"), `${entryPath}/ServiceDigitalIdentity`),
+        status: { present: Boolean(firstNode(entry, "./*[local-name()='ServiceStatus']")), value: text(entry, "./*[local-name()='ServiceStatus']") },
+        statusStartingTime: { present: Boolean(firstNode(entry, "./*[local-name()='StatusStartingTime']")), value: text(entry, "./*[local-name()='StatusStartingTime']") },
+        typeIdentifier: text(entry, "./*[local-name()='ServiceTypeIdentifier']"),
+        extensions: entryExtensions ? nodes(entryExtensions, "./*[local-name()='Extension']").map((extension) => xmlTypedExtension(extension as Element, "service")) : [],
+      };
+    }) : [],
+  };
+}
+
+function xmlIdentity(node: Node | undefined, fallbackPath: string): Ts119602IdentityObservation {
+  const path = node ? xmlNodePath(node) : fallbackPath;
+  const digitalIds = node ? nodes(node, "./*[local-name()='DigitalId']") : [];
+  function alternatives(localName: string): Array<{ path: string; value: unknown }> {
+    return digitalIds.flatMap((digitalId) => nodes(digitalId, `./*[local-name()='${localName}']`).map((entry) => ({
+      path: xmlNodePath(entry),
+      value: localName === "KeyValue"
+        ? { xmlElement: entry.nodeName }
+        : ["X509Certificate", "X509SKI"].includes(localName)
+          ? nodeText(entry).replace(/\s+/g, "")
+          : nodeText(entry),
+    })));
+  }
+  return {
+    path,
+    present: Boolean(node),
+    certificates: alternatives("X509Certificate"),
+    subjectNames: alternatives("X509SubjectName"),
+    publicKeys: alternatives("KeyValue"),
+    skis: alternatives("X509SKI"),
+    otherIds: alternatives("OtherId"),
+  };
+}
+
+function xmlAddress(node: Node | undefined): Ts119602EntitiesInput["entities"][number]["address"] {
+  const postal = node ? nodes(node, ".//*[local-name()='PostalAddress']") : [];
+  const electronic = node ? nodes(node, ".//*[local-name()='ElectronicAddress']/*[local-name()='URI']") : [];
+  return {
+    present: Boolean(node),
+    postalAddresses: postal.map((entry) => ({ path: xmlNodePath(entry), streetPresent: has(entry, "./*[local-name()='StreetAddress' and normalize-space(.) != '']"), countryPresent: has(entry, "./*[local-name()='Country' or local-name()='CountryName'][normalize-space(.) != '']") })),
+    electronicUris: electronic.map((entry) => ({ path: xmlNodePath(entry), value: nodeText(entry) })),
+  };
+}
+
+function xmlMultilingual(context: Node, expression: string): Array<{ language: unknown; value: unknown }> {
+  return nodes(context, expression).map((entry) => ({ language: (entry as Element).getAttributeNS("http://www.w3.org/XML/1998/namespace", "lang") || undefined, value: nodeText(entry) }));
+}
+
+function xmlTypedExtension(element: Element, kind: "entity" | "service"): Ts119602ServiceExtensionObservation {
+  const base = xmlExtensionObservation(element);
+  const content = Array.from(element.childNodes).find((node): node is Element => node.nodeType === 1);
+  const registry = kind === "entity" ? TS119602_ENTITY_EXTENSION_REGISTRY : TS119602_SERVICE_EXTENSION_REGISTRY;
+  const identifier = content ? `{${content.namespaceURI ?? ""}}${content.localName}` : base.identifier;
+  const recognized = Boolean(identifier && registry.recognizedIdentifiers.some((candidate) => candidate === identifier));
+  const payloadValid = content?.localName === "ServiceUniqueIdentifier"
+    ? /^[A-Za-z][A-Za-z0-9+.-]*:/.test(nodeText(content))
+    : content?.localName === "OtherAssociatedBodies"
+      ? validXmlAssociatedBodies(content)
+      : true;
+  return { ...base, identifier, recognized, payloadValid, payloadEvidence: content ? nodeText(content) : undefined };
+}
+
+function validXmlAssociatedBodies(content: Element): boolean {
+  const bodies = nodes(content, "./*[local-name()='AssociatedBody']");
+  return bodies.length > 0 && bodies.every((body) => {
+    if (!has(body, "./*[local-name()='AssociatedBodyName']/*[local-name()='Name' and normalize-space(.) != '']")) return false;
+    const address = firstNode(body, "./*[local-name()='AssociatedBodyAddress']");
+    if (address) {
+      const observed = xmlAddress(address);
+      const schemes = observed.electronicUris.map((entry) => validateTs119602Uri(entry.value).classification);
+      if (observed.postalAddresses.length === 0 || observed.postalAddresses.some((entry) => !entry.streetPresent || !entry.countryPresent) || !schemes.includes("mailto") || (!schemes.includes("http") && !schemes.includes("https"))) return false;
+    }
+    const information = firstNode(body, "./*[local-name()='AssociatedBodyInformationURI']");
+    if (information) {
+      const uris = nodes(information, "./*[local-name()='URI']").map(nodeText);
+      if (uris.length === 0 || uris.some((uri) => validateTs119602Uri(uri).outcome !== "valid")) return false;
+    }
+    const type = text(body, "./*[local-name()='AssociatedBodyTypeIdentifier']");
+    return !type || validateTs119602Uri(type).outcome === "valid";
+  });
+}
+
+function nodeText(node: Node): string { return node.textContent?.trim() ?? ""; }
 
 const XML_URI_ELEMENTS = new Set([
   "LoTEType",
