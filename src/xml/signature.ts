@@ -1,6 +1,7 @@
 import { certificateFingerprintSha256, tryCertificateFromBase64 } from "../certs.js";
 import type { CertificateSummary, CheckResult } from "../types.js";
 import { has, texts } from "./xpath.js";
+import { assessXadesSignature, type XadesAssessmentOptions } from "./xades.js";
 import { inspectReferences, verifyXmlSignatureWithXmlsec } from "./xmlsec.js";
 
 export interface SignatureAssessment {
@@ -26,7 +27,7 @@ export interface SignatureAssessmentDependencies {
   verifier?: SignatureVerifier;
 }
 
-export interface SignatureAssessmentOptions {
+export interface SignatureAssessmentOptions extends XadesAssessmentOptions {
   /** Require the first list ServiceDigitalIdentity certificate to equal the XMLDSig signing certificate. */
   requireFirstListCertificateMatch?: boolean;
 }
@@ -55,6 +56,7 @@ export async function assessSignature(
     if (options.requireFirstListCertificateMatch) {
       checks.push(...firstListCertificateChecks(document, undefined));
     }
+    checks.push(...assessXadesSignature(document, undefined, undefined, undefined, options));
     return { checks, certificates };
   }
 
@@ -158,6 +160,14 @@ export async function assessSignature(
     xadesDetected
       ? "XAdES qualifying properties detected."
       : "XAdES Baseline-B material not detected; XMLDSig presence alone may not satisfy the intended signature profile.",
+  ));
+
+  checks.push(...assessXadesSignature(
+    document,
+    signatureNode,
+    verificationEntry?.certificate,
+    verificationEntry?.summary,
+    options,
   ));
 
   return { checks, certificates };

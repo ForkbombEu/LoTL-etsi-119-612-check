@@ -122,7 +122,7 @@ const CORE_REQUIREMENTS = [
   requirement("ts119602.service.definition", "TE service definition URI", "Validate multilingual pointers to trusted-entity service information.", "semantic", "conditional", "error", "mixed", [citation("6.6.8")], "partial", ["ts119602.service.definition"]),
   requirement("ts119602.service.extensions", "Service information extensions", "Validate extension structure and selected-profile service unique identifier requirements.", "semantic", "conditional", "error", "local", [citation("6.6.9"), citation("6.6.9.1", "Service unique identifier extension")], "partial", ["ts119602.service.extensions"]),
   requirement("ts119602.service.history", "Service history instances", "Validate mandatory history fields, ordering, retained identity semantics, and profile-specific restrictions.", "semantic", "conditional", "error", "local", [citation("6.7")], "partial", ["ts119602.service.history"]),
-  requirement("ts119602.signature.baseline_b", "AdES Baseline B signature", "Validate a Baseline B signature, signer subject country/organization matching, cryptographic validity, certificate validity, and explicit signer trust separately.", "signature", "shall", "critical", "local", [citation("6.8.0"), citation("6.8.1")], "partial", ["signature.present", "signature.cryptographic_verification_result", "json_lote.signature.jades_baseline_b"]),
+  requirement("ts119602.signature.baseline_b", "AdES Baseline B signature", "Validate a Baseline B signature, signer subject country/organization matching, cryptographic validity, certificate validity, and explicit signer trust separately.", "signature", "shall", "critical", "local", [citation("6.8.0"), citation("6.8.1")], "partial", ["signature.present", "signature.xades_baseline_b.structure", "signature.xades_baseline_b.mandatory_elements", "signature.xades_baseline_b.signing_time", "signature.xades_baseline_b.signing_certificate_reference", "signature.xades_baseline_b.data_object_formats", "signature.xades_baseline_b.reference_digests", "signature.xades_baseline_b.prohibited_legacy_properties", "signature.cryptographic_verification_result", "signature.signing_certificate_validity", "signature.signer_subject.country", "signature.signer_subject.organization", "signature.signer_trust", "json_lote.signature.jades_baseline_b"]),
   requirement("ts119602.binding.json_schema", "Official scheme-explicit JSON binding", "Validate the pinned official JSON schema offline and retain semantic checks where document text prevails.", "schema", "shall", "critical", "local", [citation("Annex A.1", "JSON bindings")], "implemented", ["ts119602.binding.json_schema"], ["scheme_explicit_json"]),
   requirement("ts119602.binding.xml_schema", "Official scheme-explicit XML binding", "Validate the pinned official XML schema offline and retain semantic checks where document text prevails.", "schema", "shall", "critical", "local", [citation("Annex A.2.1", "ETSI TS 119 602 schema")], "partial", ["xml_lote.structure.xml_binding"], ["scheme_explicit_xml"]),
   requirement("ts119602.binding.ts119612_mapping", "TS 119 612 alternative XML binding", "Validate the applicable TS 119 612 schema and map components through Table A.1 before applying TS 119 602 profile rules.", "binding", "shall", "critical", "local", [citation("Annex A.2.2", "ETSI TS 119 612 schema"), citation("Table A.1", "Mapping of TS 119 612 fields to TS 119 602 components")], "not_implemented", [], ["ts119612_alternative_xml"]),
@@ -200,7 +200,19 @@ function profileRequirements(definition: ProfileDefinition): Ts119602Requirement
     profileRequirement(`${prefix}.scheme_information`, `${definition.label} scheme information`, `Validate every additional scheme-information rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.2`), citation(`Table ${definition.annex}.1`, `${definition.label} scheme information`)]),
     profileRequirement(`${prefix}.trusted_entity`, `${definition.label} trusted entity`, `Validate every additional trusted-entity information rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.3`), citation(`Table ${definition.annex}.2`, `${definition.label} information`)]),
     profileRequirement(`${prefix}.service`, `${definition.label} service`, `Validate every additional service and history rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.3`), citation(`Table ${definition.annex}.3`, `${definition.label} service information`)]),
-    profileRequirement(`${prefix}.signature`, `${definition.label} signature`, `Validate the signature binding and AdES profile required by the ${definition.label} profile.`, "signature", "critical", applicability, [citation(`${definition.annex}.4`, "Signature")]),
+    profileRequirement(
+      `${prefix}.signature`,
+      `${definition.label} signature`,
+      `Validate the signature binding and AdES profile required by the ${definition.label} profile.`,
+      "signature",
+      "critical",
+      applicability,
+      [citation(`${definition.annex}.4`, "Signature")],
+      definition.profile === "pub_eaa_providers" ? "partial" : "not_implemented",
+      definition.profile === "pub_eaa_providers"
+        ? ["signature.annex_h4.enveloped", "signature.annex_h4.document_reference", "signature.annex_h4.transforms", "signature.annex_h4.canonicalization"]
+        : [],
+    ),
   ];
 }
 
@@ -221,6 +233,8 @@ function profileRequirement(
   defaultSeverity: CheckSeverity,
   applicability: Ts119602Requirement["applicability"],
   citations: readonly Ts119602Citation[],
+  implementationStatus: Ts119602ImplementationStatus = "not_implemented",
+  existingCheckIds: readonly string[] = [],
 ): Ts119602Requirement {
   return {
     checkId,
@@ -231,7 +245,7 @@ function profileRequirement(
     defaultSeverity,
     applicability,
     citations,
-    implementation: { status: "not_implemented", existingCheckIds: [] },
+    implementation: { status: implementationStatus, existingCheckIds },
   };
 }
 

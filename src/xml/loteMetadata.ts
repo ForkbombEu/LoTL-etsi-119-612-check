@@ -32,6 +32,7 @@ const INFO = `./*[local-name()='ListAndSchemeInformation' and namespace-uri()='$
 const TRUSTED_ENTITIES =
   `./*[local-name()='TrustedEntitiesList' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`
   + `/*[local-name()='TrustedEntity' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`;
+const PUB_EAA_LOTE_TYPE = "http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersList";
 
 type XmlLoteBinding = "etsi_ts_119_602_v1_1_1" | "we_build_compatibility" | "unsupported";
 
@@ -75,7 +76,13 @@ export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Da
       { mode, expected },
     ));
   }
-  const signature = await assessSignature(xml, document);
+  const loteType = text(metadataContext, "./*[local-name()='LoTEType']");
+  const signature = await assessSignature(xml, document, assessmentDate, {}, {
+    requireBaselineB: true,
+    requireAnnexH4: loteType === PUB_EAA_LOTE_TYPE,
+    schemeTerritory: text(metadataContext, "./*[local-name()='SchemeTerritory']"),
+    schemeOperatorNames: names(root, `${INFO}/*[local-name()='SchemeOperatorName']`),
+  });
   checks.push(...signature.checks);
   checks.push(...buildTs119602MetadataFindings(metadataInput));
   checks.push(...buildTs119602SyntaxFindings(collectXmlSyntaxInputs(root)));

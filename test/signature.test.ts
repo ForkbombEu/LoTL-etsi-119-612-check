@@ -10,6 +10,16 @@ async function signedFixture(): Promise<string> {
   return readFile("test/fixtures/tsl-signed-unsupported.xml", "utf8");
 }
 
+async function xadesFixture(): Promise<string> {
+  const [template, signed] = await Promise.all([
+    readFile("test/fixtures/ts119602-pub-eaa-xades-b.xml", "utf8"),
+    signedFixture(),
+  ]);
+  const certificate = signed.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/)?.[1];
+  if (!certificate) throw new Error("Signed fixture must contain a certificate.");
+  return template.replace("{{SIGNING_CERTIFICATE}}", certificate);
+}
+
 function withFirstListCertificate(xml: string, certificate: string): string {
   return xml.replace(
     "<TrustServiceProviderList />",
@@ -104,6 +114,108 @@ describe("assessSignature", () => {
     expect(result.checks).toContainEqual(expect.objectContaining({
       id: "signature.first_list_certificate_exact_match",
       status: "fail",
+    }));
+  });
+
+  it("validates XAdES Baseline B, exact Annex H.4 constraints, signer metadata, and explicit signer trust independently", async () => {
+    const xml = await xadesFixture();
+    const document = parseXml(xml).document;
+    if (!document) throw new Error("Fixture must parse.");
+
+    const result = await assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
+      verifier: () => ({ status: "pass", message: "Test verifier accepted all references and the signature value." }),
+    }, {
+      requireBaselineB: true,
+      requireAnnexH4: true,
+      schemeTerritory: "EU",
+      schemeOperatorNames: ["WE BUILD Test"],
+      trustedSignerFingerprintsSha256: ["3f3244d1d4a6d4c0c5539761560e52afab8072f389239c69f5d2e3803228b372"],
+    });
+
+    const expectedPasses = [
+      "signature.xades_baseline_b.structure",
+      "signature.xades_baseline_b.mandatory_elements",
+      "signature.xades_baseline_b.signing_time",
+      "signature.xades_baseline_b.signing_certificate_reference",
+      "signature.xades_baseline_b.data_object_formats",
+      "signature.xades_baseline_b.reference_digests",
+      "signature.xades_baseline_b.prohibited_legacy_properties",
+      "signature.annex_h4.enveloped",
+      "signature.annex_h4.document_reference",
+      "signature.annex_h4.transforms",
+      "signature.annex_h4.canonicalization",
+      "signature.cryptographic_verification_result",
+      "signature.signing_certificate_validity",
+      "signature.signer_subject.country",
+      "signature.signer_subject.organization",
+      "signature.signer_trust",
+    ];
+    for (const id of expectedPasses) {
+      expect(result.checks).toContainEqual(expect.objectContaining({ id, status: "pass" }));
+    }
+  });
+
+  it("reports malformed H.4/XAdES evidence separately from certificate validity, subject matching, and trust", async () => {
+    const validXml = await xadesFixture();
+    const xml = validXml
+      .replace(
+        '<ds:DigestValue>PzJE0dSm1MDFU5dhVg5Sr6uAcvOJI5xp9dLjgDIos3I=</ds:DigestValue>',
+        '<ds:DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</ds:DigestValue>',
+      )
+      .replace(
+        '<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>\n          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>',
+        '<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>\n          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>',
+      )
+      .replace("2026-07-21T12:00:00Z", "2026-07-21T12:00:00+00:00")
+      .replace("<xades:Cert>", '<xades:Cert URI="https://example.test/certificate">')
+      .replace("<xades:MimeType>application/xml</xades:MimeType>", "")
+      .replace("</xades:SignedSignatureProperties>", "<xades:SignerRole/></xades:SignedSignatureProperties>");
+    const document = parseXml(xml).document;
+    if (!document) throw new Error("Fixture must parse.");
+
+    const result = await assessSignature(xml, document, new Date("2037-08-01T00:00:00Z"), {
+      verifier: () => ({ status: "fail", message: "Test verifier rejected a reference digest." }),
+    }, {
+      requireBaselineB: true,
+      requireAnnexH4: true,
+      schemeTerritory: "DE",
+      schemeOperatorNames: ["Different Operator"],
+      trustedSignerFingerprintsSha256: ["00".repeat(32)],
+    });
+
+    for (const id of [
+      "signature.xades_baseline_b.signing_certificate_reference",
+      "signature.xades_baseline_b.signing_time",
+      "signature.xades_baseline_b.data_object_formats",
+      "signature.xades_baseline_b.prohibited_legacy_properties",
+      "signature.annex_h4.transforms",
+      "signature.cryptographic_verification_result",
+      "signature.signing_certificate_validity",
+      "signature.signer_subject.country",
+      "signature.signer_subject.organization",
+      "signature.signer_trust",
+    ]) {
+      expect(result.checks).toContainEqual(expect.objectContaining({ id, status: "fail" }));
+    }
+    expect(result.checks).toContainEqual(expect.objectContaining({ id: "signature.xades_baseline_b.structure", status: "pass" }));
+  });
+
+  it("does not infer signer trust from an embedded certificate", async () => {
+    const xml = await xadesFixture();
+    const document = parseXml(xml).document;
+    if (!document) throw new Error("Fixture must parse.");
+    const result = await assessSignature(xml, document, new Date("2026-08-01T00:00:00Z"), {
+      verifier: () => ({ status: "pass", message: "Test verifier accepted the signature." }),
+    }, { requireBaselineB: true });
+
+    expect(result.checks).toContainEqual(expect.objectContaining({
+      id: "signature.signer_trust",
+      status: "not_checked",
+      message: expect.stringContaining("evidence, not a trust decision"),
+    }));
+    expect(result.checks).toContainEqual(expect.objectContaining({
+      id: "signature.annex_h4.transforms",
+      status: "not_applicable",
     }));
   });
 });

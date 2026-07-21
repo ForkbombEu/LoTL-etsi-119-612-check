@@ -269,7 +269,7 @@ Required change:
 | 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, and certificate parsing are checked; key/SKI equivalence and profile PKI requirements remain. |
 | 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Partial | History-period coupling, URI/date syntax, and list-issue ordering are implemented; registered profile status sets remain. |
 | 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, retained-history coupling, identity presence, and descending status time are checked; profile-specific retained-key rules remain. |
-| 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Partial XML only | Implement full XAdES/JAdES Baseline B and signer subject matching. |
+| 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | XAdES implemented; JAdES pending | XML LoTEs validate XAdES Baseline B structure, Annex H.4 constraints, signer subject metadata, certificate validity, cryptography, and explicit trust independently; implement compact JAdES next. |
 | Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
 | Annex C URIs | Exact registered profile URIs | Classification only | Add a versioned registry and exact comparisons with ambiguity handling. |
@@ -312,25 +312,26 @@ Required change:
 Generic XMLDSig verification is useful but insufficient. For the Annex H XML
 profile, H.4 additionally requires:
 
-- [ ] XAdES Baseline B validation under ETSI EN 319 132-1, not only detection
+- [x] XAdES Baseline B validation under ETSI EN 319 132-1, not only detection
   of `QualifyingProperties` or `SignedProperties`;
-- [ ] an enveloped signature;
-- [ ] a `ds:Reference` with `URI=""` covering the entire document;
-- [ ] exactly one `ds:Transforms` on that reference;
-- [ ] exactly two transforms in order: enveloped-signature, then exclusive
+- [x] an enveloped signature;
+- [x] a `ds:Reference` with `URI=""` covering the entire document;
+- [x] exactly one `ds:Transforms` on that reference;
+- [x] exactly two transforms in order: enveloped-signature, then exclusive
   canonicalization;
-- [ ] exclusive canonicalization for `ds:CanonicalizationMethod`;
-- [ ] validation of all references, digests, signed properties, signing time,
+- [x] exclusive canonicalization for `ds:CanonicalizationMethod`;
+- [x] validation of all references, digests, signed properties, signing time,
   signing certificate reference, and Baseline-B mandatory properties;
-- [ ] signer certificate subject country equals `SchemeTerritory`;
-- [ ] signer certificate subject organization equals one
+- [x] signer certificate subject country equals `SchemeTerritory`;
+- [x] signer certificate subject organization equals one
   `SchemeOperatorName`;
-- [ ] a clear distinction between cryptographic validity, certificate
+- [x] a clear distinction between cryptographic validity, certificate
   validity, and trust in the signer.
 
-The current verifier accepts either an empty or same-document root reference
-and delegates transform handling to `xmlsec1`. That is valid generic
-verification behavior but is too permissive for H.4.
+The generic verifier continues to accept either an empty or same-document root
+reference and delegates transform handling to `xmlsec1`. XML LoTE assessment
+adds the stricter profile-specific H.4 findings without changing that reusable
+generic verification policy.
 
 ### JSON / JAdES
 
@@ -495,8 +496,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Complete |
 | TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Complete |
 | TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Complete |
-| TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Next |
-| TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Pending |
+| TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Complete |
+| TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Next |
 | TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Pending |
 | TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Pending |
 

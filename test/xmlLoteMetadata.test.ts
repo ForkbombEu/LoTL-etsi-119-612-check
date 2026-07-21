@@ -106,6 +106,9 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       expect.objectContaining({ id: "ts119602.service.information", status: "pass" }),
       expect.objectContaining({ id: "ts119602.service.digital_identity", status: "pass" }),
       expect.objectContaining({ id: "signature.present", status: "fail" }),
+      expect.objectContaining({ id: "signature.xades_baseline_b.structure", status: "fail" }),
+      expect.objectContaining({ id: "signature.annex_h4.document_reference", status: "fail" }),
+      expect.objectContaining({ id: "signature.signer_trust", status: "not_checked" }),
     ]));
     expect(result.extracted).toMatchObject({
       schemeOperatorName: ["NXD Foundation"],

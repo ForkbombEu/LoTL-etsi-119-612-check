@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListOfTrustedEntities xmlns="http://uri.etsi.org/019602/v1#"
+  xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+  xmlns:xades="http://uri.etsi.org/01903/v1.3.2#">
+  <ListAndSchemeInformation>
+    <LoTEType>http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersList</LoTEType>
+    <SchemeOperatorName><Name xml:lang="en">WE BUILD Test</Name></SchemeOperatorName>
+    <SchemeTerritory>EU</SchemeTerritory>
+  </ListAndSchemeInformation>
+  <ds:Signature Id="Signature-1">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+      <ds:Reference Id="Document-Reference" URI="">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+        <ds:DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</ds:DigestValue>
+      </ds:Reference>
+      <ds:Reference Id="Signed-Properties-Reference" URI="#Signed-Properties-1" Type="http://uri.etsi.org/01903#SignedProperties">
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+        <ds:DigestValue>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</ds:SignatureValue>
+    <ds:KeyInfo><ds:X509Data><ds:X509Certificate>{{SIGNING_CERTIFICATE}}</ds:X509Certificate></ds:X509Data></ds:KeyInfo>
+    <ds:Object>
+      <xades:QualifyingProperties Target="#Signature-1">
+        <xades:SignedProperties Id="Signed-Properties-1">
+          <xades:SignedSignatureProperties>
+            <xades:SigningTime>2026-07-21T12:00:00Z</xades:SigningTime>
+            <xades:SigningCertificateV2>
+              <xades:Cert>
+                <xades:CertDigest>
+                  <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+                  <ds:DigestValue>PzJE0dSm1MDFU5dhVg5Sr6uAcvOJI5xp9dLjgDIos3I=</ds:DigestValue>
+                </xades:CertDigest>
+              </xades:Cert>
+            </xades:SigningCertificateV2>
+          </xades:SignedSignatureProperties>
+          <xades:SignedDataObjectProperties>
+            <xades:DataObjectFormat ObjectReference="#Document-Reference">
+              <xades:MimeType>application/xml</xades:MimeType>
+            </xades:DataObjectFormat>
+          </xades:SignedDataObjectProperties>
+        </xades:SignedProperties>
+      </xades:QualifyingProperties>
+    </ds:Object>
+  </ds:Signature>
+</ListOfTrustedEntities>

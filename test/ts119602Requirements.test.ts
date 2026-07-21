@@ -57,6 +57,15 @@ describe("ETSI TS 119 602 requirements ledger", () => {
     const pubEaaBinding = findTs119602Requirement("ts119602.profile.pub_eaa_providers.binding");
     expect(pidBinding?.applicability.bindings).toEqual(["scheme_explicit_json"]);
     expect(pubEaaBinding?.applicability.bindings).toEqual(TS119602_BINDINGS);
+    expect(findTs119602Requirement("ts119602.profile.pub_eaa_providers.signature")?.implementation).toEqual({
+      status: "partial",
+      existingCheckIds: [
+        "signature.annex_h4.enveloped",
+        "signature.annex_h4.document_reference",
+        "signature.annex_h4.transforms",
+        "signature.annex_h4.canonicalization",
+      ],
+    });
   });
 
   it("filters requirements by binding, profile, and contextual evidence scope", () => {
@@ -77,8 +86,8 @@ describe("ETSI TS 119 602 requirements ledger", () => {
     expect(summarizeTs119602Requirements()).toMatchObject({
       total: 81,
       implemented: 3,
-      partial: 43,
-      notImplemented: 35,
+      partial: 44,
+      notImplemented: 34,
       complete: false,
     });
   });
