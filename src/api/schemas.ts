@@ -41,6 +41,30 @@ const declaredPointer = {
   },
 } as const;
 
+const contextArtifact = {
+  type: "object",
+  required: ["content"],
+  additionalProperties: false,
+  properties: {
+    content: { type: "string", minLength: 1 },
+    source: { type: "string" },
+    contentType: { type: "string" },
+  },
+} as const;
+
+const contextualEvidence = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    dereference: { type: "boolean", default: false },
+    priorArtifacts: { type: "array", items: contextArtifact, maxItems: 32 },
+    trustedSignerFingerprintsSha256: { type: "array", items: { type: "string", pattern: "^[A-Fa-f0-9]{64}$" }, maxItems: 64 },
+    maxDereferences: { type: "integer", minimum: 1, maximum: 32, default: 16 },
+    maxBytesPerArtifact: { type: "integer", minimum: 1, maximum: 20971520, default: 5242880 },
+    concurrency: { type: "integer", minimum: 1, maximum: 32, default: 4 },
+  },
+} as const;
+
 export const auditUrlSchema: FastifySchema = {
   body: {
     type: "object",
@@ -49,6 +73,7 @@ export const auditUrlSchema: FastifySchema = {
     properties: {
       url: { type: "string", format: "uri" },
       options: auditOptions,
+      context: contextualEvidence,
     },
   },
 };
@@ -63,6 +88,7 @@ export const auditJsonSchema: FastifySchema = {
         anyOf: [{ type: "object", additionalProperties: true }, { type: "string" }],
       },
       options: auditOptions,
+      context: contextualEvidence,
     },
   },
 };
@@ -78,6 +104,7 @@ export const auditLotlSchema: FastifySchema = {
       content: { type: "string" },
       options: auditOptions,
       rpacChain: { anyOf: [{ type: "string" }, { type: "array", items: { type: "string" } }] },
+      context: contextualEvidence,
     },
   },
 };
@@ -104,6 +131,7 @@ export const artifactAssessUrlSchema: FastifySchema = {
       url: { type: "string", format: "uri" },
       declared: declaredPointer,
       options: artifactOptions,
+      context: contextualEvidence,
     },
   },
 };
@@ -119,6 +147,7 @@ export const artifactAssessContentSchema: FastifySchema = {
       contentType: { type: "string" },
       declared: declaredPointer,
       options: artifactOptions,
+      context: contextualEvidence,
     },
   },
 };

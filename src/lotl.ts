@@ -132,22 +132,22 @@ function qualifierValue(pointer: unknown, name: "LoTEType" | "MimeType"): string
 function extractPointerFingerprints(pointer: unknown): string[] {
   const identities = asArray(getPath(pointer, ["ServiceDigitalIdentities"]));
   const fingerprints = new Set<string>();
-  const visit = (value: unknown): void => {
-    if (typeof value === "string" && value.length > 200) {
+  const visit = (value: unknown, certificateContext = false): void => {
+    if (typeof value === "string" && certificateContext && value.length > 200) {
       const fingerprint = certificateFingerprintSha256(value);
       if (fingerprint) fingerprints.add(fingerprint);
       return;
     }
     if (Array.isArray(value)) {
-      value.forEach(visit);
+      value.forEach((entry) => visit(entry, certificateContext));
       return;
     }
     if (!isRecord(value)) return;
     for (const [key, nested] of Object.entries(value)) {
-      if (/X509Certificate|certificate/i.test(key)) visit(nested);
-      else if (typeof nested === "object") visit(nested);
+      const nestedCertificateContext = certificateContext || /X509Certificate|certificate/i.test(key);
+      if (nestedCertificateContext || typeof nested === "object") visit(nested, nestedCertificateContext);
     }
   };
-  identities.forEach(visit);
+  identities.forEach((identity) => visit(identity));
   return [...fingerprints].sort();
 }

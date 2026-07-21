@@ -1,8 +1,8 @@
 # ETSI TS 119 602 V1.1.1 conformance gap report
 
-Assessment date: 2026-07-20
+Assessment date: 2026-07-21
 
-Code baseline: commit `57d6dc3`
+Code baseline: commit `2c1b365`
 
 Target: ETSI TS 119 602 V1.1.1 (2025-11)
 
@@ -14,27 +14,27 @@ yet a complete ETSI TS 119 602 conformance checker and must not produce a
 
 The implementation currently covers artifact recognition, independent
 binding/profile classification, official offline JSON Schema validation,
-local clauses 6.1-6.8 evidence, JAdES/XAdES signatures, and the locally
-decidable Annex D-I tables. The missing work is
+local clauses 6.1-6.8 evidence, JAdES/XAdES signatures, the locally
+decidable Annex D-I tables, and optional bounded contextual evidence. The missing work is
 concentrated in the layers that determine normative conformance:
 
 1. official XML Schema validation and TS 119 612 alternative-binding mapping;
-2. remaining contextual clauses 6.1 through 6.8 evidence;
-3. cross-document, historical, trust-path, and dereferencing checks.
+2. remaining authoritative-record, policy, history-retention, and trust-path evidence;
+3. contextual public-key/SKI identity, archive-index, and register semantics.
 
 An exact percentage would be misleading until every normative requirement is
 entered in a requirements ledger. As a non-normative engineering estimate:
 
 | Area | Current maturity | Approximate distance |
 | --- | --- | --- |
-| Scheme-explicit TS 119 602 XML evidence | Local semantic/profile validation | Core components, Pub-EAA local tables, and XAdES rules are checked; the official XML schema and contextual evidence remain. |
-| Official TS 119 602 JSON binding | Local structural, semantic, signature, and profile validation | The official model, compact JAdES, and applicable Annex D-I local tables are checked; contextual evidence remains incomplete. |
+| Scheme-explicit TS 119 602 XML evidence | Local semantic/profile plus optional context | Core components, Pub-EAA local tables, XAdES, explicit trust, and applicable bounded context are checked; the official XML schema and authoritative evidence remain. |
+| Official TS 119 602 JSON binding | Local validation plus optional context | The official model, compact JAdES, Annex D-I local tables, explicit trust, and supplied/bounded contextual evidence are checked; authoritative claims remain incomplete. |
 | TS 119 612 alternative XML binding | Classified, mapping missing | Annex A.2.2 applicability is guarded, but Table A.1 component mapping is not implemented. |
-| Annex D-I profile conformance | Local tables implemented | Exact dispatch and locally decidable scheme/entity/service/signature/history rules are checked; cross-document and authoritative-record claims remain contextual. |
+| Annex D-I profile conformance | Local tables plus optional context | Exact dispatch and local rules are checked; supplied prior artifacts and bounded certificate-pointer/distribution/archive/supply evidence are supported, while authoritative claims remain contextual. |
 | Complete TS 119 602 verdict | Not implemented | No artifact can currently receive an evidence-backed complete TS 119 602 conformance verdict. |
 
-The JSON structural, local semantic, compact-signature, and local profile
-layers are now implemented, but configured trust and contextual layers remain. This
+The JSON structural, local semantic, compact-signature, local profile, and
+bounded contextual evidence layers are now implemented, but authoritative trust and policy layers remain. This
 is a planning observation, not a conformance score.
 
 ## Normative source set
@@ -258,17 +258,17 @@ Required change:
 | 6.2 LoTE tag | Binding-specific LoTE tag representation | Partial | XML validates a local absolute-URI `LOTETag`; JSON reports the field as not applicable. Registered `LOTETag` values remain future Annex C work. |
 | 6.3/Table 1 | Correct implicit vs explicit scheme presence matrix | Partial | Local JSON/XML mode inference, mandatory/prohibited fields, and profile routing are implemented. Alternative-binding mapping remains. |
 | 6.3.1 version | Integer; profile/binding-specific value | Local implementation | Integer form and Annex D-I value `1` are checked. |
-| 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Partial | Local positive-integer validation is implemented; compare with prior list instances when supplied or fetched. |
+| 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Local plus supplied context | Local positive-integer validation and progression across supplied same-type prior instances are checked; proving an unsupplied first release remains contextual. |
 | 6.3.3 LoTE type | URI and profile discriminator | Local implementation | Exact registered values select Annex D-I checks and binding mismatches fail. |
 | 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Partial | Local address, `CC:name`, email/web, policy choice, and registered profile values are checked; dereferenced policy semantics remain. |
 | 6.3.12 history period | Integer with semantics including `65535` | Partial | Local value, retention, service-status, and history-presence consequences are implemented; contextual retention-window completeness remains. |
-| 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Partial | Local shape and qualifier checks are implemented; verify that at least one pointer identity authenticates the fetched target. |
+| 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Certificate context implemented | Local shape plus bounded identical-self-target, signature, and certificate-identity matching are checked; public-key/SKI equivalence remains. |
 | 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Local/profile implementation | Local lexical, ordering, expiry, closed-list, and six-calendar-month profile limits are checked. |
-| 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Partial | Local cardinality and URI checks are implemented; fetch/hash all locations only under bounded contextual checks. |
+| 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Implemented with opt-in context | Local cardinality/URI checks and bounded exact-byte/hash comparison across every selected location are implemented. |
 | 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | Versioned scheme, entity, and service registries reject unknown critical extensions; Wallet `ServiceUniqueIdentifier` is checked, while additional standardized registrations remain. |
 | 6.4 entity list | Absent only when no entity is/was approved; otherwise one-or-more entities | Partial | Present containers and local cardinalities are validated; absence is inconclusive without external approval evidence. |
 | 6.4.1-6.5 entity information | Information, services, name, address, and information URI are mandatory | Partial | JSON/XML mandatory structure, contacts, multilingual names, information URIs, and known extension payloads are checked; official-record claims remain contextual. |
-| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Local nesting, identifiers, registered service types/statuses, supply points, definition URIs, and extensions are checked; dereferenced semantics remain. |
+| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Local nesting, identifiers, registered service types/statuses, supply points, definition URIs, and extensions are checked; bounded supply-point JSON/XML syntax is checked while authoritative register semantics remain. |
 | 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, profile certificate cardinality, and Pub-EAA key/subject rules are checked; general key/SKI equivalence and certificate-purpose policy remain. |
 | 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Local/profile implementation | Profile absence rules and Pub-EAA notified/withdrawn values and start-time ordering are checked. |
 | 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, ordering, and Pub-EAA SKI/no-certificate history rules are checked; retention completeness remains contextual. |
@@ -276,7 +276,7 @@ Required change:
 | Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
 | Annex C URIs | Exact registered profile URIs | Implemented locally | Exact profile comparisons preserve the published WRPRC typo under the interpretation registry. |
-| Annexes D-I | Six EU profiles | Local tables implemented | Binding, scheme, entity, service/history, and signature families are reported separately; contextual requirements remain for TS602-12. |
+| Annexes D-I | Six EU profiles | Local tables plus optional context | Binding, scheme, entity, service/history, signature, and supported contextual families are reported separately; unsupported identity/archive/register semantics remain explicit. |
 
 ## Schema validation backlog
 
@@ -355,12 +355,12 @@ generic verification policy.
 Clause 6.3.13 requires at least one `ServiceDigitalIdentity` in a pointer to
 successfully authenticate the pointed-to LoTE before use.
 
-- [ ] Match the verified target signer key/certificate against every pointer
+- [x] Match the verified target signer certificate against every pointer
   identity.
-- [ ] Support certificate rollover with multiple identities.
+- [x] Support certificate rollover with multiple certificate identities.
 - [ ] Compare public keys/SKIs where exact certificate equality is not the
   applicable identity rule.
-- [ ] Do not treat a target's self-embedded signing certificate as trusted
+- [x] Do not treat a target's self-embedded signing certificate as trusted
   merely because its signature verifies.
 
 ## Annex D-I profile validation
@@ -432,13 +432,13 @@ Some requirements cannot be conclusively checked from one artifact. They need
 additional evidence and should otherwise return `inconclusive` or
 `not_checked`, not pass:
 
-- sequence number starts at 1 and increases across releases;
-- distribution points return identical current LoTE bytes;
-- archive URIs expose previous instances where the profile requires them;
-- a self-pointer resolves to and authenticates the current profile list;
-- pointer identities authenticate the fetched target;
+- sequence number starts at 1 and increases across releases — supplied comparable prior instances are checked;
+- distribution points return identical current LoTE bytes — implemented under opt-in bounded dereferencing;
+- archive URIs expose previous instances where the profile requires them — direct previous-instance responses are checked; indexes remain inconclusive;
+- a self-pointer resolves to and authenticates the current profile list — implemented for certificate identities and identical current bytes;
+- pointer identities authenticate the fetched target — certificate identities are implemented; public-key/SKI forms remain;
 - scheme information pages contain the required policies and explanations;
-- service supply points expose the required machine-processable register;
+- service supply points expose the required machine-processable register — JSON/XML reachability is checked; record semantics remain contextual;
 - legal identity and registration claims match authoritative records;
 - status history retains all changes for the required period;
 - final closed LoTE status semantics are correct.
@@ -503,7 +503,7 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Complete |
 | TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Complete |
 | TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Complete |
-| TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Next |
+| TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Complete |
 
 TS602-01 establishes result isolation only; it does not claim that any TS
 119 602 binding or profile is completely validated.
@@ -564,11 +564,11 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 ### Phase 6 — Contextual validation and product surfaces
 
-- [ ] Add optional prior-list/archive inputs for sequence/history checks.
-- [ ] Add bounded distribution, pointer, and supply-point dereferencing.
-- [ ] Expose the complete TS 119 602 result through CLI, API, OpenAPI, JSON,
+- [x] Add optional prior-list/archive inputs for sequence/history checks.
+- [x] Add bounded distribution, pointer, and supply-point dereferencing.
+- [x] Expose the complete TS 119 602 result through CLI, API, OpenAPI, JSON,
   and Markdown using the same core model.
-- [ ] Add schema/version compatibility tests for report consumers.
+- [x] Add schema/version compatibility tests for report consumers.
 - [ ] Add optional live smoke tests without making normal tests network
   dependent.
 

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it, afterEach, vi } from "vitest";
 import YAML from "yaml";
 import { buildServer } from "../src/api/server.js";
+import { parseCompactJades } from "../src/json/jades.js";
 
 const originalFetch = globalThis.fetch;
 const originalEnv = { ...process.env };
@@ -179,6 +180,53 @@ describe("API server", () => {
     await app.close();
   });
 
+  it("accepts explicit TS 119 602 contextual evidence without enabling network dereferencing", async () => {
+    const app = await buildServer();
+    const current = (await readFile("test/fixtures/ts119602-context-current.jws", "utf8")).trim();
+    const prior = structuredClone(parseCompactJades(current).parsedPayload) as {
+      LoTE: { ListAndSchemeInformation: { LoTESequenceNumber: number; ListIssueDateTime: string } };
+    };
+    prior.LoTE.ListAndSchemeInformation.LoTESequenceNumber = 1;
+    prior.LoTE.ListAndSchemeInformation.ListIssueDateTime = "2026-01-01T00:00:00Z";
+    globalThis.fetch = vi.fn();
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: {
+        content: current,
+        source: "current.jws",
+        contentType: "application/jose",
+        context: {
+          dereference: false,
+          priorArtifacts: [{ content: JSON.stringify(prior), source: "prior.json", contentType: "application/json" }],
+          maxDereferences: 4,
+          maxBytesPerArtifact: 1000000,
+          concurrency: 2,
+        },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().result).toMatchObject({
+      ts119602: {
+        checks: expect.arrayContaining([
+          expect.objectContaining({ id: "ts119602.scheme.sequence.history", status: "pass" }),
+          expect.objectContaining({ id: "ts119602.scheme.pointers.authentication", status: "not_checked" }),
+          expect.objectContaining({ id: "ts119602.context.bounds", status: "pass" }),
+        ]),
+      },
+    });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+
+    const invalid = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: { content: current, context: { dereference: true, maxDereferences: 33 } },
+    });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json()).toMatchObject({ error: { code: "invalid_request" } });
+    await app.close();
+  });
+
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
@@ -289,6 +337,8 @@ describe("API server", () => {
       expect(parsedYaml.paths[path]).toBeDefined();
       expect(parsedJson.paths[path]).toBeDefined();
     }
+    expect(parsedYaml.components.schemas.Ts119602ContextOptions).toEqual(parsedJson.components.schemas.Ts119602ContextOptions);
+    expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
     await app.close();
   });
 

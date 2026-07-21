@@ -13,9 +13,10 @@ import { generateNegativeFixtureDescriptors, writeNegativeFixtureDescriptors } f
 import { buildStandardAssessment } from "./standards/assessment.js";
 import { classifyTs119602Artifact, createUnknownTs119602Classification } from "./standards/ts119602Classification.js";
 import { summarizeTs119602Requirements } from "./standards/ts119602Requirements.js";
+import { assessTs119602Context } from "./standards/ts119602Context.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
-import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult } from "./types.js";
+import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult, Ts119602ContextOptions } from "./types.js";
 import { assessTs119612Xml } from "./xml/ts119612Checks.js";
 import { assessXmlLoteMetadata } from "./xml/loteMetadata.js";
 
@@ -27,6 +28,7 @@ export interface AuditCoreOptions {
   includeJsonLoteChecks: boolean;
   fetch: boolean;
   rpacChain?: string | string[];
+  context?: Ts119602ContextOptions;
 }
 
 export interface InMemoryAuditOptions extends AuditCoreOptions {
@@ -48,6 +50,7 @@ export interface AssessArtifactUrlOptions {
   strict: boolean;
   includeJsonLoteChecks: boolean;
   xsd?: string;
+  context?: Ts119602ContextOptions;
 }
 
 export interface AssessArtifactContentOptions {
@@ -58,11 +61,17 @@ export interface AssessArtifactContentOptions {
   strict: boolean;
   includeJsonLoteChecks: boolean;
   xsd?: string;
+  context?: Ts119602ContextOptions;
+  timeoutMs?: number;
 }
 
 export async function runAudit(options: CliOptions, version: string): Promise<AuditReport> {
   const input = await loadInput(options.input, options.timeoutMs);
   const rpacChain = options.rpacChain ? await loadRpacChain(options.rpacChain) : undefined;
+  const priorArtifact = options.priorLote ? {
+    content: await readFile(options.priorLote, "utf8"),
+    source: options.priorLote,
+  } : undefined;
   const result = await runAuditInMemory(
     {
       source: options.input,
@@ -76,6 +85,10 @@ export async function runAudit(options: CliOptions, version: string): Promise<Au
       includeJsonLoteChecks: options.includeJsonLoteChecks,
       fetch: options.fetch,
       rpacChain,
+      context: options.contextual || priorArtifact ? {
+        dereference: options.contextual,
+        priorArtifacts: priorArtifact ? [priorArtifact] : undefined,
+      } : undefined,
     },
     version,
   );
@@ -213,6 +226,7 @@ export async function assessArtifactUrl(
       includeJsonLoteChecks: options.includeJsonLoteChecks,
       fetch: true,
       xsd: options.xsd,
+      context: options.context,
     },
   );
 }
@@ -290,7 +304,12 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
   return assessArtifactBytes(base, fetched.bytes, fetched.fetch.contentType, options);
 }
 
-async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, contentType: string | undefined, options: Pick<AuditCoreOptions, "strict" | "includeJsonLoteChecks" | "xsd">): Promise<TrustedListAuditResult> {
+async function assessArtifactBytes(
+  base: TrustedListAuditResult,
+  bytes: Buffer,
+  contentType: string | undefined,
+  options: Pick<AuditCoreOptions, "strict" | "includeJsonLoteChecks" | "xsd" | "context"> & { timeoutMs?: number },
+): Promise<TrustedListAuditResult> {
   const detected = detectArtifact(bytes, contentType);
   base.detected = {
     format: detected.format,
@@ -313,15 +332,22 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
   }
 
   if (detected.artifactKind === "xml_lote") {
-    return mergeResult(base, await assessXmlLoteMetadata(bytes.toString("utf8"), new Date(), base.ts119602Classification.profileStatus));
+    const result = mergeResult(base, await assessXmlLoteMetadata(
+      bytes.toString("utf8"),
+      new Date(),
+      base.ts119602Classification.profileStatus,
+      options.context?.trustedSignerFingerprintsSha256,
+    ));
+    return applyContext(result, bytes, contentType, options);
   }
 
   if (detected.artifactKind === "json_lote" || detected.artifactKind === "json_lotl") {
     const assessed = assessJsonLote(detected.parsedJson, options.includeJsonLoteChecks, new Date(), {
       compactJades: detected.compactJades,
       profileSelectionStatus: base.ts119602Classification.profileStatus,
+      trustedSignerFingerprintsSha256: options.context?.trustedSignerFingerprintsSha256,
     });
-    return mergeResult(base, assessed);
+    return applyContext(mergeResult(base, assessed), bytes, contentType, options);
   }
 
   const reason =
@@ -340,6 +366,28 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
     warnings: [],
   };
   return base;
+}
+
+async function applyContext(
+  result: TrustedListAuditResult,
+  bytes: Buffer,
+  contentType: string | undefined,
+  options: Pick<AuditCoreOptions, "context"> & { timeoutMs?: number },
+): Promise<TrustedListAuditResult> {
+  if (!options.context || !result.ts119602.applicable) return result;
+  const contextual = await assessTs119602Context({
+    currentBytes: bytes,
+    currentContentType: contentType,
+    currentResult: result,
+    timeoutMs: options.timeoutMs ?? 15_000,
+    options: options.context,
+  });
+  const replacementIds = new Set(contextual.map((entry) => entry.id));
+  result.ts119602 = buildStandardAssessment([
+    ...result.ts119602.checks.filter((entry) => !replacementIds.has(entry.id)),
+    ...contextual,
+  ], { coverageComplete: false });
+  return result;
 }
 
 function routeStandardChecks(result: TrustedListAuditResult): void {

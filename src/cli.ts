@@ -20,6 +20,8 @@ const program = new Command()
   .option("--strict", "Failed mandatory checks make XML artifact non_conformant.", false)
   .option("--include-json-lote-checks", "Deprecated compatibility option; local JSON LoTE checks always run.", false)
   .option("--rpac-chain <path>", "Optional PEM, base64, x5c JSON, or JSON certificate-array RPAC/WRPAC chain.")
+  .option("--contextual", "Opt in to bounded pointer, distribution, archive, and supply-point dereferencing.", false)
+  .option("--prior-lote <path>", "Optional prior LoTE artifact for sequence progression evidence.")
   .option("--generate-negative-fixtures", "Write negative fixture descriptors under artifacts/generated-fixtures/.", false)
   .option("--no-fetch", "Parse LoTL only and report referenced URLs without fetching.")
   .parse();
@@ -35,6 +37,8 @@ const opts = program.opts<{
   includeJsonLoteChecks: boolean;
   fetch: boolean;
   rpacChain?: string;
+  contextual: boolean;
+  priorLote?: string;
   generateNegativeFixtures: boolean;
 }>();
 
@@ -52,6 +56,8 @@ try {
       includeJsonLoteChecks: opts.includeJsonLoteChecks,
       fetch: opts.fetch,
       rpacChain: opts.rpacChain,
+      contextual: opts.contextual,
+      priorLote: opts.priorLote,
       generateNegativeFixtures: opts.generateNegativeFixtures,
     },
     pkg.version,

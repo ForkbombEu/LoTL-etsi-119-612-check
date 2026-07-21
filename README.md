@@ -110,6 +110,18 @@ node dist/cli.js \
   --no-fetch
 ```
 
+Opt in to bounded contextual dereferencing and supply a prior LoTE for sequence evidence:
+
+```bash
+node dist/cli.js \
+  --input ./list_of_trusted_lists.json \
+  --out-dir ./audit-output \
+  --contextual \
+  --prior-lote ./previous-lote.json
+```
+
+Contextual mode is off by default. It caches duplicate URLs per assessed artifact and caps contextual work at 16 references, 4 concurrent requests, 5 MiB per response, and the existing per-request timeout. Library and API callers may lower these limits, up to hard maxima of 32 references and 20 MiB. A CLI prior artifact is compared only with fetched LoTEs having the same registered type.
+
 CLI outputs:
 
 ```text
@@ -253,7 +265,7 @@ curl -s -X POST http://127.0.0.1:3000/api/v1/report/markdown \
   -d @report-wrapper.json | jq -r '.markdown'
 ```
 
-Expanded POST endpoints (also documented in Stoplight) are `/api/audit/lotl`, `/api/audit/artifact`, `/api/audit/certificate-chain`, `/api/audit/fixture-readiness`, and `/api/reports/markdown`. The LoTL endpoint accepts `url`, `lotl`, or raw JSON `content`; the artifact endpoint accepts raw XML, JSON, or compact JAdES content without fetching it. Certificate-chain and fixture-readiness responses reuse the same core assessment functions as the CLI/API audit flow.
+Expanded POST endpoints (also documented in Stoplight) are `/api/audit/lotl`, `/api/audit/artifact`, `/api/audit/certificate-chain`, `/api/audit/fixture-readiness`, and `/api/reports/markdown`. The LoTL endpoint accepts `url`, `lotl`, or raw JSON `content`; the artifact endpoint accepts raw XML, JSON, or compact JAdES content. Audit and artifact requests may include a `context` object with explicit `priorArtifacts`, trusted signer SHA-256 fingerprints, opt-in `dereference`, and bounded concurrency/count/byte limits. Certificate-chain and fixture-readiness responses reuse the same core assessment functions as the CLI/API audit flow.
 
 Assessment endpoints return both:
 
@@ -379,7 +391,9 @@ JSON LoTE assessment now validates the official object/array model against the p
 
 Compact JAdES Baseline B is detected as JWS rather than as a JSON `signature` property. The assessor recovers the attached JSON payload, compares it with the assessed LoTE, validates protected Baseline-B headers and certificate references, verifies supported RSA/RSA-PSS/ECDSA/EdDSA signature algorithms with an embedded `x5c` signer certificate, and reports certificate validity, signer subject matching, and explicit trust independently. Detached payloads or externally referenced certificates are reported as unsupported when the required external bytes/material are not supplied.
 
-Exact embedded `LoTEType` values dispatch Annex D-I local profile checks. Each selected profile receives separate binding, scheme-information, trusted-entity, service/history, and signature findings. The implementation checks the registered status/rules/service URIs, six-calendar-month update limit, profile history/pointer shape, contact and country-role URIs, certificate cardinality, Wallet `ServiceUniqueIdentifier`, Pub-EAA certificate/status/SKI-history rules, and registrar supply points. Prior-list progression, self-pointer authentication, archive/policy dereferencing, certificate-purpose policy, register-content authentication, and production trust paths remain explicitly contextual; therefore local schema, signature, and profile success still cannot produce a complete TS 119 602 `conformant` verdict.
+Exact embedded `LoTEType` values dispatch Annex D-I local profile checks. Each selected profile receives separate binding, scheme-information, trusted-entity, service/history, and signature findings. The implementation checks the registered status/rules/service URIs, six-calendar-month update limit, profile history/pointer shape, contact and country-role URIs, certificate cardinality, Wallet `ServiceUniqueIdentifier`, Pub-EAA certificate/status/SKI-history rules, and registrar supply points.
+
+Optional contextual assessment compares supplied prior instances, requires certificate-declared self-pointers to return the identical current bytes with a verified matching signer, checks distribution-point byte equality, recognizes directly returned previous archive instances, verifies JSON/XML supply-point responses, and applies explicit signer fingerprints without trusting embedded certificates by default. Every fetch records the normal HTTP/hash evidence and observes timeout, count, concurrency, byte, and duplicate-URL cache bounds. Public-key/SKI pointer identities, archive indexes requiring traversal, register semantics beyond machine-readable syntax, authoritative legal records, certificate-purpose policy, and production chain/revocation trust remain explicit limitations; therefore success still cannot produce a complete TS 119 602 `conformant` verdict.
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
@@ -403,6 +417,9 @@ and its referenced
 - XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
 - Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
 - The XML signature assessor evaluates the first `ds:Signature`; XML XSD validation and contextual signer-chain trust remain separate from the implemented XAdES Baseline B and Annex H.4 findings.
+- Contextual pointer authentication currently supports X.509 certificate identities. Public-key/SKI equivalence and full chain/revocation path construction remain unimplemented.
+- Archive checks recognize a previous LoTE returned directly by the configured archive URI; HTML indexes and multi-step archive protocols remain `inconclusive`.
+- Supply-point checks establish bounded reachability and machine-processable JSON/XML syntax, not the authoritative semantics of register records.
 - Full legal ETSI conformance requires normative interpretation beyond structural checks, schema checks, and cryptographic checks.
 - JSON LoTE artifacts should be assessed under ETSI TS 119 602 / WE BUILD profile rules, not ETSI TS 119 612.
 - The Stoplight docs page uses CDN assets by default; OpenAPI specs are served locally.

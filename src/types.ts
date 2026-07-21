@@ -94,6 +94,22 @@ export interface CheckResult {
   evidence?: unknown;
 }
 
+export interface ContextArtifactInput {
+  content: string;
+  source?: string;
+  contentType?: string;
+}
+
+/** Optional evidence and limits for checks that require other artifacts or dereferencing. */
+export interface Ts119602ContextOptions {
+  dereference?: boolean;
+  priorArtifacts?: ContextArtifactInput[];
+  trustedSignerFingerprintsSha256?: string[];
+  maxDereferences?: number;
+  maxBytesPerArtifact?: number;
+  concurrency?: number;
+}
+
 export interface StandardAssessment {
   applicable: boolean;
   conformanceLevel: ConformanceLevel;
@@ -253,6 +269,8 @@ export interface CliOptions {
   includeJsonLoteChecks: boolean;
   fetch: boolean;
   rpacChain?: string;
+  contextual: boolean;
+  priorLote?: string;
   generateNegativeFixtures?: boolean;
 }
 

@@ -42,6 +42,7 @@ export async function assessXmlLoteMetadata(
   xml: string,
   assessmentDate = new Date(),
   profileSelectionStatus?: NonNullable<TrustedListAuditResult["ts119602Classification"]>["profileStatus"],
+  trustedSignerFingerprintsSha256?: readonly string[],
 ): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
   const parsed = parseXml(xml);
   if (!parsed.document || parsed.errors.some((error) => error.startsWith("fatal"))) {
@@ -87,6 +88,7 @@ export async function assessXmlLoteMetadata(
     requireAnnexH4: loteType === PUB_EAA_LOTE_TYPE,
     schemeTerritory: text(metadataContext, "./*[local-name()='SchemeTerritory']"),
     schemeOperatorNames: names(root, `${INFO}/*[local-name()='SchemeOperatorName']`),
+    trustedSignerFingerprintsSha256,
   });
   checks.push(...signature.checks);
   checks.push(...buildTs119602MetadataFindings(metadataInput));

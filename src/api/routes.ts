@@ -5,7 +5,7 @@ import type { EudiTrustRole } from "../eudi/roles.js";
 import { isUrl } from "../input.js";
 import { parseLotlJson } from "../lotl.js";
 import { renderMarkdownReport } from "../report/markdownReport.js";
-import type { AuditReport, TrustedListAuditResult } from "../types.js";
+import type { AuditReport, TrustedListAuditResult, Ts119602ContextOptions } from "../types.js";
 import type { ApiRuntimeConfig } from "./config.js";
 import { requestBaseUrl } from "./config.js";
 import { renderDocsHtml } from "./docs.js";
@@ -31,11 +31,13 @@ export interface RouteOptions {
 interface AuditUrlBody {
   url: string;
   options?: Partial<ReturnType<typeof defaultAuditOptions>>;
+  context?: Ts119602ContextOptions;
 }
 
 interface AuditJsonBody {
   lotl: unknown;
   options?: Partial<ReturnType<typeof defaultAuditOptions>>;
+  context?: Ts119602ContextOptions;
 }
 
 interface AuditLotlBody {
@@ -44,6 +46,7 @@ interface AuditLotlBody {
   content?: string;
   options?: Partial<ReturnType<typeof defaultAuditOptions>>;
   rpacChain?: string | string[];
+  context?: Ts119602ContextOptions;
 }
 
 interface LotlParseBody {
@@ -54,6 +57,7 @@ interface ArtifactAssessUrlBody {
   url: string;
   declared?: Partial<TrustedListAuditResult["declared"]>;
   options?: Partial<ReturnType<typeof defaultArtifactOptions>>;
+  context?: Ts119602ContextOptions;
 }
 
 interface ArtifactAssessContentBody {
@@ -62,6 +66,7 @@ interface ArtifactAssessContentBody {
   contentType?: string;
   declared?: Partial<TrustedListAuditResult["declared"]>;
   options?: Partial<ReturnType<typeof defaultArtifactOptions>>;
+  context?: Ts119602ContextOptions;
 }
 
 interface CertificateChainBody {
@@ -98,7 +103,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     if (!isUrl(request.body.url)) {
       throw request.server.httpErrors.badRequest("Invalid URL.", { code: "invalid_url" });
     }
-    const result = await runAuditFromUrl(request.body.url, defaultAuditOptions(request.body.options, options.config.auditDefaults), options.version);
+    const result = await runAuditFromUrl(request.body.url, { ...defaultAuditOptions(request.body.options, options.config.auditDefaults), context: request.body.context }, options.version);
     return {
       report: result.json,
       markdown: result.markdown,
@@ -106,7 +111,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
   });
 
   app.post<{ Body: AuditJsonBody }>("/api/v1/audit/json", { schema: auditJsonSchema }, async (request) => {
-    const result = await runAuditFromJson(request.body.lotl, defaultAuditOptions(request.body.options, options.config.auditDefaults), options.version);
+    const result = await runAuditFromJson(request.body.lotl, { ...defaultAuditOptions(request.body.options, options.config.auditDefaults), context: request.body.context }, options.version);
     return {
       report: result.json,
       markdown: result.markdown,
@@ -141,6 +146,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
       timeoutMs: artifactOptions.timeoutMs,
       strict: artifactOptions.strict,
       includeJsonLoteChecks: artifactOptions.includeJsonLoteChecks,
+      context: request.body.context,
     });
     return { result };
   });
@@ -153,6 +159,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
       contentType: request.body.contentType,
       declared: request.body.declared,
       ...artifactOptions,
+      context: request.body.context,
     });
     return { result };
   });
@@ -180,7 +187,7 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
 }
 
 async function auditLotl(body: AuditLotlBody, routeOptions: RouteOptions, app: FastifyInstance) {
-  const auditOptions = { ...defaultAuditOptions(body.options, routeOptions.config.auditDefaults), rpacChain: body.rpacChain };
+  const auditOptions = { ...defaultAuditOptions(body.options, routeOptions.config.auditDefaults), rpacChain: body.rpacChain, context: body.context };
   if (body.url !== undefined) {
     if (!isUrl(body.url)) throw app.httpErrors.badRequest("Invalid URL.", { code: "invalid_url" });
     return runAuditFromUrl(body.url, auditOptions, routeOptions.version);

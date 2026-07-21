@@ -66,6 +66,8 @@ paths:
                 url: { type: string, format: uri }
                 options:
                   $ref: '#/components/schemas/AuditOptions'
+                context:
+                  $ref: '#/components/schemas/Ts119602ContextOptions'
             examples:
               webuild:
                 value:
@@ -104,6 +106,8 @@ paths:
                     - type: string
                 options:
                   $ref: '#/components/schemas/AuditOptions'
+                context:
+                  $ref: '#/components/schemas/Ts119602ContextOptions'
             examples:
               minimal:
                 value:
@@ -191,6 +195,8 @@ paths:
                   $ref: '#/components/schemas/DeclaredPointer'
                 options:
                   $ref: '#/components/schemas/ArtifactAssessOptions'
+                context:
+                  $ref: '#/components/schemas/Ts119602ContextOptions'
             examples:
               xml:
                 value:
@@ -315,7 +321,7 @@ paths:
         '500': { $ref: '#/components/responses/InternalError' }
   /api/audit/artifact:
     post:
-      summary: Assess raw XML, JSON, or compact JAdES TL/LoTE artifact content without fetching it
+      summary: Assess raw XML, JSON, or compact JAdES TL/LoTE content with optional bounded contextual evidence
       requestBody:
         required: true
         content:
@@ -450,6 +456,7 @@ components:
             - type: string
         content: { type: string }
         options: { $ref: '#/components/schemas/AuditOptions' }
+        context: { $ref: '#/components/schemas/Ts119602ContextOptions' }
         rpacChain:
           oneOf:
             - type: string
@@ -465,6 +472,32 @@ components:
         contentType: { type: string }
         declared: { $ref: '#/components/schemas/DeclaredPointer' }
         options: { $ref: '#/components/schemas/ArtifactAssessOptions' }
+        context: { $ref: '#/components/schemas/Ts119602ContextOptions' }
+    ContextArtifactInput:
+      type: object
+      required: [content]
+      additionalProperties: false
+      properties:
+        content: { type: string, minLength: 1 }
+        source: { type: string }
+        contentType: { type: string }
+    Ts119602ContextOptions:
+      type: object
+      additionalProperties: false
+      description: Explicit prior evidence and opt-in bounded network checks. Dereferencing is disabled unless dereference is true.
+      properties:
+        dereference: { type: boolean, default: false }
+        priorArtifacts:
+          type: array
+          maxItems: 32
+          items: { $ref: '#/components/schemas/ContextArtifactInput' }
+        trustedSignerFingerprintsSha256:
+          type: array
+          maxItems: 64
+          items: { type: string, pattern: '^[A-Fa-f0-9]{64}$' }
+        maxDereferences: { type: integer, minimum: 1, maximum: 32, default: 16 }
+        maxBytesPerArtifact: { type: integer, minimum: 1, maximum: 20971520, default: 5242880 }
+        concurrency: { type: integer, minimum: 1, maximum: 32, default: 4 }
     CertificateChainRequest:
       type: object
       required: [chain]
@@ -858,7 +891,7 @@ components:
       type: object
       required: [source]
       properties:
-        source: { type: string, enum: [pointer, xml_signature, service_digital_identity] }
+        source: { type: string, enum: [pointer, xml_signature, json_signature, service_digital_identity] }
         subject: { type: string }
         issuer: { type: string }
         serialNumber: { type: string }

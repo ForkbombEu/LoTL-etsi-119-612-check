@@ -8,14 +8,34 @@ export interface FetchResult {
   bytes?: Buffer;
 }
 
-export async function fetchArtifact(location: string, timeoutMs: number): Promise<FetchResult> {
+export interface FetchLimits {
+  maxBytes?: number;
+}
+
+export async function fetchArtifact(location: string, timeoutMs: number, limits: FetchLimits = {}): Promise<FetchResult> {
   const started = Date.now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(location, { signal: controller.signal });
-    const arrayBuffer = await response.arrayBuffer();
-    const bytes = Buffer.from(arrayBuffer);
+    const declaredLength = Number(response.headers.get("content-length"));
+    if (limits.maxBytes && Number.isFinite(declaredLength) && declaredLength > limits.maxBytes) {
+      await response.body?.cancel();
+      return {
+        fetch: {
+          attempted: true,
+          ok: false,
+          status: response.status,
+          statusText: response.statusText,
+          finalUrl: response.url,
+          contentType: response.headers.get("content-type") ?? undefined,
+          durationMs: Date.now() - started,
+          bytes: 0,
+          error: `Response Content-Length ${declaredLength} exceeds the ${limits.maxBytes}-byte limit.`,
+        },
+      };
+    }
+    const bytes = await readBoundedBody(response, limits.maxBytes);
     return {
       fetch: {
         attempted: true,
@@ -43,6 +63,28 @@ export async function fetchArtifact(location: string, timeoutMs: number): Promis
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function readBoundedBody(response: Response, maxBytes?: number): Promise<Buffer> {
+  if (!response.body) return Buffer.alloc(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (maxBytes && total > maxBytes) {
+        await reader.cancel();
+        throw new Error(`Response body exceeds the ${maxBytes}-byte limit.`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), total);
 }
 
 export async function saveFetchedArtifact(
