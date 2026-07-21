@@ -55,7 +55,7 @@ describe("assessJsonLote", () => {
       }),
     ]));
     expect(result.extracted?.jsonLote).toMatchObject({
-      assessmentProfile: "ETSI TS 119 602 V1.1.1 JSON binding with offline schema validation (incomplete semantic/profile coverage)",
+      assessmentProfile: "ETSI TS 119 602 V1.1.1 JSON binding with offline schema and local Annex D-I profile validation (contextual coverage incomplete)",
       jsonBindingModel: "official_ts119602",
       schemaValid: true,
       LoTEVersionIdentifier: 1,

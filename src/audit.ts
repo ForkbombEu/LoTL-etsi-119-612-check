@@ -313,12 +313,13 @@ async function assessArtifactBytes(base: TrustedListAuditResult, bytes: Buffer, 
   }
 
   if (detected.artifactKind === "xml_lote") {
-    return mergeResult(base, await assessXmlLoteMetadata(bytes.toString("utf8")));
+    return mergeResult(base, await assessXmlLoteMetadata(bytes.toString("utf8"), new Date(), base.ts119602Classification.profileStatus));
   }
 
   if (detected.artifactKind === "json_lote" || detected.artifactKind === "json_lotl") {
     const assessed = assessJsonLote(detected.parsedJson, options.includeJsonLoteChecks, new Date(), {
       compactJades: detected.compactJades,
+      profileSelectionStatus: base.ts119602Classification.profileStatus,
     });
     return mergeResult(base, assessed);
   }

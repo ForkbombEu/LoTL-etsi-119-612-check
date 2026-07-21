@@ -8,7 +8,7 @@ import type {
 } from "../types.js";
 
 const TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
-const PROFILE_URIS: Readonly<Record<Exclude<Ts119602Profile, "unknown">, string>> = Object.freeze({
+export const TS119602_PROFILE_URIS: Readonly<Record<Exclude<Ts119602Profile, "unknown">, string>> = Object.freeze({
   pid_providers: "http://uri.etsi.org/19602/LoTEType/EUPIDProvidersList",
   wallet_providers: "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
   wrpac_providers: "http://uri.etsi.org/19602/LoTEType/EUWRPACProvidersList",
@@ -37,7 +37,7 @@ export function classifyTs119602Artifact(input: Ts119602ClassificationInput): Ts
 
 export function profileFromLoteType(value: string | undefined): Ts119602Profile {
   if (!value) return "unknown";
-  const match = Object.entries(PROFILE_URIS).find(([, uri]) => value === uri);
+  const match = Object.entries(TS119602_PROFILE_URIS).find(([, uri]) => value === uri);
   return match ? match[0] as Exclude<Ts119602Profile, "unknown"> : "unknown";
 }
 

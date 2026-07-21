@@ -65,6 +65,10 @@ export interface Ts119602MetadataInput {
   loteTag: { present: boolean; value?: unknown };
   version: unknown;
   sequence: unknown;
+  loteType?: unknown;
+  schemeInformationUris?: unknown[];
+  statusDeterminationApproach?: unknown;
+  schemeTypeCommunityRules?: unknown[];
   schemeNames: Array<{ language: unknown; value: unknown }>;
   territory: unknown;
   address: Ts119602AddressObservation;

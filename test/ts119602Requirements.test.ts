@@ -58,8 +58,9 @@ describe("ETSI TS 119 602 requirements ledger", () => {
     expect(pidBinding?.applicability.bindings).toEqual(["scheme_explicit_json"]);
     expect(pubEaaBinding?.applicability.bindings).toEqual(TS119602_BINDINGS);
     expect(findTs119602Requirement("ts119602.profile.pub_eaa_providers.signature")?.implementation).toEqual({
-      status: "partial",
+      status: "implemented",
       existingCheckIds: [
+        "ts119602.profile.pub_eaa_providers.signature",
         "json_lote.signature.jades_baseline_b",
         "json_lote.signature.jades_cryptographic_verification_result",
         "signature.annex_h4.enveloped",
@@ -68,6 +69,10 @@ describe("ETSI TS 119 602 requirements ledger", () => {
         "signature.annex_h4.canonicalization",
       ],
     });
+    expect(findTs119602Requirement("ts119602.profile.wallet_providers.binding")?.implementation.status).toBe("implemented");
+    expect(findTs119602Requirement("ts119602.profile.wallet_providers.scheme_information")?.implementation.status).toBe("partial");
+    expect(findTs119602Requirement("ts119602.profile.wallet_providers.trusted_entity")?.implementation.status).toBe("partial");
+    expect(findTs119602Requirement("ts119602.profile.wallet_providers.service")?.implementation.status).toBe("partial");
   });
 
   it("filters requirements by binding, profile, and contextual evidence scope", () => {
@@ -87,9 +92,9 @@ describe("ETSI TS 119 602 requirements ledger", () => {
   it("reports coverage without implying complete normative validation", () => {
     expect(summarizeTs119602Requirements()).toMatchObject({
       total: 81,
-      implemented: 4,
-      partial: 48,
-      notImplemented: 29,
+      implemented: 17,
+      partial: 60,
+      notImplemented: 4,
       complete: false,
     });
   });

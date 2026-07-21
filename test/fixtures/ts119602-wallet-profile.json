@@ -1,0 +1,99 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEVersionIdentifier": 1,
+      "LoTESequenceNumber": 1,
+      "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
+      "SchemeOperatorName": [
+        { "lang": "en", "value": "JSON-Operator" }
+      ],
+      "SchemeOperatorAddress": {
+        "SchemeOperatorPostalAddress": [
+          { "lang": "en", "StreetAddress": "1 Commission Street", "Country": "EU" }
+        ],
+        "SchemeOperatorElectronicAddress": [
+          { "lang": "en", "uriValue": "mailto:operator@example.test" },
+          { "lang": "en", "uriValue": "https://operator.example.test" }
+        ]
+      },
+      "SchemeName": [
+        { "lang": "en", "value": "EU:Wallet providers" }
+      ],
+      "SchemeInformationURI": [
+        { "lang": "en", "uriValue": "https://operator.example.test/wallet-providers" },
+        { "lang": "en", "uriValue": "https://operator.example.test/wallet-providers/archive" }
+      ],
+      "StatusDeterminationApproach": "http://uri.etsi.org/19602/WalletProvidersList/StatusDetn/EU",
+      "SchemeTypeCommunityRules": [
+        { "lang": "en", "uriValue": "http://uri.etsi.org/19602/WalletProvidersList/schemerules/EU" }
+      ],
+      "SchemeTerritory": "EU",
+      "PolicyOrLegalNotice": [
+        { "LoTEPolicy": { "lang": "en", "uriValue": "https://operator.example.test/policy" } }
+      ],
+      "PointersToOtherLoTE": [
+        {
+          "LoTELocation": "https://operator.example.test/wallet-providers/current.json",
+          "ServiceDigitalIdentities": [
+            { "OtherIds": ["urn:example:self-pointer"] }
+          ],
+          "LoTEQualifiers": [
+            {
+              "LoTEType": "http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList",
+              "SchemeOperatorName": [
+                { "lang": "en", "value": "JSON-Operator" }
+              ],
+              "MimeType": "application/jose"
+            }
+          ]
+        }
+      ],
+      "ListIssueDateTime": "2026-01-31T00:00:00Z",
+      "NextUpdate": "2026-07-31T00:00:00Z"
+    },
+    "TrustedEntitiesList": [
+      {
+        "TrustedEntityInformation": {
+          "TEName": [
+            { "lang": "en", "value": "JSON-Operator" }
+          ],
+          "TETradeName": [
+            { "lang": "en", "value": "VATDE-123456789" }
+          ],
+          "TEAddress": {
+            "TEPostalAddress": [
+              { "lang": "en", "StreetAddress": "2 Wallet Street", "Country": "DE" }
+            ],
+            "TEElectronicAddress": [
+              { "lang": "en", "uriValue": "mailto:wallet@example.test" },
+              { "lang": "en", "uriValue": "tel:+4930123456" },
+              { "lang": "en", "uriValue": "https://wallet.example.test" }
+            ]
+          },
+          "TEInformationURI": [
+            { "lang": "en", "uriValue": "https://wallet.example.test/policy" },
+            { "lang": "en", "uriValue": "http://uri.etsi.org/19602/ListOfTrustedEntities/WalletProvider/DE" }
+          ]
+        },
+        "TrustedEntityServices": [
+          {
+            "ServiceInformation": {
+              "ServiceTypeIdentifier": "http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance",
+              "ServiceName": [
+                { "lang": "en", "value": "Example Wallet" }
+              ],
+              "ServiceDigitalIdentity": {
+                "X509Certificates": [
+                  { "val": "__JADES_SIGNER_CERTIFICATE__" }
+                ]
+              },
+              "ServiceInformationExtensions": [
+                { "ServiceUniqueIdentifier": "urn:wallet:example", "Critical": false }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -17,6 +17,7 @@ import {
   type Ts119602MetadataInput,
 } from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
+import { buildTs119602ProfileFindings } from "../standards/ts119602Profiles.js";
 import { parseTs119602UtcDateTime, validateTs119602Uri } from "../standards/ts119602Syntax.js";
 import {
   buildTs119602SyntaxFindings,
@@ -32,6 +33,7 @@ type JsonBindingModel = "official_ts119602" | "legacy_we_build_tsl_like" | "unre
 
 export interface JsonLoteAssessmentOptions extends Omit<JadesAssessmentOptions, "assessmentDate" | "schemeTerritory" | "schemeOperatorNames"> {
   compactJades?: string;
+  profileSelectionStatus?: NonNullable<TrustedListAuditResult["ts119602Classification"]>["profileStatus"];
 }
 
 export function assessJsonLote(
@@ -58,12 +60,14 @@ export function assessJsonLote(
   const nextUpdateValue = getPath(info, ["NextUpdate"]);
   const nextUpdate = firstString(nextUpdateValue);
   const schemaValidation = validateTs119602JsonSchema(parsed);
-  const entityAssessment = buildTs119602EntityFindings(collectJsonEntitiesInput(
+  const entityInput = collectJsonEntitiesInput(
     trustedEntities,
     isRecord(loteValue) && Object.hasOwn(loteValue, "TrustedEntitiesList"),
     info,
     assessmentDate,
-  ));
+  );
+  const entityAssessment = buildTs119602EntityFindings(entityInput);
+  const metadataInput = collectJsonMetadataInput(metadataInfo, info !== undefined, assessmentDate, loteValue);
   const jadesAssessment = assessCompactJades(options.compactJades, parsed, {
     assessmentDate,
     schemeTerritory: firstString(getPath(info, ["SchemeTerritory"])),
@@ -91,15 +95,22 @@ export function assessJsonLote(
     check("json_lote.pointers.count", "pass", "info", "PointersToOtherLoTE entries counted.", pointers.length),
     pointerIdentityCheck(pointers),
     ...jadesAssessment.checks,
-    ...buildTs119602MetadataFindings(collectJsonMetadataInput(metadataInfo, info !== undefined, assessmentDate, loteValue)),
+    ...buildTs119602MetadataFindings(metadataInput),
     ...entityAssessment.checks,
+    ...buildTs119602ProfileFindings({
+      binding: model === "official_ts119602" ? "scheme_explicit_json" : "unknown",
+      metadata: metadataInput,
+      entities: entityInput,
+      signatureChecks: jadesAssessment.checks,
+      profileSelectionStatus: options.profileSelectionStatus,
+    }),
     ...buildTs119602SyntaxFindings(collectJsonSyntaxInputs(parsed)),
     ...dateChecks(issueDateTime, nextUpdateValue, assessmentDate),
     check(
       "ts119602.coverage.complete",
       "not_checked",
       "warning",
-      "Complete ETSI TS 119 602 V1.1.1 semantic, signature, and Annex D-I profile coverage is not implemented.",
+      "Complete ETSI TS 119 602 V1.1.1 contextual trust, prior-instance, dereferencing, and alternative XML binding coverage is not implemented.",
       summarizeTs119602Requirements(),
     ),
   );
@@ -116,7 +127,7 @@ export function assessJsonLote(
       distributionPoints: stringValues(getPath(info, ["DistributionPoints"])),
       certificates: [...jadesAssessment.certificates, ...entityAssessment.certificates],
       jsonLote: {
-        assessmentProfile: "ETSI TS 119 602 V1.1.1 JSON binding with offline schema validation (incomplete semantic/profile coverage)",
+        assessmentProfile: "ETSI TS 119 602 V1.1.1 JSON binding with offline schema and local Annex D-I profile validation (contextual coverage incomplete)",
         jsonBindingModel: model,
         schemaValid: schemaValidation.valid,
         schemaSha256: schemaValidation.schema.sha256,
@@ -385,6 +396,10 @@ function collectJsonMetadataInput(
     loteTag: { present: false },
     version: info.LoTEVersionIdentifier,
     sequence: info.LoTESequenceNumber,
+    loteType: info.LoTEType,
+    schemeInformationUris: jsonUriValues(info.SchemeInformationURI),
+    statusDeterminationApproach: info.StatusDeterminationApproach,
+    schemeTypeCommunityRules: jsonUriValues(info.SchemeTypeCommunityRules),
     schemeNames: asArray(info.SchemeName).map((entry) => ({
       language: getPath(entry, ["lang"]),
       value: getPath(entry, ["value"]),

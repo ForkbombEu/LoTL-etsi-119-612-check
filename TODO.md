@@ -14,29 +14,27 @@ yet a complete ETSI TS 119 602 conformance checker and must not produce a
 
 The implementation currently covers artifact recognition, independent
 binding/profile classification, official offline JSON Schema validation,
-some top-level semantic evidence, basic dates, entity/service counting, X.509
-parsing, and generic XMLDSig cryptographic verification. The missing work is
+local clauses 6.1-6.8 evidence, JAdES/XAdES signatures, and the locally
+decidable Annex D-I tables. The missing work is
 concentrated in the layers that determine normative conformance:
 
 1. official XML Schema validation and TS 119 612 alternative-binding mapping;
-2. clauses 6.1 through 6.8 semantic validation;
-3. complete profile dispatch around the implemented JAdES/XAdES Baseline B validation;
-4. the six normative EU profiles in Annexes D through I;
-5. cross-document, historical, and dereferencing checks.
+2. remaining contextual clauses 6.1 through 6.8 evidence;
+3. cross-document, historical, trust-path, and dereferencing checks.
 
 An exact percentage would be misleading until every normative requirement is
 entered in a requirements ledger. As a non-normative engineering estimate:
 
 | Area | Current maturity | Approximate distance |
 | --- | --- | --- |
-| Scheme-explicit TS 119 602 XML evidence | Early partial | The root and some mandatory fields are covered, but most syntax, semantics, profile, and XAdES rules are missing. |
-| Official TS 119 602 JSON binding | Structural, semantic, and signature validation | The official model is validated offline and compact JAdES is verified; Annex D-I dispatch and contextual checks remain incomplete. |
+| Scheme-explicit TS 119 602 XML evidence | Local semantic/profile validation | Core components, Pub-EAA local tables, and XAdES rules are checked; the official XML schema and contextual evidence remain. |
+| Official TS 119 602 JSON binding | Local structural, semantic, signature, and profile validation | The official model, compact JAdES, and applicable Annex D-I local tables are checked; contextual evidence remains incomplete. |
 | TS 119 612 alternative XML binding | Classified, mapping missing | Annex A.2.2 applicability is guarded, but Table A.1 component mapping is not implemented. |
-| Annex D-I profile conformance | Classification only | List-type names are recognized, but the normative profile tables are not validated. |
+| Annex D-I profile conformance | Local tables implemented | Exact dispatch and locally decidable scheme/entity/service/signature/history rules are checked; cross-document and authoritative-record claims remain contextual. |
 | Complete TS 119 602 verdict | Not implemented | No artifact can currently receive an evidence-backed complete TS 119 602 conformance verdict. |
 
-The JSON structural, local semantic, and compact-signature layers are now
-implemented, but profile, configured trust, and contextual layers remain. This
+The JSON structural, local semantic, compact-signature, and local profile
+layers are now implemented, but configured trust and contextual layers remain. This
 is a planning observation, not a conformance score.
 
 ## Normative source set
@@ -233,11 +231,12 @@ Annex D-I tables restrict its allowed values but do not uniformly say that it
 shall be present. Checks must follow the exact selected-profile wording
 rather than applying one presence rule to every LoTE.
 
-### P0.7 Correct the six-month calculation
+### P0.7 Correct the six-month calculation — complete
 
-The implementation applies `<= 183` rounded days to every XML/JSON LoTE.
 The base data model only says profiles should specify a maximum; Annexes D-I
-specify six calendar months. Six months is not always 183 days.
+specify six calendar months. Six months is not always 183 days. TS602-11 now
+applies a clamped UTC calendar-month deadline only after exact profile dispatch;
+the base metadata finding remains profile-neutral.
 
 Required change:
 
@@ -256,28 +255,28 @@ Required change:
 | 6.1.3 date-time | Exact ISO 8601 UTC form with seconds and `Z`, no decimal fraction | Partial | JavaScript `Date` accepts offsets and fractions that the standard forbids; add lexical validation. |
 | 6.1.4 and Annex B language | At least English `en`; language tags, casing, transliteration, Unicode restrictions | Missing | Validate multilingual strings/pointers and prohibited characters; dereferenced content is a separate optional network check. |
 | 6.1.5 country codes | Upper-case ISO 3166-1 plus defined exceptions/extensions | Missing | Add a pinned country-code policy and EU/UK/EL exceptions. |
-| 6.2 LoTE tag | Binding-specific LoTE tag representation | Partial | XML validates a local absolute-URI `LOTETag`; JSON reports the field as not applicable. Registered tag/profile values remain Annex C work. |
-| 6.3/Table 1 | Correct implicit vs explicit scheme presence matrix | Partial | Local JSON/XML mode inference and mandatory/prohibited-field checks are implemented. Alternative-binding mapping and profile routing remain. |
-| 6.3.1 version | Integer; profile/binding-specific value | Partial | Local integer validation is implemented; enforce Annex D-I value `1` during profile dispatch. |
+| 6.2 LoTE tag | Binding-specific LoTE tag representation | Partial | XML validates a local absolute-URI `LOTETag`; JSON reports the field as not applicable. Registered `LOTETag` values remain future Annex C work. |
+| 6.3/Table 1 | Correct implicit vs explicit scheme presence matrix | Partial | Local JSON/XML mode inference, mandatory/prohibited fields, and profile routing are implemented. Alternative-binding mapping remains. |
+| 6.3.1 version | Integer; profile/binding-specific value | Local implementation | Integer form and Annex D-I value `1` are checked. |
 | 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Partial | Local positive-integer validation is implemented; compare with prior list instances when supplied or fetched. |
-| 6.3.3 LoTE type | URI and profile discriminator | Classification only | Require exact registered values and reject binding/profile mismatches. |
-| 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Partial | Local address, `CC:name`, email/web, and policy-choice checks are implemented; Annex B and profile-specific semantics remain. |
+| 6.3.3 LoTE type | URI and profile discriminator | Local implementation | Exact registered values select Annex D-I checks and binding mismatches fail. |
+| 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Partial | Local address, `CC:name`, email/web, policy choice, and registered profile values are checked; dereferenced policy semantics remain. |
 | 6.3.12 history period | Integer with semantics including `65535` | Partial | Local value, retention, service-status, and history-presence consequences are implemented; contextual retention-window completeness remains. |
 | 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Partial | Local shape and qualifier checks are implemented; verify that at least one pointer identity authenticates the fetched target. |
-| 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Partial | Local lexical, ordering, expiry, and closed-list checks are implemented; enforce calendar-month limits only after profile dispatch. |
+| 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Local/profile implementation | Local lexical, ordering, expiry, closed-list, and six-calendar-month profile limits are checked. |
 | 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Partial | Local cardinality and URI checks are implemented; fetch/hash all locations only under bounded contextual checks. |
-| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | Versioned scheme, entity, and service registries reject unknown critical extensions; profile-specific registrations remain. |
+| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | Versioned scheme, entity, and service registries reject unknown critical extensions; Wallet `ServiceUniqueIdentifier` is checked, while additional standardized registrations remain. |
 | 6.4 entity list | Absent only when no entity is/was approved; otherwise one-or-more entities | Partial | Present containers and local cardinalities are validated; absence is inconclusive without external approval evidence. |
 | 6.4.1-6.5 entity information | Information, services, name, address, and information URI are mandatory | Partial | JSON/XML mandatory structure, contacts, multilingual names, information URIs, and known extension payloads are checked; official-record claims remain contextual. |
-| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Local nesting, identifiers, statuses, supply points, definition URIs, and extensions are checked; exact profile semantics remain. |
-| 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, and certificate parsing are checked; key/SKI equivalence and profile PKI requirements remain. |
-| 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Partial | History-period coupling, URI/date syntax, and list-issue ordering are implemented; registered profile status sets remain. |
-| 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, retained-history coupling, identity presence, and descending status time are checked; profile-specific retained-key rules remain. |
+| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Local nesting, identifiers, registered service types/statuses, supply points, definition URIs, and extensions are checked; dereferenced semantics remain. |
+| 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, profile certificate cardinality, and Pub-EAA key/subject rules are checked; general key/SKI equivalence and certificate-purpose policy remain. |
+| 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Local/profile implementation | Profile absence rules and Pub-EAA notified/withdrawn values and start-time ordering are checked. |
+| 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, ordering, and Pub-EAA SKI/no-certificate history rules are checked; retention completeness remains contextual. |
 | 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Local XAdES and JAdES implemented | Both bindings separate structure/payload, cryptography, certificate validity, signer metadata, and explicit trust; contextual chain trust remains. |
 | Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
 | Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
-| Annex C URIs | Exact registered profile URIs | Classification only | Add a versioned registry and exact comparisons with ambiguity handling. |
-| Annexes D-I | Six complete EU profiles | Missing | Implement profile dispatch and every additional table requirement. |
+| Annex C URIs | Exact registered profile URIs | Implemented locally | Exact profile comparisons preserve the published WRPRC typo under the interpretation registry. |
+| Annexes D-I | Six EU profiles | Local tables implemented | Binding, scheme, entity, service/history, and signature families are reported separately; contextual requirements remain for TS602-12. |
 
 ## Schema validation backlog
 
@@ -364,10 +363,11 @@ successfully authenticate the pointed-to LoTE before use.
 - [ ] Do not treat a target's self-embedded signing certificate as trusted
   merely because its signature verifies.
 
-## Annex D-I profile backlog
+## Annex D-I profile validation
 
-Every profile needs an exact dispatcher based on `LoTEType`. The generic
-WE BUILD role classifier is not a profile validator.
+Every profile is dispatched by exact embedded `LoTEType`; the generic WE BUILD
+role classifier is not used as profile evidence. The checks below implement
+locally decidable rules and expose contextual gaps rather than inferring them.
 
 Common Annex D-I requirements include:
 
@@ -383,12 +383,12 @@ Common Annex D-I requirements include:
 
 | Annex/profile | Allowed binding | Important distinguishing rules | Current support |
 | --- | --- | --- | --- |
-| D — PID providers | Scheme-explicit JSON | No history period, self-pointer, PID issuance/revocation service types, no service status/start time, JAdES B | Type classification plus JAdES evidence |
-| E — Wallet providers | Scheme-explicit JSON | No history period, self-pointer, wallet issuance/revocation types, service name is wallet solution, mandatory `ServiceUniqueIdentifier`, JAdES B | Type classification plus JAdES evidence |
-| F — WRPAC providers | Scheme-explicit JSON | No history period, self-pointer, WRPAC issuance/revocation types, certificate-purpose rules, JAdES B | Type classification plus JAdES evidence |
-| G — WRPRC providers | Scheme-explicit JSON | No history period, self-pointer, WRPRC issuance/revocation types, certificate-purpose rules, JAdES B | Type classification plus JAdES evidence |
-| H — Pub-EAA providers | Scheme-explicit JSON or XML | History period `65535`, no pointers, notified/withdrawn statuses, history uses SKI and forbids history certificates, JAdES B or tightly profiled XAdES B | Type classification plus JAdES/XAdES evidence |
-| I — Registrars/registers | Scheme-explicit JSON | No history period, self-pointer, only Register service type, no status/start time, mandatory machine-processable service supply point, JAdES B | Type classification plus JAdES evidence |
+| D — PID providers | Scheme-explicit JSON | No history period, self-pointer, PID issuance/revocation service types, no service status/start time, JAdES B | Local tables implemented |
+| E — Wallet providers | Scheme-explicit JSON | No history period, self-pointer, wallet issuance/revocation types, service name is wallet solution, mandatory `ServiceUniqueIdentifier`, JAdES B | Local tables implemented |
+| F — WRPAC providers | Scheme-explicit JSON | No history period, self-pointer, WRPAC issuance/revocation types, certificate-purpose rules, JAdES B | Local tables implemented; certificate purpose contextual |
+| G — WRPRC providers | Scheme-explicit JSON | No history period, self-pointer, WRPRC issuance/revocation types, certificate-purpose rules, JAdES B | Local tables implemented; published URI typo preserved |
+| H — Pub-EAA providers | Scheme-explicit JSON or XML | History period `65535`, no pointers, notified/withdrawn statuses, history uses SKI and forbids history certificates, JAdES B or tightly profiled XAdES B | Local JSON/XML tables implemented |
+| I — Registrars/registers | Scheme-explicit JSON | No history period, self-pointer, only Register service type, no status/start time, mandatory machine-processable service supply point, JAdES B | Local tables implemented; supply-point authentication contextual |
 
 `EUgeneric`/QEAA is not one of the TS 119 602 Annex D-I LoTE profiles. It
 belongs in the separate TS 119 612/WE BUILD assessment path and must not be
@@ -404,20 +404,20 @@ used as evidence that a TS 119 602 profile passed.
 - [ ] Validate legal/natural-person registration identifier semantics where
   Annex D-H refers to ETSI EN 319 412-1.
 - [ ] Validate associated-body requirements for PID and wallet profiles.
-- [ ] Validate profile-specific country role URIs.
-- [ ] Validate email, website, and mandatory telephone contact requirements.
-- [ ] Validate service-type URIs against the selected profile only.
+- [x] Validate profile-specific country role URIs.
+- [x] Validate email, website, and mandatory telephone contact requirements.
+- [x] Validate service-type URIs against the selected profile only.
 - [ ] Validate `ServiceName` semantics where mechanically possible.
-- [ ] Require profile-appropriate X.509 certificates and reject an empty
+- [x] Require profile-appropriate X.509 certificates and reject an empty
   `X509Certificates` array.
-- [ ] Compare certificate `organizationName` with `TEName` where required.
-- [ ] For Pub-EAA, ensure multiple certificates represent the same public key
+- [x] Compare certificate `organizationName` with `TEName` where required.
+- [x] For Pub-EAA, ensure multiple certificates represent the same public key
   and have identical subject names.
 - [ ] Validate `PublicKeyValue` and `X509SKI` against any accompanying
   certificate.
-- [ ] Validate service statuses and transitions.
-- [ ] Validate service history in descending status-time order.
-- [ ] For Pub-EAA history, require at least one SKI and forbid
+- [x] Validate selected-profile service status sets and local start-time rules.
+- [x] Validate service history ordering and Pub-EAA retained identity rules.
+- [x] For Pub-EAA history, require at least one SKI and forbid
   `X509Certificate`.
 - [x] Reject unknown critical scheme extensions with a versioned registry.
 - [x] Reject unknown critical TE and service extensions with versioned registries.
@@ -502,8 +502,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Complete |
 | TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Complete |
 | TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Complete |
-| TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Next |
-| TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Pending |
+| TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Complete |
+| TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Next |
 
 TS602-01 establishes result isolation only; it does not claim that any TS
 119 602 binding or profile is completely validated.
@@ -555,12 +555,12 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 ### Phase 5 — Annex D-I profiles
 
-- [ ] Implement exact profile routing by LoTE type and binding.
-- [ ] Implement every scheme-information table.
-- [ ] Implement every entity-information table.
-- [ ] Implement every service-information table.
-- [ ] Implement each profile's signature and history rules.
-- [ ] Add one positive and focused negative fixture per requirement family.
+- [x] Implement exact profile routing by LoTE type and binding.
+- [x] Implement every locally decidable scheme-information table rule.
+- [x] Implement every locally decidable entity-information table rule.
+- [x] Implement every locally decidable service-information table rule.
+- [x] Implement each profile's signature and local history rules.
+- [x] Add positive and focused negative fixture coverage per requirement family.
 
 ### Phase 6 — Contextual validation and product surfaces
 

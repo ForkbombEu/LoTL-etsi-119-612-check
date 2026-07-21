@@ -16,6 +16,7 @@ import {
   type Ts119602MetadataInput,
 } from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
+import { buildTs119602ProfileFindings } from "../standards/ts119602Profiles.js";
 import { parseTs119602UtcDateTime, validateTs119602Uri } from "../standards/ts119602Syntax.js";
 import {
   buildTs119602SyntaxFindings,
@@ -37,7 +38,11 @@ const PUB_EAA_LOTE_TYPE = "http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersL
 type XmlLoteBinding = "etsi_ts_119_602_v1_1_1" | "we_build_compatibility" | "unsupported";
 
 /** Assess the implemented ETSI TS 119 602 XML LoTE data-model evidence. */
-export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Date()): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
+export async function assessXmlLoteMetadata(
+  xml: string,
+  assessmentDate = new Date(),
+  profileSelectionStatus?: NonNullable<TrustedListAuditResult["ts119602Classification"]>["profileStatus"],
+): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
   const parsed = parseXml(xml);
   if (!parsed.document || parsed.errors.some((error) => error.startsWith("fatal"))) {
     return { detected: { format: "xml", artifactKind: "xml_lote" }, ts119602: buildStandardAssessment([check("parse.xml", "parse", "fail", "critical", "XML LoTE parse failed.", parsed.errors)]) };
@@ -90,12 +95,19 @@ export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Da
   const services = assessTrustedEntities(root);
   checks.push(...services.checks);
   checks.push(...entityAssessment.checks);
+  checks.push(...buildTs119602ProfileFindings({
+    binding: binding === "etsi_ts_119_602_v1_1_1" ? "scheme_explicit_xml" : "unknown",
+    metadata: metadataInput,
+    entities: entityInput,
+    signatureChecks: signature.checks,
+    profileSelectionStatus,
+  }));
   checks.push(check(
     "ts119602.coverage.complete",
     "profile",
     "not_checked",
     "warning",
-    "Complete ETSI TS 119 602 V1.1.1 schema, semantic, signature, and Annex D-I profile coverage is not implemented.",
+    "Complete ETSI TS 119 602 V1.1.1 XML schema, alternative-binding mapping, and contextual trust/dereferencing coverage is not implemented.",
     summarizeTs119602Requirements(),
   ));
 
@@ -253,6 +265,10 @@ function collectXmlMetadataInput(
     loteTag: { present: root.hasAttribute("LOTETag"), value: root.getAttribute("LOTETag") || undefined },
     version: integerElementValue(context, "LoTEVersionIdentifier"),
     sequence: integerElementValue(context, "LoTESequenceNumber"),
+    loteType: text(context, "./*[local-name()='LoTEType']"),
+    schemeInformationUris: nodes(context, "./*[local-name()='SchemeInformationURI']/*[local-name()='URI']").map(nodeText),
+    statusDeterminationApproach: text(context, "./*[local-name()='StatusDeterminationApproach']"),
+    schemeTypeCommunityRules: nodes(context, "./*[local-name()='SchemeTypeCommunityRules']/*[local-name()='URI']").map(nodeText),
     schemeNames: nodes(context, "./*[local-name()='SchemeName']/*[local-name()='Name']").map((node) => ({
       language: (node as Element).getAttributeNS("http://www.w3.org/XML/1998/namespace", "lang") || undefined,
       value: node.textContent?.trim(),

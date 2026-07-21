@@ -127,7 +127,7 @@ const CORE_REQUIREMENTS = [
   requirement("ts119602.binding.xml_schema", "Official scheme-explicit XML binding", "Validate the pinned official XML schema offline and retain semantic checks where document text prevails.", "schema", "shall", "critical", "local", [citation("Annex A.2.1", "ETSI TS 119 602 schema")], "partial", ["xml_lote.structure.xml_binding"], ["scheme_explicit_xml"]),
   requirement("ts119602.binding.ts119612_mapping", "TS 119 612 alternative XML binding", "Validate the applicable TS 119 612 schema and map components through Table A.1 before applying TS 119 602 profile rules.", "binding", "shall", "critical", "local", [citation("Annex A.2.2", "ETSI TS 119 612 schema"), citation("Table A.1", "Mapping of TS 119 612 fields to TS 119 602 components")], "not_implemented", [], ["ts119612_alternative_xml"]),
   requirement("ts119602.language.annex_b", "Normative multilingual implementation", "Apply Annex B character, encoding, pointer, and parser interoperability requirements.", "syntax", "mixed", "error", "mixed", [citation("Annex B")], "partial", ["ts119602.language.annex_b"]),
-  requirement("ts119602.uri_registry.annex_c", "Registered EU profile URIs", "Compare registered LoTE type, status, rules, service type, status, and related URIs exactly, preserving published ambiguities.", "semantic", "shall", "error", "local", [citation("Annex C")]),
+  requirement("ts119602.uri_registry.annex_c", "Registered EU profile URIs", "Compare registered LoTE type, status, rules, service type, status, and related URIs exactly, preserving published ambiguities.", "semantic", "shall", "error", "local", [citation("Annex C")], "implemented", ["ts119602.profile.dispatch", "ts119602.profile.pid_providers.scheme_information", "ts119602.profile.wallet_providers.scheme_information", "ts119602.profile.wrpac_providers.scheme_information", "ts119602.profile.wrprc_providers.scheme_information", "ts119602.profile.pub_eaa_providers.scheme_information", "ts119602.profile.registrars_and_registers.scheme_information"]),
 ] as const satisfies readonly Ts119602Requirement[];
 
 interface ProfileDefinition {
@@ -196,10 +196,10 @@ function profileRequirements(definition: ProfileDefinition): Ts119602Requirement
   const prefix = `ts119602.profile.${definition.profile}` as const;
   const applicability = profileApplicability(definition);
   return [
-    profileRequirement(`${prefix}.binding`, `${definition.label} binding`, `Validate the binding permitted by the ${definition.label} profile.`, "binding", "critical", applicability, [citation(`${definition.annex}.1`, "General requirements")]),
-    profileRequirement(`${prefix}.scheme_information`, `${definition.label} scheme information`, `Validate every additional scheme-information rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.2`), citation(`Table ${definition.annex}.1`, `${definition.label} scheme information`)]),
-    profileRequirement(`${prefix}.trusted_entity`, `${definition.label} trusted entity`, `Validate every additional trusted-entity information rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.3`), citation(`Table ${definition.annex}.2`, `${definition.label} information`)]),
-    profileRequirement(`${prefix}.service`, `${definition.label} service`, `Validate every additional service and history rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.3`), citation(`Table ${definition.annex}.3`, `${definition.label} service information`)]),
+    profileRequirement(`${prefix}.binding`, `${definition.label} binding`, `Validate the binding permitted by the ${definition.label} profile.`, "binding", "critical", applicability, [citation(`${definition.annex}.1`, "General requirements")], "implemented", [`${prefix}.binding`]),
+    profileRequirement(`${prefix}.scheme_information`, `${definition.label} scheme information`, `Validate every additional scheme-information rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.2`), citation(`Table ${definition.annex}.1`, `${definition.label} scheme information`)], "partial", [`${prefix}.scheme_information`]),
+    profileRequirement(`${prefix}.trusted_entity`, `${definition.label} trusted entity`, `Validate every additional trusted-entity information rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.3`), citation(`Table ${definition.annex}.2`, `${definition.label} information`)], "partial", [`${prefix}.trusted_entity`]),
+    profileRequirement(`${prefix}.service`, `${definition.label} service`, `Validate every additional service and history rule for the ${definition.label} profile.`, "profile", "error", applicability, [citation(`${definition.annex}.3`), citation(`Table ${definition.annex}.3`, `${definition.label} service information`)], "partial", [`${prefix}.service`]),
     profileRequirement(
       `${prefix}.signature`,
       `${definition.label} signature`,
@@ -208,10 +208,10 @@ function profileRequirements(definition: ProfileDefinition): Ts119602Requirement
       "critical",
       applicability,
       [citation(`${definition.annex}.4`, "Signature")],
-      "partial",
+      "implemented",
       definition.profile === "pub_eaa_providers"
-        ? ["json_lote.signature.jades_baseline_b", "json_lote.signature.jades_cryptographic_verification_result", "signature.annex_h4.enveloped", "signature.annex_h4.document_reference", "signature.annex_h4.transforms", "signature.annex_h4.canonicalization"]
-        : ["json_lote.signature.jades_baseline_b", "json_lote.signature.jades_cryptographic_verification_result"],
+        ? [`${prefix}.signature`, "json_lote.signature.jades_baseline_b", "json_lote.signature.jades_cryptographic_verification_result", "signature.annex_h4.enveloped", "signature.annex_h4.document_reference", "signature.annex_h4.transforms", "signature.annex_h4.canonicalization"]
+        : [`${prefix}.signature`, "json_lote.signature.jades_baseline_b", "json_lote.signature.jades_cryptographic_verification_result"],
     ),
   ];
 }
