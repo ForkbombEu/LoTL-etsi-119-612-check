@@ -1,5 +1,12 @@
 import { tryCertificateFromBase64 } from "../certs.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
+import {
+  buildTs119602MetadataFindings,
+  inferTs119602SchemeMode,
+  TS119602_SCHEME_FIELDS,
+  ts119602Table1Presence,
+  type Ts119602MetadataInput,
+} from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
 import { parseTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import {
@@ -10,7 +17,7 @@ import {
 import type { CertificateSummary, CheckResult, TrustedListAuditResult } from "../types.js";
 import { assessSignature } from "./signature.js";
 import { parseXml } from "./parse.js";
-import { has, nodes, text, texts } from "./xpath.js";
+import { firstNode, has, nodes, text, texts } from "./xpath.js";
 
 const ETSI_TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
 const INFO = `./*[local-name()='ListAndSchemeInformation' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`;
@@ -21,7 +28,7 @@ const TRUSTED_ENTITIES =
 type XmlLoteBinding = "etsi_ts_119_602_v1_1_1" | "we_build_compatibility" | "unsupported";
 
 /** Assess the implemented ETSI TS 119 602 XML LoTE data-model evidence. */
-export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
+export async function assessXmlLoteMetadata(xml: string, assessmentDate = new Date()): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
   const parsed = parseXml(xml);
   if (!parsed.document || parsed.errors.some((error) => error.startsWith("fatal"))) {
     return { detected: { format: "xml", artifactKind: "xml_lote" }, ts119602: buildStandardAssessment([check("parse.xml", "parse", "fail", "critical", "XML LoTE parse failed.", parsed.errors)]) };
@@ -30,22 +37,39 @@ export async function assessXmlLoteMetadata(xml: string): Promise<Pick<TrustedLi
   const document = parsed.document;
   const root = document.documentElement;
   const binding = xmlLoteBinding(root);
-  const issue = text(root, `${INFO}/*[local-name()='ListIssueDateTime']`);
-  const next = text(root, `${INFO}/*[local-name()='NextUpdate']/*[local-name()='dateTime'] | ${INFO}/*[local-name()='NextUpdate']`);
+  const infoNode = firstNode(root, INFO);
+  const metadataContext = infoNode ?? root;
+  const issue = text(metadataContext, "./*[local-name()='ListIssueDateTime']");
+  const nextNode = firstNode(metadataContext, "./*[local-name()='NextUpdate']");
+  const next = nextNode
+    ? text(nextNode, "./*[local-name()='dateTime']") ?? (nextNode.textContent?.trim() || undefined)
+    : undefined;
+  const metadataInput = collectXmlMetadataInput(root, metadataContext, Boolean(infoNode), assessmentDate);
   const checks: CheckResult[] = [
     check("parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML LoTE parsed successfully." : "XML LoTE parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined),
     xmlBindingCheck(root, binding),
     check("xml_lote.structure.list_and_scheme_information", "structure", has(root, INFO) ? "pass" : "fail", has(root, INFO) ? "info" : "critical", "ListAndSchemeInformation exists."),
   ];
+  const mode = inferTs119602SchemeMode(metadataInput.fields);
   for (const [id, name] of Object.entries({
     version_identifier: "LoTEVersionIdentifier", sequence_number: "LoTESequenceNumber", type: "LoTEType", scheme_operator_name: "SchemeOperatorName", scheme_operator_address: "SchemeOperatorAddress", scheme_name: "SchemeName", scheme_information_uri: "SchemeInformationURI", status_determination_approach: "StatusDeterminationApproach", scheme_type_community_rules: "SchemeTypeCommunityRules", scheme_territory: "SchemeTerritory", policy_or_legal_notice: "PolicyOrLegalNotice", list_issue_date_time: "ListIssueDateTime", next_update: "NextUpdate",
   })) {
-    exists(checks, root, `xml_lote.structure.${id}`, `${INFO}/*[local-name()='${name}']`, `${name} exists.`);
+    const present = metadataInput.fields[name as keyof typeof metadataInput.fields].present;
+    const expected = ts119602Table1Presence(mode, name as keyof typeof metadataInput.fields);
+    checks.push(check(
+      `xml_lote.structure.${id}`,
+      "structure",
+      present ? "pass" : expected === "mandatory" ? "fail" : "not_applicable",
+      !present && expected === "mandatory" ? "error" : "info",
+      present ? `${name} exists.` : `${name} is ${expected} and absent in ${mode} scheme-information mode.`,
+      { mode, expected },
+    ));
   }
   const signature = await assessSignature(xml, document);
   checks.push(...signature.checks);
+  checks.push(...buildTs119602MetadataFindings(metadataInput));
   checks.push(...buildTs119602SyntaxFindings(collectXmlSyntaxInputs(root)));
-  checks.push(...dateChecks(issue, next));
+  checks.push(...dateChecks(issue, nextNode !== undefined, next, assessmentDate));
   const services = assessTrustedEntities(root);
   checks.push(...services.checks);
   checks.push(check(
@@ -176,12 +200,123 @@ function xmlBindingCheck(root: Element, binding: XmlLoteBinding): CheckResult {
   );
 }
 
-function dateChecks(issueValue: string | undefined, nextValue: string | undefined): CheckResult[] {
-  const issue = parseTs119602UtcDateTime(issueValue); const next = parseTs119602UtcDateTime(nextValue);
-  const checks = [check("xml_lote.dates.issue_valid", "dates", issue ? "pass" : "fail", issue ? "info" : "error", "ListIssueDateTime uses the strict TS 119 602 UTC lexical form.", issueValue), check("xml_lote.dates.next_update_valid", "dates", next ? "pass" : "fail", next ? "info" : "error", "NextUpdate uses the strict TS 119 602 UTC lexical form.", nextValue)];
-  checks.push(check("xml_lote.dates.next_after_issue", "dates", issue && next && next > issue ? "pass" : "fail", issue && next && next > issue ? "info" : "error", "NextUpdate is after ListIssueDateTime.", issue && next ? { issue: issue.toISOString(), nextUpdate: next.toISOString() } : undefined));
-  if (issue && next) checks.push(check("xml_lote.dates.update_period_days", "dates", Math.round((next.getTime() - issue.getTime()) / 86_400_000) <= 183 ? "pass" : "warn", "warning", "Update period is not longer than six months.", Math.round((next.getTime() - issue.getTime()) / 86_400_000)));
+function dateChecks(issueValue: string | undefined, nextPresent: boolean, nextValue: string | undefined, assessmentDate: Date): CheckResult[] {
+  const issue = parseTs119602UtcDateTime(issueValue); const closed = nextPresent && !nextValue; const next = parseTs119602UtcDateTime(nextValue);
+  const checks = [check("xml_lote.dates.issue_valid", "dates", issue ? "pass" : "fail", issue ? "info" : "error", "ListIssueDateTime uses the strict TS 119 602 UTC lexical form.", issueValue), check("xml_lote.dates.next_update_valid", "dates", closed ? "not_applicable" : next ? "pass" : "fail", closed || next ? "info" : "error", closed ? "NextUpdate date-time syntax is not applicable to a closed LoTE." : "NextUpdate uses the strict TS 119 602 UTC lexical form.", nextValue)];
+  checks.push(check("xml_lote.dates.next_after_issue", "dates", closed ? "not_applicable" : issue && next && next > issue ? "pass" : "fail", closed || issue && next && next > issue ? "info" : "error", closed ? "NextUpdate ordering is not applicable to a closed LoTE." : "NextUpdate is after ListIssueDateTime.", issue && next ? { issue: issue.toISOString(), nextUpdate: next.toISOString() } : undefined));
+  if (issue && next) {
+    const milliseconds = next.getTime() - issue.getTime();
+    checks.push(check("xml_lote.dates.update_period_days", "dates", "not_checked", "info", "A maximum update interval is profile-specific and was not checked by the base metadata assessment.", { milliseconds, days: milliseconds / 86_400_000 }));
+    if (assessmentDate > next) checks.push(check("xml_lote.dates.next_update_expired", "dates", "fail", "error", "XML LoTE NextUpdate is before assessment time and the LoTE is expired.", { nextUpdate: next.toISOString(), assessmentDate: assessmentDate.toISOString() }));
+  } else {
+    checks.push(check("xml_lote.dates.update_period_days", "dates", "not_checked", "info", "A maximum update interval is profile-specific and was not checked by the base metadata assessment."));
+  }
   return checks;
+}
+
+function collectXmlMetadataInput(
+  root: Element,
+  context: Node,
+  schemeInformationContainerPresent: boolean,
+  assessmentDate: Date,
+): Ts119602MetadataInput {
+  const fields = Object.fromEntries(TS119602_SCHEME_FIELDS.map((field) => {
+    const matches = nodes(context, `./*[local-name()='${field}' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`);
+    return [field, { present: matches.length > 0, count: matches.length }];
+  })) as Ts119602MetadataInput["fields"];
+  const addressNode = firstNode(context, "./*[local-name()='SchemeOperatorAddress']");
+  const postalNodes = addressNode ? nodes(addressNode, ".//*[local-name()='PostalAddress']") : [];
+  const electronicNodes = addressNode ? nodes(addressNode, ".//*[local-name()='ElectronicAddress']/*[local-name()='URI']") : [];
+  const policyNode = firstNode(context, "./*[local-name()='PolicyOrLegalNotice']");
+  const policyPointers = policyNode ? nodes(policyNode, "./*[local-name()='LoTEPolicy']") : [];
+  const legalNotices = policyNode ? nodes(policyNode, "./*[local-name()='LoTELegalNotice']") : [];
+  const policyChildren = policyNode ? nodes(policyNode, "./*") : [];
+  const pointerNodes = nodes(context, "./*[local-name()='PointersToOtherLoTE']/*[local-name()='OtherLoTEPointer']");
+  const extensionNodes = nodes(context, "./*[local-name()='SchemeExtensions']/*[local-name()='Extension']");
+  const nextNode = firstNode(context, "./*[local-name()='NextUpdate']");
+  return {
+    binding: "xml",
+    schemeInformationContainerPresent,
+    fields,
+    loteTag: { present: root.hasAttribute("LOTETag"), value: root.getAttribute("LOTETag") || undefined },
+    version: integerElementValue(context, "LoTEVersionIdentifier"),
+    sequence: integerElementValue(context, "LoTESequenceNumber"),
+    schemeNames: nodes(context, "./*[local-name()='SchemeName']/*[local-name()='Name']").map((node) => ({
+      language: (node as Element).getAttributeNS("http://www.w3.org/XML/1998/namespace", "lang") || undefined,
+      value: node.textContent?.trim(),
+    })),
+    territory: text(context, "./*[local-name()='SchemeTerritory']"),
+    address: {
+      present: Boolean(addressNode),
+      postalAddresses: postalNodes.map((node) => ({
+        path: xmlNodePath(node),
+        streetPresent: has(node, "./*[local-name()='StreetAddress' and normalize-space(.) != '']"),
+        countryPresent: has(node, "./*[local-name()='Country' or local-name()='CountryName'][normalize-space(.) != '']"),
+      })),
+      electronicUris: electronicNodes.map((node) => ({ path: xmlNodePath(node), value: node.textContent?.trim() })),
+    },
+    policy: {
+      present: Boolean(policyNode),
+      policyPointerCount: policyPointers.length,
+      legalNoticeCount: legalNotices.length,
+      unknownEntryCount: policyChildren.length - policyPointers.length - legalNotices.length,
+    },
+    historyPeriod: integerElementValue(context, "HistoricalInformationPeriod"),
+    pointers: pointerNodes.map(xmlPointerObservation),
+    issueDateTime: text(context, "./*[local-name()='ListIssueDateTime']"),
+    nextUpdate: {
+      present: Boolean(nextNode),
+      value: nextNode ? text(nextNode, "./*[local-name()='dateTime']") ?? (nextNode.textContent?.trim() || null) : undefined,
+    },
+    serviceStatuses: texts(root, ".//*[local-name()='ServiceStatus']"),
+    distributionPoints: {
+      present: fields.DistributionPoints.present,
+      values: nodes(context, "./*[local-name()='DistributionPoints']/*[local-name()='URI']").map((node) => node.textContent?.trim()),
+    },
+    extensions: {
+      present: fields.SchemeExtensions.present,
+      values: extensionNodes.map((node) => xmlExtensionObservation(node as Element)),
+    },
+    assessmentDate,
+  };
+}
+
+function integerElementValue(context: Node, localName: string): unknown {
+  const value = text(context, `./*[local-name()='${localName}']`);
+  return value && /^-?\d+$/.test(value) ? Number(value) : value;
+}
+
+function xmlPointerObservation(node: Node, index: number): Ts119602MetadataInput["pointers"][number] {
+  const qualifierNodes = nodes(node, ".//*[local-name()='LoTEQualifier']");
+  const additionalInformation = firstNode(node, "./*[local-name()='AdditionalInformation']");
+  const effectiveQualifiers = qualifierNodes.length > 0 ? qualifierNodes : additionalInformation ? [additionalInformation] : [];
+  return {
+    path: xmlNodePath(node),
+    location: text(node, "./*[local-name()='LoTELocation']"),
+    identityCount: nodes(node, "./*[local-name()='ServiceDigitalIdentities']/*[local-name()='ServiceDigitalIdentity']").length,
+    qualifiers: effectiveQualifiers.map((qualifier, qualifierIndex) => ({
+      path: `${xmlNodePath(qualifier)}#qualifier-${qualifierIndex + 1}`,
+      typePresent: has(qualifier, ".//*[local-name()='LoTEType']"),
+      operatorNamePresent: has(qualifier, ".//*[local-name()='SchemeOperatorName']"),
+      mimeTypePresent: has(qualifier, ".//*[local-name()='MimeType']"),
+    })),
+  };
+}
+
+function xmlExtensionObservation(element: Element): Ts119602MetadataInput["extensions"]["values"][number] {
+  const rawCritical = element.getAttribute("Critical");
+  const critical = rawCritical === "true" || rawCritical === "1"
+    ? true
+    : rawCritical === "false" || rawCritical === "0"
+      ? false
+      : rawCritical || undefined;
+  const content = Array.from(element.childNodes).find((node): node is Element => node.nodeType === 1);
+  return {
+    path: xmlNodePath(element),
+    critical,
+    identifier: content ? `{${content.namespaceURI ?? ""}}${content.localName}` : undefined,
+    recognized: false,
+  };
 }
 
 const XML_URI_ELEMENTS = new Set([

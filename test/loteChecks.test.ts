@@ -27,6 +27,19 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "ts119602.syntax.language", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.country_code", status: "pass" }),
       expect.objectContaining({ id: "ts119602.language.annex_b", status: "not_checked" }),
+      expect.objectContaining({ id: "ts119602.structure.lote_tag", status: "not_applicable" }),
+      expect.objectContaining({
+        id: "ts119602.structure.scheme_information_presence",
+        status: "pass",
+        evidence: expect.objectContaining({ mode: "explicit", violations: [] }),
+      }),
+      expect.objectContaining({ id: "ts119602.scheme.version", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.sequence.local", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.operator_address", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.name", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.policy_or_legal_notice", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.pointers.structure", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.distribution_points", status: "pass" }),
       expect.objectContaining({
         id: "ts119602.coverage.complete",
         status: "not_checked",
@@ -44,6 +57,68 @@ describe("assessJsonLote", () => {
       pointersWithServiceDigitalIdentities: 1,
       signatureObjectPresent: false,
     });
+  });
+
+  it("accepts the Table 1 implicit scheme-information field set", async () => {
+    const result = assessJsonLote(
+      await fixture("ts119602-implicit.json"),
+      true,
+      new Date("2026-07-21T00:00:00Z"),
+    );
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ts119602.binding.json_schema", status: "pass" }),
+      expect.objectContaining({
+        id: "ts119602.structure.scheme_information_presence",
+        status: "pass",
+        evidence: expect.objectContaining({
+          mode: "implicit",
+          explicitSignalFields: [],
+          violations: [],
+        }),
+      }),
+      expect.objectContaining({ id: "ts119602.scheme.name", status: "not_applicable" }),
+      expect.objectContaining({ id: "ts119602.scheme.operator_address", status: "not_applicable" }),
+      expect.objectContaining({ id: "ts119602.scheme.next_update", status: "pass" }),
+    ]));
+  });
+
+  it("keeps the closed-LoTE semantic rule separate from the published JSON schema conflict", async () => {
+    const result = assessJsonLote(
+      await fixture("ts119602-closed.json"),
+      true,
+      new Date("2026-07-21T00:00:00Z"),
+    );
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ts119602.binding.json_schema", status: "fail" }),
+      expect.objectContaining({ id: "ts119602.syntax.date_time", status: "pass" }),
+      expect.objectContaining({
+        id: "ts119602.scheme.next_update",
+        status: "pass",
+        evidence: expect.objectContaining({
+          closed: true,
+          interpretationId: "ts119602-v1.1.1-next-update-null",
+        }),
+      }),
+    ]));
+  });
+
+  it("rejects an unregistered critical scheme extension", async () => {
+    const result = assessJsonLote(
+      await fixture("ts119602-critical-extension.json"),
+      true,
+      new Date("2026-07-21T00:00:00Z"),
+    );
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ts119602.binding.json_schema", status: "pass" }),
+      expect.objectContaining({
+        id: "ts119602.scheme.extensions",
+        status: "fail",
+        severity: "critical",
+        evidence: expect.objectContaining({
+          registry: expect.objectContaining({ unknownCriticalPolicy: "reject" }),
+        }),
+      }),
+    ]));
   });
 
   it("reports clause 6.1 failures separately from permissive binding formats", async () => {
@@ -137,7 +212,8 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "ts119602.binding.json_schema", status: "pass" }),
       expect.objectContaining({ id: "json_lote.dates.issue_valid", status: "pass" }),
       expect.objectContaining({ id: "json_lote.dates.next_update_valid", status: "pass" }),
-      expect.objectContaining({ id: "json_lote.dates.next_update_expired", status: "warn" }),
+      expect.objectContaining({ id: "json_lote.dates.next_update_expired", status: "fail" }),
+      expect.objectContaining({ id: "ts119602.scheme.next_update", status: "fail" }),
     ]));
   });
 

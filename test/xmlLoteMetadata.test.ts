@@ -7,10 +7,16 @@ const schemeInformation = `
     <LoTESequenceNumber>2</LoTESequenceNumber>
     <LoTEType>http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersList</LoTEType>
     <SchemeOperatorName><Name xml:lang="en">NXD Foundation</Name></SchemeOperatorName>
-    <SchemeOperatorAddress><PostalAddresses><PostalAddress xml:lang="en"><CountryName>SE</CountryName></PostalAddress></PostalAddresses></SchemeOperatorAddress>
-    <SchemeName><Name xml:lang="en">NXD EAA Providers</Name></SchemeName>
+    <SchemeOperatorAddress>
+      <PostalAddresses><PostalAddress xml:lang="en"><StreetAddress>1 Example Street</StreetAddress><CountryName>EU</CountryName></PostalAddress></PostalAddresses>
+      <ElectronicAddress><URI xml:lang="en">mailto:audit@example.test</URI><URI xml:lang="en">https://example.test/contact</URI></ElectronicAddress>
+    </SchemeOperatorAddress>
+    <SchemeName><Name xml:lang="en">EU:NXD EAA Providers</Name></SchemeName>
+    <SchemeInformationURI><URI xml:lang="en">https://example.test/info</URI></SchemeInformationURI>
     <SchemeTerritory>EU</SchemeTerritory>
     <StatusDeterminationApproach>http://example.test/status</StatusDeterminationApproach>
+    <SchemeTypeCommunityRules><URI xml:lang="en">https://example.test/scheme-rules</URI></SchemeTypeCommunityRules>
+    <PolicyOrLegalNotice><LoTEPolicy xml:lang="en">https://example.test/policy</LoTEPolicy></PolicyOrLegalNotice>
     <ListIssueDateTime>2026-07-09T11:30:03Z</ListIssueDateTime>
     <NextUpdate><dateTime>2027-01-09T11:30:03Z</dateTime></NextUpdate>
   </ListAndSchemeInformation>`;
@@ -79,13 +85,22 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       expect.objectContaining({ id: "ts119602.syntax.language", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.country_code", status: "pass" }),
       expect.objectContaining({ id: "ts119602.language.annex_b", status: "not_checked" }),
+      expect.objectContaining({ id: "ts119602.structure.lote_tag", status: "pass" }),
+      expect.objectContaining({
+        id: "ts119602.structure.scheme_information_presence",
+        status: "pass",
+        evidence: expect.objectContaining({ mode: "explicit", violations: [] }),
+      }),
+      expect.objectContaining({ id: "ts119602.scheme.operator_address", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.name", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.scheme.policy_or_legal_notice", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.structure.trusted_entities_container", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.services.trusted_entity_count", status: "pass", evidence: 1 }),
       expect.objectContaining({ id: "signature.present", status: "fail" }),
     ]));
     expect(result.extracted).toMatchObject({
       schemeOperatorName: ["NXD Foundation"],
-      schemeName: ["NXD EAA Providers"],
+      schemeName: ["EU:NXD EAA Providers"],
       schemeTerritory: "EU",
       statusDeterminationApproach: "http://example.test/status",
       listIssueDateTime: "2026-07-09T11:30:03Z",

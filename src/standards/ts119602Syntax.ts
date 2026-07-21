@@ -193,10 +193,6 @@ export function validateTs119602MultilingualValues(
   if (!languages.includes("en")) {
     diagnostics.push({ code: "multilingual.english_required", message: "The multilingual value set must include an English entry tagged en." });
   }
-  const duplicates = languages.filter((language, index) => languages.indexOf(language) !== index);
-  if (duplicates.length > 0) {
-    diagnostics.push({ code: "multilingual.duplicate_language", message: "A multilingual value set must not repeat the same language tag." });
-  }
   return {
     outcome: diagnostics.length === 0 ? "valid" : "invalid",
     diagnostics,

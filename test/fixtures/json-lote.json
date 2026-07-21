@@ -12,6 +12,7 @@
           { "lang": "en", "StreetAddress": "1 Example Street", "Locality": "Example City", "Country": "EU" }
         ],
         "SchemeOperatorElectronicAddress": [
+          { "lang": "en", "uriValue": "mailto:audit@example.test" },
           { "lang": "en", "uriValue": "https://example.test/contact" }
         ]
       },
@@ -22,9 +23,15 @@
         { "lang": "en", "uriValue": "https://example.test/info" }
       ],
       "StatusDeterminationApproach": "http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate",
+      "SchemeTypeCommunityRules": [
+        { "lang": "en", "uriValue": "https://example.test/scheme-rules" }
+      ],
       "SchemeTerritory": "EU",
+      "PolicyOrLegalNotice": [
+        { "LoTEPolicy": { "lang": "en", "uriValue": "https://example.test/policy" } }
+      ],
       "ListIssueDateTime": "2026-01-01T00:00:00Z",
-      "NextUpdate": "2026-07-01T00:00:00Z",
+      "NextUpdate": "2027-01-01T00:00:00Z",
       "DistributionPoints": ["https://example.test/lote.json"],
       "PointersToOtherLoTE": [
         {

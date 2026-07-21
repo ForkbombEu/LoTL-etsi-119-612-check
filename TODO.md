@@ -252,17 +252,17 @@ Required change:
 | 6.1.3 date-time | Exact ISO 8601 UTC form with seconds and `Z`, no decimal fraction | Partial | JavaScript `Date` accepts offsets and fractions that the standard forbids; add lexical validation. |
 | 6.1.4 and Annex B language | At least English `en`; language tags, casing, transliteration, Unicode restrictions | Missing | Validate multilingual strings/pointers and prohibited characters; dereferenced content is a separate optional network check. |
 | 6.1.5 country codes | Upper-case ISO 3166-1 plus defined exceptions/extensions | Missing | Add a pinned country-code policy and EU/UK/EL exceptions. |
-| 6.2 LoTE tag | Binding-specific LoTE tag representation | XML presence missing | Validate the XML `LOTETag` attribute and document JSON binding behavior explicitly. |
-| 6.3/Table 1 | Correct implicit vs explicit scheme presence matrix | Partial | Explicit XML presence checks cover some fields; implicit scheme mode, prohibited fields, cardinality, and JSON schema rules are absent. |
-| 6.3.1 version | Integer; profile/binding-specific value | Presence only | Validate type and Annex D-I value `1`; do not accept numeric strings unless the binding allows them. |
-| 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Presence only | Validate local type/range and compare with prior list instances when supplied or fetched. |
+| 6.2 LoTE tag | Binding-specific LoTE tag representation | Partial | XML validates a local absolute-URI `LOTETag`; JSON reports the field as not applicable. Registered tag/profile values remain Annex C work. |
+| 6.3/Table 1 | Correct implicit vs explicit scheme presence matrix | Partial | Local JSON/XML mode inference and mandatory/prohibited-field checks are implemented. Alternative-binding mapping and profile routing remain. |
+| 6.3.1 version | Integer; profile/binding-specific value | Partial | Local integer validation is implemented; enforce Annex D-I value `1` during profile dispatch. |
+| 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Partial | Local positive-integer validation is implemented; compare with prior list instances when supplied or fetched. |
 | 6.3.3 LoTE type | URI and profile discriminator | Classification only | Require exact registered values and reject binding/profile mismatches. |
-| 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Presence only | Validate nested structure, `CC:name`, email/web contact requirements, language coverage, and policy/legal-notice alternatives. |
-| 6.3.12 history period | Integer with semantics including `65535` | Missing | Validate value and its consequences for statuses and histories. |
-| 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Partial | Validate full shape and qualifier fields; verify that at least one pointer identity authenticates the fetched target. |
-| 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Partial | Add exact lexical, profile, null, and assessment-time rules. |
-| 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Presence/extraction only | Validate cardinality and optionally fetch/hash all locations with bounded network policy. |
-| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Missing | Add an extension registry and fail closed for unknown critical extensions. |
+| 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Partial | Local address, `CC:name`, email/web, and policy-choice checks are implemented; Annex B and profile-specific semantics remain. |
+| 6.3.12 history period | Integer with semantics including `65535` | Partial | Local non-negative integer and `65535` retention semantics are implemented; validate consequences for service statuses and histories. |
+| 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Partial | Local shape and qualifier checks are implemented; verify that at least one pointer identity authenticates the fetched target. |
+| 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Partial | Local lexical, ordering, expiry, and closed-list checks are implemented; enforce calendar-month limits only after profile dispatch. |
+| 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Partial | Local cardinality and URI checks are implemented; fetch/hash all locations only under bounded contextual checks. |
+| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | A versioned scheme-extension registry rejects unknown critical scheme extensions; entity/service registries remain. |
 | 6.4 entity list | Absent only when no entity is/was approved; otherwise one-or-more entities | Partial | XSD/JSON schema plus semantic presence logic; distinguish empty scheme from malformed empty container. |
 | 6.4.1-6.5 entity information | Information, services, name, address, and information URI are mandatory | Partial | Current XML checks omit mandatory `TEInformationURI`, exact wrappers/cardinality, trade-name semantics, and associated-body extensions. |
 | 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Validate exact nesting, identity alternatives, statuses, supply points, definitions, and extensions. |
@@ -414,7 +414,8 @@ used as evidence that a TS 119 602 profile passed.
 - [ ] Validate service history in descending status-time order.
 - [ ] For Pub-EAA history, require at least one SKI and forbid
   `X509Certificate`.
-- [ ] Validate unknown critical scheme, TE, and service extensions.
+- [x] Reject unknown critical scheme extensions with a versioned registry.
+- [ ] Validate unknown critical TE and service extensions.
 
 Certificate expiry is valuable audit evidence, but the implementation must
 identify whether a validity rule is normative for the selected component and
@@ -474,6 +475,10 @@ Required policy:
 - do not normalize a published URI typo without a documented erratum or an
   explicit human-approved compatibility rule.
 
+The versioned implementation registry is in
+`src/standards/ts119602Interpretations.ts`; implemented exceptions link their
+finding evidence to the applicable registry identifier.
+
 ## Executable task breakdown
 
 The backlog is divided into reviewable tasks below. Each task should be one
@@ -488,8 +493,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Complete |
 | TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Complete |
 | TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Complete |
-| TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Next |
-| TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Pending |
+| TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Complete |
+| TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Next |
 | TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Pending |
 | TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Pending |
 | TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Pending |
@@ -525,10 +530,12 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 - [x] Implement reusable validators for URIs, UTC timestamps, language tags,
   country codes, and multilingual values.
-- [ ] Implement reusable address validators.
-- [ ] Implement Table 1 implicit/explicit presence rules.
-- [ ] Implement list metadata, pointers, entities, services, identities,
-  statuses, histories, and critical extensions.
+- [x] Implement reusable scheme-operator address validators.
+- [x] Implement Table 1 implicit/explicit presence rules.
+- [x] Implement list metadata, local pointer structure, dates, distribution
+  point structure, and critical scheme extensions.
+- [ ] Implement entities, services, identities, statuses, histories, and
+  critical entity/service extensions.
 - [ ] Add cross-field consistency checks.
 
 ### Phase 4 — Signature profiles

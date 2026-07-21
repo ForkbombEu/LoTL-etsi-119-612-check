@@ -1,5 +1,10 @@
 import { getPath, isRecord, numberValue, asArray, firstString } from "../lotl.js";
 import { buildStandardAssessment } from "../standards/assessment.js";
+import {
+  buildTs119602MetadataFindings,
+  TS119602_SCHEME_FIELDS,
+  type Ts119602MetadataInput,
+} from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
 import { parseTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import {
@@ -28,11 +33,13 @@ export function assessJsonLote(
       : "unrecognized";
   const infoValue = legacy?.listAndSchemeInformation ?? getPath(loteValue, ["ListAndSchemeInformation"]);
   const info = isRecord(infoValue) ? infoValue : undefined;
+  const metadataInfo = info ?? (isRecord(loteValue) ? loteValue : {});
   const pointers = asArray(getPath(info, ["PointersToOtherLoTE"]));
   const trustedEntities = legacy?.trustedEntities ?? (Array.isArray(officialTrustedEntities) ? officialTrustedEntities : []);
   const signature = getPath(parsed, ["signature"]) ?? getPath(loteValue, ["signature"]) ?? getPath(loteValue, ["Signature"]);
   const issueDateTime = firstString(getPath(info, ["ListIssueDateTime"]));
-  const nextUpdate = firstString(getPath(info, ["NextUpdate"]));
+  const nextUpdateValue = getPath(info, ["NextUpdate"]);
+  const nextUpdate = firstString(nextUpdateValue);
   const schemaValidation = validateTs119602JsonSchema(parsed);
   const checks: CheckResult[] = [
     schemaCheck(schemaValidation),
@@ -49,7 +56,7 @@ export function assessJsonLote(
   addOptionalJsonCheck(checks, "json_lote.status_determination_approach", Boolean(firstString(getPath(info, ["StatusDeterminationApproach"]))), "StatusDeterminationApproach is present.");
   addOptionalJsonCheck(checks, "json_lote.scheme_territory", Boolean(firstString(getPath(info, ["SchemeTerritory"]))), "SchemeTerritory is present.");
   addRequiredJsonCheck(checks, "json_lote.list_issue_date_time", Boolean(issueDateTime), "ListIssueDateTime is present.");
-  addRequiredJsonCheck(checks, "json_lote.next_update", Boolean(nextUpdate), "NextUpdate is present.");
+  addRequiredJsonCheck(checks, "json_lote.next_update", Boolean(info && Object.hasOwn(info, "NextUpdate")), "NextUpdate is present.");
   addOptionalJsonCheck(checks, "json_lote.distribution_points", getPath(info, ["DistributionPoints"]) !== undefined, "DistributionPoints is present.");
   checks.push(
     check("json_lote.pointers.count", "pass", "info", "PointersToOtherLoTE entries counted.", pointers.length),
@@ -61,8 +68,9 @@ export function assessJsonLote(
       "Compact JAdES Baseline B validation is not implemented; a JSON signature property is not treated as signature evidence.",
       { legacySignatureObjectPresent: isJsonObject(signature) },
     ),
+    ...buildTs119602MetadataFindings(collectJsonMetadataInput(metadataInfo, info !== undefined, assessmentDate, loteValue)),
     ...buildTs119602SyntaxFindings(collectJsonSyntaxInputs(parsed)),
-    ...dateChecks(issueDateTime, nextUpdate, assessmentDate),
+    ...dateChecks(issueDateTime, nextUpdateValue, assessmentDate),
     check(
       "ts119602.coverage.complete",
       "not_checked",
@@ -149,29 +157,126 @@ function compatibilityCheck(
   );
 }
 
-function dateChecks(issueValue: string | undefined, nextValue: string | undefined, assessmentDate: Date): CheckResult[] {
+function dateChecks(issueValue: string | undefined, nextRaw: unknown, assessmentDate: Date): CheckResult[] {
   const issue = parseTs119602UtcDateTime(issueValue);
+  const closed = nextRaw === null;
+  const nextValue = typeof nextRaw === "string" ? nextRaw : undefined;
   const next = parseTs119602UtcDateTime(nextValue);
   const checks = [
     check("json_lote.dates.issue_valid", issue ? "pass" : "fail", issue ? "info" : "error", "ListIssueDateTime uses the strict TS 119 602 UTC lexical form.", issueValue),
-    check("json_lote.dates.next_update_valid", next ? "pass" : "fail", next ? "info" : "error", "NextUpdate uses the strict TS 119 602 UTC lexical form.", nextValue),
+    check("json_lote.dates.next_update_valid", closed ? "not_applicable" : next ? "pass" : "fail", closed || next ? "info" : "error", closed ? "NextUpdate date-time syntax is not applicable to a closed LoTE." : "NextUpdate uses the strict TS 119 602 UTC lexical form.", nextValue ?? nextRaw),
   ];
-  if (!issue || !next) {
+  if (closed || !issue || !next) {
     checks.push(
-      check("json_lote.dates.next_after_issue", "not_checked", "info", "NextUpdate ordering was not checked because one or both timestamps are invalid or absent."),
-      check("json_lote.dates.update_period_days", "not_checked", "info", "Update period was not checked because one or both timestamps are invalid or absent."),
+      check("json_lote.dates.next_after_issue", closed ? "not_applicable" : "not_checked", "info", closed ? "NextUpdate ordering is not applicable to a closed LoTE." : "NextUpdate ordering was not checked because one or both timestamps are invalid or absent."),
+      check("json_lote.dates.update_period_days", "not_checked", "info", "A maximum update interval is profile-specific and was not checked by the base metadata assessment."),
     );
     return checks;
   }
   checks.push(
     check("json_lote.dates.next_after_issue", next > issue ? "pass" : "warn", next > issue ? "info" : "warning", "NextUpdate is after ListIssueDateTime.", { issue: issue.toISOString(), nextUpdate: next.toISOString() }),
   );
-  const days = Math.round((next.getTime() - issue.getTime()) / 86_400_000);
-  checks.push(check("json_lote.dates.update_period_days", days <= 183 ? "pass" : "warn", days <= 183 ? "info" : "warning", "Update period is not longer than six months.", days));
+  const milliseconds = next.getTime() - issue.getTime();
+  checks.push(check("json_lote.dates.update_period_days", "not_checked", "info", "A maximum update interval is profile-specific and was not checked by the base metadata assessment.", { milliseconds, days: milliseconds / 86_400_000 }));
   if (assessmentDate > next) {
-    checks.push(check("json_lote.dates.next_update_expired", "warn", "warning", "JSON LoTE NextUpdate is before assessment time.", { nextUpdate: next.toISOString(), assessmentDate: assessmentDate.toISOString() }));
+    checks.push(check("json_lote.dates.next_update_expired", "fail", "error", "JSON LoTE NextUpdate is before assessment time and the LoTE is expired.", { nextUpdate: next.toISOString(), assessmentDate: assessmentDate.toISOString() }));
   }
   return checks;
+}
+
+function collectJsonMetadataInput(
+  info: Record<string, unknown>,
+  schemeInformationContainerPresent: boolean,
+  assessmentDate: Date,
+  loteValue: unknown,
+): Ts119602MetadataInput {
+  const fields = Object.fromEntries(TS119602_SCHEME_FIELDS.map((field) => {
+    const present = Object.hasOwn(info, field);
+    const value = info[field];
+    return [field, { present, count: present ? Array.isArray(value) ? value.length : 1 : 0 }];
+  })) as Ts119602MetadataInput["fields"];
+  const addressValue = info.SchemeOperatorAddress;
+  const address = isRecord(addressValue) ? addressValue : {};
+  const postal = asArray(address.SchemeOperatorPostalAddress);
+  const electronic = asArray(address.SchemeOperatorElectronicAddress);
+  const policyEntries = asArray(info.PolicyOrLegalNotice);
+  const pointerEntries = asArray(info.PointersToOtherLoTE);
+  const extensionEntries = asArray(info.SchemeExtensions);
+  return {
+    binding: "json",
+    schemeInformationContainerPresent,
+    fields,
+    loteTag: { present: false },
+    version: info.LoTEVersionIdentifier,
+    sequence: info.LoTESequenceNumber,
+    schemeNames: asArray(info.SchemeName).map((entry) => ({
+      language: getPath(entry, ["lang"]),
+      value: getPath(entry, ["value"]),
+    })),
+    territory: info.SchemeTerritory,
+    address: {
+      present: fields.SchemeOperatorAddress.present,
+      postalAddresses: postal.map((entry, index) => ({
+        path: `/LoTE/ListAndSchemeInformation/SchemeOperatorAddress/SchemeOperatorPostalAddress/${index}`,
+        streetPresent: typeof getPath(entry, ["StreetAddress"]) === "string" && Boolean(firstString(getPath(entry, ["StreetAddress"]))),
+        countryPresent: typeof getPath(entry, ["Country"]) === "string" && Boolean(firstString(getPath(entry, ["Country"]))),
+      })),
+      electronicUris: electronic.map((entry, index) => ({
+        path: `/LoTE/ListAndSchemeInformation/SchemeOperatorAddress/SchemeOperatorElectronicAddress/${index}/uriValue`,
+        value: getPath(entry, ["uriValue"]),
+      })),
+    },
+    policy: {
+      present: fields.PolicyOrLegalNotice.present,
+      policyPointerCount: policyEntries.filter((entry) => getPath(entry, ["LoTEPolicy"]) !== undefined).length,
+      legalNoticeCount: policyEntries.filter((entry) => getPath(entry, ["LoTELegalNotice"]) !== undefined).length,
+      unknownEntryCount: policyEntries.filter((entry) =>
+        getPath(entry, ["LoTEPolicy"]) === undefined && getPath(entry, ["LoTELegalNotice"]) === undefined).length,
+    },
+    historyPeriod: info.HistoricalInformationPeriod,
+    pointers: pointerEntries.map((pointer, pointerIndex) => ({
+      path: `/LoTE/ListAndSchemeInformation/PointersToOtherLoTE/${pointerIndex}`,
+      location: getPath(pointer, ["LoTELocation"]),
+      identityCount: asArray(getPath(pointer, ["ServiceDigitalIdentities"])).length,
+      qualifiers: asArray(getPath(pointer, ["LoTEQualifiers"])).map((qualifier, qualifierIndex) => ({
+        path: `/LoTE/ListAndSchemeInformation/PointersToOtherLoTE/${pointerIndex}/LoTEQualifiers/${qualifierIndex}`,
+        typePresent: Boolean(firstString(getPath(qualifier, ["LoTEType"]))),
+        operatorNamePresent: asArray(getPath(qualifier, ["SchemeOperatorName"])).length > 0,
+        mimeTypePresent: Boolean(firstString(getPath(qualifier, ["MimeType"]))),
+      })),
+    })),
+    issueDateTime: info.ListIssueDateTime,
+    nextUpdate: { present: fields.NextUpdate.present, value: info.NextUpdate },
+    serviceStatuses: collectJsonPropertyValues(loteValue, "ServiceStatus"),
+    distributionPoints: { present: fields.DistributionPoints.present, values: asArray(info.DistributionPoints) },
+    extensions: {
+      present: fields.SchemeExtensions.present,
+      values: extensionEntries.map((extension, index) => ({
+        path: `/LoTE/ListAndSchemeInformation/SchemeExtensions/${index}`,
+        critical: getPath(extension, ["Critical"]),
+        identifier: jsonExtensionIdentifier(extension),
+        recognized: false,
+      })),
+    },
+    assessmentDate,
+  };
+}
+
+function collectJsonPropertyValues(value: unknown, property: string): unknown[] {
+  if (Array.isArray(value)) return value.flatMap((entry) => collectJsonPropertyValues(entry, property));
+  if (!isRecord(value)) return [];
+  return Object.entries(value).flatMap(([key, entry]) => [
+    ...(key === property ? [entry] : []),
+    ...collectJsonPropertyValues(entry, property),
+  ]);
+}
+
+function jsonExtensionIdentifier(value: unknown): string | undefined {
+  if (!isRecord(value)) return undefined;
+  for (const property of ["id", "type", "name", "$type"]) {
+    if (typeof value[property] === "string") return value[property];
+  }
+  return Object.keys(value).find((property) => property !== "Critical");
 }
 
 function pointerIdentityCheck(pointers: unknown[]): CheckResult {
@@ -253,7 +358,9 @@ function collectJsonSyntaxInputs(value: unknown): {
     for (const [property, propertyValue] of Object.entries(current)) {
       const propertyPath = `${path}/${escapeJsonPointer(property)}`;
       if (JSON_URI_PROPERTIES.has(property)) uris.push({ path: propertyPath, value: propertyValue });
-      if (JSON_DATE_TIME_PROPERTIES.has(property)) dateTimes.push({ path: propertyPath, value: propertyValue });
+      if (JSON_DATE_TIME_PROPERTIES.has(property) && !(property === "NextUpdate" && propertyValue === null)) {
+        dateTimes.push({ path: propertyPath, value: propertyValue });
+      }
       if (JSON_COUNTRY_PROPERTIES.has(property)) countries.push({ path: propertyPath, value: propertyValue });
       if (JSON_URI_ARRAY_PROPERTIES.has(property) && Array.isArray(propertyValue)) {
         propertyValue.forEach((entry, index) => uris.push({ path: `${propertyPath}/${index}`, value: entry }));
