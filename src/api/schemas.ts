@@ -52,6 +52,27 @@ const contextArtifact = {
   },
 } as const;
 
+const ts119612SignerEvidence = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    intermediateCertificates: { type: "array", items: { type: "string", minLength: 1 }, maxItems: 16 },
+    trustAnchors: { type: "array", items: { type: "string", minLength: 1 }, maxItems: 16 },
+    revocation: {
+      type: "object",
+      required: ["status", "source", "checkedAt", "signerFingerprintSha256"],
+      additionalProperties: false,
+      properties: {
+        status: { type: "string", enum: ["good", "revoked", "unknown"] },
+        source: { type: "string", minLength: 1 },
+        checkedAt: { type: "string", format: "date-time" },
+        nextUpdate: { type: "string", format: "date-time" },
+        signerFingerprintSha256: { type: "string", pattern: "^[A-Fa-f0-9]{64}$" },
+      },
+    },
+  },
+} as const;
+
 const contextualEvidence = {
   type: "object",
   additionalProperties: false,
@@ -59,6 +80,7 @@ const contextualEvidence = {
     dereference: { type: "boolean", default: false },
     priorArtifacts: { type: "array", items: contextArtifact, maxItems: 32 },
     trustedSignerFingerprintsSha256: { type: "array", items: { type: "string", pattern: "^[A-Fa-f0-9]{64}$" }, maxItems: 64 },
+    ts119612Signer: ts119612SignerEvidence,
     maxDereferences: { type: "integer", minimum: 1, maximum: 32, default: 16 },
     maxBytesPerArtifact: { type: "integer", minimum: 1, maximum: 20971520, default: 5242880 },
     concurrency: { type: "integer", minimum: 1, maximum: 32, default: 4 },

@@ -100,11 +100,29 @@ export interface ContextArtifactInput {
   contentType?: string;
 }
 
+export interface Ts119612RevocationEvidence {
+  status: "good" | "revoked" | "unknown";
+  source: string;
+  checkedAt: string;
+  nextUpdate?: string;
+  signerFingerprintSha256: string;
+}
+
+export interface Ts119612SignerEvidence {
+  /** Issuer certificates between the embedded TLSO certificate and a separately supplied anchor. */
+  intermediateCertificates?: string[];
+  /** Explicit trust anchors; embedded ds:KeyInfo material is never copied into this set implicitly. */
+  trustAnchors?: string[];
+  /** Externally obtained revocation evidence for the embedded TLSO certificate. */
+  revocation?: Ts119612RevocationEvidence;
+}
+
 /** Optional evidence and limits for checks that require other artifacts or dereferencing. */
 export interface Ts119602ContextOptions {
   dereference?: boolean;
   priorArtifacts?: ContextArtifactInput[];
   trustedSignerFingerprintsSha256?: string[];
+  ts119612Signer?: Ts119612SignerEvidence;
   maxDereferences?: number;
   maxBytesPerArtifact?: number;
   concurrency?: number;

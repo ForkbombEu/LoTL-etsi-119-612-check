@@ -327,6 +327,8 @@ async function assessArtifactBytes(
     const assessed = await assessTs119612Xml(bytes.toString("utf8"), {
       strict: options.strict,
       xsdPath: options.xsd,
+      trustedSignerFingerprintsSha256: options.context?.trustedSignerFingerprintsSha256,
+      signerEvidence: options.context?.ts119612Signer,
     });
     const result = mergeResult(base, assessed);
     if (base.ts119602Classification.applicability === "applicable") {

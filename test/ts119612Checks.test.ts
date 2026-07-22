@@ -20,10 +20,12 @@ describe("assessTs119612Xml", () => {
       expect.arrayContaining([
         expect.objectContaining({ id: "parse.xml", status: "pass" }),
         expect.objectContaining({ id: "structure.trust_service_provider_list", status: "pass" }),
+        expect.objectContaining({ id: "signature.xades_baseline_b.structure", status: "fail" }),
+        expect.objectContaining({ id: "ts119612.signature.annex_b", status: "fail" }),
         expect.objectContaining({
           id: "ts119612.coverage.complete",
           status: "not_checked",
-          evidence: expect.objectContaining({ total: 69, implemented: 9, complete: false }),
+          evidence: expect.objectContaining({ total: 69, implemented: 11, complete: false }),
         }),
       ]),
     );

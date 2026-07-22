@@ -2,6 +2,7 @@ import { certificateFingerprintSha256, tryCertificateFromBase64 } from "../certs
 import type { CertificateSummary, CheckResult } from "../types.js";
 import { has, texts } from "./xpath.js";
 import { assessXadesSignature, type XadesAssessmentOptions } from "./xades.js";
+import { assessTs119612SignatureProfile } from "./ts119612Signature.js";
 import { inspectReferences, verifyXmlSignatureWithXmlsec } from "./xmlsec.js";
 
 export interface SignatureAssessment {
@@ -30,6 +31,9 @@ export interface SignatureAssessmentDependencies {
 export interface SignatureAssessmentOptions extends XadesAssessmentOptions {
   /** Require the first list ServiceDigitalIdentity certificate to equal the XMLDSig signing certificate. */
   requireFirstListCertificateMatch?: boolean;
+  /** Apply ETSI TS 119 612 V2.4.1 clauses 5.7 and normative Annex B. */
+  requireTs119612Profile?: boolean;
+  ts119612SignerEvidence?: import("../types.js").Ts119612SignerEvidence;
 }
 
 export async function assessSignature(
@@ -57,6 +61,13 @@ export async function assessSignature(
       checks.push(...firstListCertificateChecks(document, undefined));
     }
     checks.push(...assessXadesSignature(document, undefined, undefined, undefined, options));
+    if (options.requireTs119612Profile) {
+      checks.push(...assessTs119612SignatureProfile(document, undefined, undefined, undefined, {
+        assessmentDate,
+        signerEvidence: options.ts119612SignerEvidence,
+        trustedSignerFingerprintsSha256: options.trustedSignerFingerprintsSha256,
+      }));
+    }
     return { checks, certificates };
   }
 
@@ -169,6 +180,19 @@ export async function assessSignature(
     verificationEntry?.summary,
     options,
   ));
+  if (options.requireTs119612Profile) {
+    checks.push(...assessTs119612SignatureProfile(
+      document,
+      signatureNode,
+      verificationEntry?.certificate,
+      verificationEntry?.summary,
+      {
+        assessmentDate,
+        signerEvidence: options.ts119612SignerEvidence,
+        trustedSignerFingerprintsSha256: options.trustedSignerFingerprintsSha256,
+      },
+    ));
+  }
 
   return { checks, certificates };
 }

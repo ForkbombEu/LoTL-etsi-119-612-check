@@ -133,9 +133,10 @@ describe("API server", () => {
 
   it("exposes the expanded assessment core through POST endpoints", async () => {
     const app = await buildServer();
-    const [lotl, xml, jades] = await Promise.all([
+    const [lotl, xml, signedXml, jades] = await Promise.all([
       readFile("test/fixtures/lotl.json", "utf8"),
       readFile("test/fixtures/tsl-valid-ish.xml", "utf8"),
+      readFile("test/fixtures/ts119612-signature-profile.xml", "utf8"),
       readFile("test/fixtures/ts119602-jades-compact.jws", "utf8"),
     ]);
     const lotlResponse = await app.inject({
@@ -153,6 +154,37 @@ describe("API server", () => {
     });
     expect(artifactResponse.statusCode).toBe(200);
     expect(artifactResponse.json().result).toMatchObject({ source: "fixture.xml", fetch: { attempted: false }, detected: { format: "xml" } });
+
+    const signingCertificate = signedXml.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/)?.[1];
+    expect(signingCertificate).toBeDefined();
+    const signedArtifactResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: {
+        content: signedXml,
+        source: "signed-fixture.xml",
+        contentType: "application/xml",
+        context: {
+          trustedSignerFingerprintsSha256: ["f67ceee86d57b888ffac479f1466e7acc38f7e36318cc5374d0fcf3406135efa"],
+          ts119612Signer: {
+            trustAnchors: [signingCertificate],
+            revocation: {
+              status: "good",
+              source: "deterministic-api-test-status",
+              checkedAt: "2026-07-22T10:45:00Z",
+              nextUpdate: "2030-07-22T11:00:00Z",
+              signerFingerprintSha256: "f67ceee86d57b888ffac479f1466e7acc38f7e36318cc5374d0fcf3406135efa",
+            },
+          },
+        },
+      },
+    });
+    expect(signedArtifactResponse.statusCode).toBe(200);
+    expect(signedArtifactResponse.json().result.ts119612.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ts119612.signature.certificate_path", status: "pass" }),
+      expect.objectContaining({ id: "ts119612.signature.revocation", status: "pass" }),
+      expect.objectContaining({ id: "ts119612.signature.signer_trust", status: "pass" }),
+    ]));
 
     const jadesResponse = await app.inject({
       method: "POST",
@@ -350,6 +382,8 @@ describe("API server", () => {
       expect(parsedJson.paths[path]).toBeDefined();
     }
     expect(parsedYaml.components.schemas.Ts119602ContextOptions).toEqual(parsedJson.components.schemas.Ts119602ContextOptions);
+    expect(parsedJson.components.schemas.Ts119612SignerEvidence.properties.revocation.required)
+      .toContain("signerFingerprintSha256");
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
     expect(parsedJson.info.description).toContain("pinned V1.1.1 XSD and offline catalog");
     expect(parsedJson.paths["/api/audit/artifact"].post.description).toContain("separate pinned offline XML Schema finding");

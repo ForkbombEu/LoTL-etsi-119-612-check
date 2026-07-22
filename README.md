@@ -323,8 +323,8 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 9
-families as implemented, 46 as partial, and 14 as not implemented. Every
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 11
+families as implemented, 45 as partial, and 13 as not implemented. Every
 applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
@@ -351,7 +351,7 @@ while adding requirement-oriented findings. Registry/legal facts, certificate
 and representation equivalence, target content, transition history and detailed
 extension semantics remain explicit limitations.
 
-For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, Reference URIs, expected-root coverage, whether cryptographic verification was attempted, its result or limitation, and XAdES-property detection. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence.
+For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, Reference URIs, expected-root coverage, whether cryptographic verification was attempted, its result or limitation, and XAdES properties. TS 119 612 artifacts additionally receive XAdES-B-B checks, exact Annex B root-reference/transform/canonicalization checks, and TLSO certificate KeyInfo, KeyUsage, extended-key-usage, SubjectKeyIdentifier, BasicConstraints, subject and issuer findings. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence.
 
 The verifier is document-driven rather than fixture-specific: it derives the
 root local name, namespace, `Id`/`ID`/`id` attribute, and Reference URIs from
@@ -362,8 +362,13 @@ This supports ETSI TS 119 612 `TrustServiceStatusList` roots, the ETSI TS
 compatibility `TrustedEntitiesList` roots without hard-coded URLs or IDs.
 Cryptographic validity remains separate from certificate trust: an embedded
 certificate is not treated as trusted merely because its signature verifies.
-XAdES detection is evidence only; full XAdES semantic validation is not
-implemented.
+API callers can supply `context.ts119612Signer` intermediates, trust anchors
+and timestamped revocation evidence, plus separately trusted signer
+fingerprints. Certificate path, revocation and signer trust remain distinct
+findings. The non-specific ETSI TS 119 312 usable-key policy is explicitly
+`not_checked` until an applicable policy snapshot is selected, and a valid
+path alone does not prove that a non-self-signed issuer is listed in the TL or
+the same community.
 
 ### TS 119 612 XSD selection
 

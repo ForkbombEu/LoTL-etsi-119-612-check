@@ -1,4 +1,4 @@
-import type { CertificateSummary, CheckResult, ConformanceLevel, TrustedListAuditResult } from "../types.js";
+import type { CertificateSummary, CheckResult, ConformanceLevel, TrustedListAuditResult, Ts119612SignerEvidence } from "../types.js";
 import {
   summarizeTs119612Requirements,
   TS119612_COMPATIBILITY_INPUTS,
@@ -20,6 +20,8 @@ export interface XmlAssessmentOptions {
   xsdPath?: string;
   xsdDependencies?: XsdValidationDependencies;
   assessmentDate?: Date;
+  trustedSignerFingerprintsSha256?: readonly string[];
+  signerEvidence?: Ts119612SignerEvidence;
 }
 
 type ExtractedMetadata = NonNullable<TrustedListAuditResult["extracted"]>;
@@ -113,10 +115,13 @@ export async function assessTs119612Xml(
   const pubEaaAlternativeBinding = text(document, D("TSLType")) === PUB_EAA_LOTE_TYPE;
   const signature = await assessSignature(xml, document, assessmentDate, {}, {
     requireFirstListCertificateMatch: isLotlOrLoteType(text(document, D("TSLType"))),
-    requireBaselineB: pubEaaAlternativeBinding,
+    requireBaselineB: true,
     requireAnnexH4: pubEaaAlternativeBinding,
+    requireTs119612Profile: true,
     schemeTerritory: text(document, D("SchemeTerritory")),
     schemeOperatorNames: texts(document, `${D("SchemeOperatorName")}/${L("Name")}`),
+    trustedSignerFingerprintsSha256: options.trustedSignerFingerprintsSha256,
+    ts119612SignerEvidence: options.signerEvidence,
   });
   checks.push(...signature.checks);
   certificates.push(...signature.certificates);
