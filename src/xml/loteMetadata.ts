@@ -26,6 +26,8 @@ import {
 import type { CheckResult, TrustedListAuditResult } from "../types.js";
 import { assessSignature } from "./signature.js";
 import { parseXml } from "./parse.js";
+import { validateTs119602XmlSchema } from "./ts119602Xsd.js";
+import type { XsdValidationDependencies } from "./xsd.js";
 import { firstNode, has, nodes, text, texts } from "./xpath.js";
 
 const ETSI_TS119602_NAMESPACE = "http://uri.etsi.org/019602/v1#";
@@ -43,6 +45,7 @@ export async function assessXmlLoteMetadata(
   assessmentDate = new Date(),
   profileSelectionStatus?: NonNullable<TrustedListAuditResult["ts119602Classification"]>["profileStatus"],
   trustedSignerFingerprintsSha256?: readonly string[],
+  xsdDependencies: XsdValidationDependencies = {},
 ): Promise<Pick<TrustedListAuditResult, "ts119602" | "extracted" | "detected">> {
   const parsed = parseXml(xml);
   if (!parsed.document || parsed.errors.some((error) => error.startsWith("fatal"))) {
@@ -62,9 +65,11 @@ export async function assessXmlLoteMetadata(
   const metadataInput = collectXmlMetadataInput(root, metadataContext, Boolean(infoNode), assessmentDate);
   const entityInput = collectXmlEntitiesInput(root, metadataInput.historyPeriod, metadataInput.issueDateTime, assessmentDate);
   const entityAssessment = buildTs119602EntityFindings(entityInput);
+  const xmlSchema = await validateTs119602XmlSchema(xml, xsdDependencies);
   const checks: CheckResult[] = [
     check("parse.xml", "parse", parsed.errors.length === 0 ? "pass" : "warn", parsed.errors.length === 0 ? "info" : "warning", parsed.errors.length === 0 ? "XML LoTE parsed successfully." : "XML LoTE parsed with parser warnings.", parsed.errors.length ? parsed.errors : undefined),
     xmlBindingCheck(root, binding),
+    xmlSchema,
     check("xml_lote.structure.list_and_scheme_information", "structure", has(root, INFO) ? "pass" : "fail", has(root, INFO) ? "info" : "critical", "ListAndSchemeInformation exists."),
   ];
   const mode = inferTs119602SchemeMode(metadataInput.fields);
@@ -109,7 +114,7 @@ export async function assessXmlLoteMetadata(
     "profile",
     "not_checked",
     "warning",
-    "Complete ETSI TS 119 602 V1.1.1 XML schema, alternative-binding mapping, and contextual trust/dereferencing coverage is not implemented.",
+    "Complete ETSI TS 119 602 V1.1.1 alternative-binding mapping and contextual trust/dereferencing coverage is not implemented.",
     summarizeTs119602Requirements(),
   ));
 

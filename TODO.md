@@ -298,15 +298,15 @@ Required change:
 
 - [x] Bundle or reproducibly fetch `1960201_xsd_schema.xsd`, `_sie.xsd`, and
   `_tie.xsd`, plus pinned XMLDSig dependencies.
-- [ ] Route the `--xsd`/schema validator through `xml_lote`; it currently only
-  runs for TS 119 612 XML.
-- [ ] Route scheme-explicit XML validation through the pinned offline XML
+- [x] Route the schema validator through `xml_lote`; TS 119 602 XML uses its
+  pinned schema automatically while `--xsd` remains the TS 119 612 override.
+- [x] Route scheme-explicit XML validation through the pinned offline XML
   catalog; generic `xmllint` validation now prohibits network access with
   `--nonet`.
-- [ ] Report XPath/line diagnostics and schema source identity.
+- [x] Report structured line/column diagnostics and schema source identity.
 - [ ] Validate the TS 119 612 alternative binding with the correct TS 119 612
   schema before applying Table A.1 mappings.
-- [ ] Keep XML schema validity separate from semantic and profile validity.
+- [x] Keep XML schema validity separate from semantic and profile validity.
 
 ## Signature validation backlog
 
@@ -504,6 +504,8 @@ explicit so normative profile work cannot outrun binding and core semantics.
 | TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Complete |
 | TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Complete |
 | TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Complete |
+| TS602-13 | Validate scheme-explicit XML with the integrity-checked pinned XSD/catalog, offline diagnostics, and binding-source evidence. | TS602-04, TS602-09 | Complete |
+| TS602-14 | Implement Annex A.2.2/Table A.1 mapping for the TS 119 612 alternative XML binding. | TS602-03, TS602-13 | Next |
 
 TS602-01 establishes result isolation only; it does not claim that any TS
 119 602 binding or profile is completely validated.
@@ -525,7 +527,7 @@ TS602-01 establishes result isolation only; it does not claim that any TS
 
 - [x] Pin the official v1.1.1 JSON/XSD schema bundle and hashes.
 - [x] Implement offline JSON Schema validation.
-- [ ] Implement offline XML Schema validation for scheme-explicit XML.
+- [x] Implement offline XML Schema validation for scheme-explicit XML.
 - [ ] Implement TS 119 612 alternative-binding mapping.
 - [x] Correct official JSON parsing and fixtures.
 - [x] Keep WE BUILD legacy structures as explicitly non-conformant

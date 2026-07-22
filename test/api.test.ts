@@ -339,6 +339,8 @@ describe("API server", () => {
     }
     expect(parsedYaml.components.schemas.Ts119602ContextOptions).toEqual(parsedJson.components.schemas.Ts119602ContextOptions);
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
+    expect(parsedJson.info.description).toContain("pinned V1.1.1 XSD and offline catalog");
+    expect(parsedJson.paths["/api/audit/artifact"].post.description).toContain("separate pinned offline XML Schema finding");
     await app.close();
   });
 

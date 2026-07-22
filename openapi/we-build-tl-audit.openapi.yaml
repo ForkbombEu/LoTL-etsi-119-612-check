@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: WE BUILD Trusted List Audit API
   version: 0.1.0
-  description: HTTP API for auditing trusted-list pointers in WE BUILD WP4 LoTL JSON artifacts.
+  description: HTTP API for auditing trusted-list pointers and assessing ETSI TS 119 612 / TS 119 602 artifacts. Scheme-explicit TS 119 602 XML is validated against the integrity-checked pinned V1.1.1 XSD and offline catalog when xmllint is available.
 servers:
   - url: http://127.0.0.1:3000
 paths:
@@ -181,6 +181,7 @@ paths:
   /api/v1/artifact/assess-url:
     post:
       summary: Assess one referenced artifact URL
+      description: TS 119 602 scheme-explicit XML automatically receives a separate pinned offline XML Schema finding; unavailable local validator support is reported as unsupported.
       requestBody:
         required: true
         content:
@@ -322,6 +323,7 @@ paths:
   /api/audit/artifact:
     post:
       summary: Assess raw XML, JSON, or compact JAdES TL/LoTE content with optional bounded contextual evidence
+      description: TS 119 602 scheme-explicit XML automatically receives a separate pinned offline XML Schema finding; unavailable local validator support is reported as unsupported.
       requestBody:
         required: true
         content:

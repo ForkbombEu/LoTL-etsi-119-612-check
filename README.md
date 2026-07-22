@@ -339,7 +339,7 @@ The official ETSI TS 119 602 V1.1.1 JSON and XML binding schemas are pinned unde
 
 `src/standards/ts119602Schemas.ts` verifies bundle integrity and resolves only allowlisted local references. The accompanying `catalog.xml` maps the HTTP/HTTPS W3C imports to local files. The resolver explicitly handles the published TIE schema reference `1960201-jsonSchema.json`, whose spelling differs from the published base filename, without modifying either upstream file. Unknown remote, absolute, and traversal references are rejected.
 
-This task pins and resolves the schemas; TS 119 602 JSON/XML schema validation and binding-specific report findings are implemented separately. Schema success alone will not imply normative conformance because the ETSI specification prevails over conflicting electronic schemas.
+TS 119 602 JSON and scheme-explicit XML assessments use these pinned schemas automatically. XML validation verifies every bundled file against the manifest before invoking `xmllint` with `--nonet` and the pinned catalog through `XML_CATALOG_FILES`. Its separate `ts119602.binding.xml_schema` finding records source commit/hash, bundle integrity, and structured line/column diagnostics. If `xmllint` is unavailable, the finding is `unsupported`; it never pretends validation passed. Schema success alone does not imply normative conformance because the ETSI specification prevails over conflicting electronic schemas.
 
 ## Report schema v2
 
@@ -411,9 +411,13 @@ because no normative version defining it has been identified. The basis is
 and its referenced
 [ETSI scheme-explicit binding repository](https://forge.etsi.org/rep/esi/x19_60201_lists_of_trusted_entities).
 
+The same route automatically validates the artifact with the integrity-checked
+V1.1.1 XSD and offline catalog. Schema validity remains a distinct finding
+from semantic, profile, signature, certificate, and trust results.
+
 ## Known limitations
 
-- XSD validation depends on `xmllint` and a local schema supplied through CLI `--xsd`; API requests currently do not accept an XSD upload/path.
+- XSD validation depends on `xmllint`. TS 119 602 scheme-explicit XML uses the pinned schema bundle automatically; TS 119 612 uses the optional local CLI `--xsd` path, which API requests do not accept.
 - XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
 - Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
 - The XML signature assessor evaluates the first `ds:Signature`; XML XSD validation and contextual signer-chain trust remain separate from the implemented XAdES Baseline B and Annex H.4 findings.

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { validateXsd } from "../src/xml/xsd.js";
+import { parseXsdDiagnostics, validateXsd } from "../src/xml/xsd.js";
 
 const xml = "<TrustServiceStatusList />";
 const xsdPath = "test/fixtures/minimal-tsl.xsd";
@@ -64,5 +64,31 @@ describe("validateXsd", () => {
       }),
     });
     expect(runner).not.toHaveBeenCalled();
+  });
+
+  it("supplies an offline XML catalog through the process environment", async () => {
+    const runner = vi.fn(async (_command: string, args: string[]) => (
+      args[0] === "--version"
+        ? { code: 0, stdout: "xmllint", stderr: "" }
+        : { code: 0, stdout: "", stderr: "" }
+    ));
+    await validateXsd(xml, xsdPath, { commandRunner: runner }, { catalogPath: "schemas/catalog.xml" });
+    expect(runner).toHaveBeenLastCalledWith(
+      "xmllint",
+      expect.arrayContaining(["--nonet", "--schema", xsdPath, "--noout"]),
+      { env: { XML_CATALOG_FILES: "schemas/catalog.xml" } },
+    );
+    expect(runner.mock.calls.at(-1)?.[1]).not.toContain("--catalogs");
+  });
+
+  it("parses line diagnostics without exposing the temporary artifact path", () => {
+    const temporaryPath = "/tmp/we-build-tl-audit-abc123/artifact.xml";
+    expect(parseXsdDiagnostics(
+      `${temporaryPath}:7:12: Schemas validity error : Element 'Wrong': No matching global declaration.\nvalidation failed`,
+      temporaryPath,
+    )).toEqual([
+      { line: 7, column: 12, message: "Schemas validity error : Element 'Wrong': No matching global declaration." },
+      { message: "validation failed" },
+    ]);
   });
 });

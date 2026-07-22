@@ -10,7 +10,11 @@ export interface XsdCommandResult {
   stderr: string;
 }
 
-export type XsdCommandRunner = (command: string, args: string[]) => Promise<XsdCommandResult>;
+export interface XsdCommandOptions {
+  env?: NodeJS.ProcessEnv;
+}
+
+export type XsdCommandRunner = (command: string, args: string[], options?: XsdCommandOptions) => Promise<XsdCommandResult>;
 
 export interface XsdValidationDependencies {
   commandRunner?: XsdCommandRunner;
@@ -18,6 +22,11 @@ export interface XsdValidationDependencies {
 
 export interface XsdValidationOptions {
   expectedNamespace?: string;
+  checkId?: string;
+  schemaLabel?: string;
+  catalogPath?: string;
+  schemaEvidence?: Record<string, unknown>;
+  unavailableStatus?: Extract<CheckResult["status"], "not_checked" | "unsupported">;
 }
 
 export async function validateXsd(
@@ -26,13 +35,17 @@ export async function validateXsd(
   dependencies: XsdValidationDependencies = {},
   options: XsdValidationOptions = {},
 ): Promise<CheckResult> {
+  const id = options.checkId ?? "schema.xsd";
+  const label = options.schemaLabel ?? "XSD";
+  const unavailableStatus = options.unavailableStatus ?? "not_checked";
   if (!xsdPath) {
     return {
-      id: "schema.xsd",
+      id,
       category: "schema",
-      status: "not_checked",
+      status: unavailableStatus,
       severity: "warning",
-      message: "XSD validation not checked; pass --xsd with local ETSI TS 119 612 schema to enable xmllint validation.",
+      message: `${label} validation was not checked because no schema path was supplied.`,
+      evidence: options.schemaEvidence,
     };
   }
 
@@ -40,12 +53,12 @@ export async function validateXsd(
     await access(xsdPath);
   } catch {
     return {
-      id: "schema.xsd",
+      id,
       category: "schema",
-      status: "not_checked",
+      status: unavailableStatus,
       severity: "warning",
-      message: "XSD validation not checked because schema file was not readable.",
-      evidence: xsdPath,
+      message: `${label} validation was not checked because the schema file was not readable.`,
+      evidence: mergeEvidence(options.schemaEvidence, { xsdPath }),
     };
   }
 
@@ -53,12 +66,12 @@ export async function validateXsd(
     const schemaNamespace = await targetNamespace(xsdPath);
     if (schemaNamespace !== options.expectedNamespace) {
       return {
-        id: "schema.xsd",
+        id,
         category: "schema",
-        status: "not_checked",
+        status: unavailableStatus,
         severity: "warning",
-        message: "XSD validation not checked because the supplied schema target namespace does not match the XML artifact namespace.",
-        evidence: { artifactNamespace: options.expectedNamespace, schemaNamespace: schemaNamespace ?? null, xsdPath },
+        message: `${label} validation was not checked because the schema target namespace does not match the XML artifact namespace.`,
+        evidence: mergeEvidence(options.schemaEvidence, { artifactNamespace: options.expectedNamespace, schemaNamespace: schemaNamespace ?? null, xsdPath }),
       };
     }
   }
@@ -67,11 +80,12 @@ export async function validateXsd(
   const xmllint = await hasXmllint(commandRunner);
   if (!xmllint) {
     return {
-      id: "schema.xsd",
+      id,
       category: "schema",
-      status: "not_checked",
+      status: unavailableStatus,
       severity: "warning",
-      message: "XSD validation not checked because xmllint was not found on PATH.",
+      message: `${label} validation was not checked because xmllint was not found on PATH.`,
+      evidence: options.schemaEvidence,
     };
   }
 
@@ -79,18 +93,49 @@ export async function validateXsd(
   const xmlPath = join(dir, "artifact.xml");
   try {
     await writeFile(xmlPath, xml);
-    const result = await commandRunner("xmllint", ["--nonet", "--schema", xsdPath, xmlPath, "--noout"]);
+    const args = ["--nonet"];
+    args.push("--schema", xsdPath, xmlPath, "--noout");
+    const result = options.catalogPath
+      ? await commandRunner("xmllint", args, { env: { XML_CATALOG_FILES: options.catalogPath } })
+      : await commandRunner("xmllint", args);
+    const diagnostics = parseXsdDiagnostics(result.stderr || result.stdout, xmlPath);
     return {
-      id: "schema.xsd",
+      id,
       category: "schema",
       status: result.code === 0 ? "pass" : "fail",
       severity: result.code === 0 ? "info" : "error",
-      message: result.code === 0 ? "XSD validation passed with xmllint." : "XSD validation failed with xmllint.",
-      evidence: result.stderr || result.stdout || undefined,
+      message: result.code === 0 ? `${label} validation passed with xmllint.` : `${label} validation failed with xmllint.`,
+      evidence: options.schemaEvidence
+        ? mergeEvidence(options.schemaEvidence, { diagnostics, command: { executable: "xmllint", networkDisabled: true, catalogUsed: Boolean(options.catalogPath) } })
+        : result.stderr || result.stdout || undefined,
     };
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+}
+
+export interface XsdDiagnostic {
+  line?: number;
+  column?: number;
+  message: string;
+}
+
+export function parseXsdDiagnostics(output: string, xmlPath?: string): XsdDiagnostic[] {
+  if (!output.trim()) return [];
+  const normalizedPath = xmlPath?.replaceAll("\\", "/");
+  return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const normalizedLine = line.replaceAll("\\", "/");
+    const withoutPath = normalizedPath && normalizedLine.startsWith(`${normalizedPath}:`)
+      ? normalizedLine.slice(normalizedPath.length + 1)
+      : normalizedLine;
+    const located = /^(\d+):(?:(\d+):)?\s*(.*)$/.exec(withoutPath);
+    if (!located) return { message: redactTemporaryPath(normalizedLine) };
+    return {
+      line: Number(located[1]),
+      column: located[2] ? Number(located[2]) : undefined,
+      message: located[3].trim(),
+    };
+  });
 }
 
 async function targetNamespace(xsdPath: string): Promise<string | undefined> {
@@ -107,9 +152,9 @@ async function hasXmllint(commandRunner: XsdCommandRunner): Promise<boolean> {
   return result.code === 0;
 }
 
-function runCommand(command: string, args: string[]): Promise<XsdCommandResult> {
+function runCommand(command: string, args: string[], options: XsdCommandOptions = {}): Promise<XsdCommandResult> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, ...options.env } });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => {
@@ -121,4 +166,12 @@ function runCommand(command: string, args: string[]): Promise<XsdCommandResult> 
     child.on("error", () => resolve({ code: -1, stdout, stderr }));
     child.on("close", (code) => resolve({ code, stdout, stderr }));
   });
+}
+
+function mergeEvidence(base: Record<string, unknown> | undefined, extra: Record<string, unknown>): Record<string, unknown> {
+  return { ...(base ?? {}), ...extra };
+}
+
+function redactTemporaryPath(value: string): string {
+  return value.replace(/(?:[A-Za-z]:)?[^\s:]*(?:we-build-tl-audit-[^\s/:]+)[^\s:]*(?:artifact\.xml)?/g, "artifact.xml");
 }

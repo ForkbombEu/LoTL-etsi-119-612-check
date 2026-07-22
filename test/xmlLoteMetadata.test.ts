@@ -82,6 +82,7 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
           normativeEntityPath: "/ListOfTrustedEntities/TrustedEntitiesList/TrustedEntity",
         }),
       }),
+      expect.objectContaining({ id: "ts119602.binding.xml_schema", category: "schema" }),
       expect.objectContaining({ id: "xml_lote.structure.type", status: "pass" }),
       expect.objectContaining({ id: "xml_lote.dates.next_after_issue", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.uri", status: "pass" }),
