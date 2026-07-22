@@ -1,5 +1,8 @@
+import { X509Certificate } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { assessArtifactContent } from "../src/audit.js";
+import { inspectTs119602Certificate } from "../src/standards/ts119602Identity.js";
 
 const schemeInformation = `
   <ListAndSchemeInformation>
@@ -62,6 +65,26 @@ const weBuildCompatibilityXmlLote = `<?xml version="1.0"?>
 </TrustedEntitiesList>`;
 
 describe("ETSI TS 119 602 XML LoTE metadata", () => {
+  it("preserves XML RSA KeyValue and compares it with certificate and SKI forms", async () => {
+    const certificate = (await readFile("test/fixtures/ts119612-service-ca.cert.pem", "utf8"))
+      .replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s+/g, "");
+    const jwk = new X509Certificate(Buffer.from(certificate, "base64")).publicKey.export({ format: "jwk" });
+    const ski = Buffer.from(inspectTs119602Certificate(certificate).subjectKeyIdentifier!, "hex").toString("base64");
+    const xml = standardXmlLote
+      .replace('xmlns="http://uri.etsi.org/019602/v1#"', 'xmlns="http://uri.etsi.org/019602/v1#" xmlns:ds="http://www.w3.org/2000/09/xmldsig#"')
+      .replace(
+        "<DigitalId><OtherId>urn:example:service-identity</OtherId></DigitalId>",
+        `<DigitalId><X509Certificate>${certificate}</X509Certificate></DigitalId>
+         <DigitalId><ds:KeyValue><ds:RSAKeyValue><ds:Modulus>${Buffer.from(jwk.n!, "base64url").toString("base64")}</ds:Modulus><ds:Exponent>${Buffer.from(jwk.e!, "base64url").toString("base64")}</ds:Exponent></ds:RSAKeyValue></ds:KeyValue></DigitalId>
+         <DigitalId><X509SKI>${ski}</X509SKI></DigitalId>`,
+      );
+    const result = await assessArtifactContent({ content: xml, contentType: "application/xml", strict: false, includeJsonLoteChecks: false });
+    expect(result.ts119602.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ts119602.service.digital_identity", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.service.identity_equivalence", status: "pass" }),
+    ]));
+  });
+
   it("accepts the normative ListOfTrustedEntities entity path", async () => {
     const result = await assessArtifactContent({
       content: standardXmlLote,

@@ -515,15 +515,17 @@ Compact JAdES Baseline B is detected as JWS rather than as a JSON `signature` pr
 
 Exact embedded `LoTEType` values dispatch Annex D-I local profile checks. Each selected profile receives separate binding, scheme-information, trusted-entity, service/history, and signature findings. The implementation checks the registered status/rules/service URIs, six-calendar-month update limit, profile history/pointer shape, contact and country-role URIs, locally asserted ETSI registration-identifier syntax, associated-body payload validity, certificate name/registration consistency, BasicConstraints/KeyUsage purpose, Wallet `ServiceUniqueIdentifier`, Pub-EAA certificate/status/SKI-history rules, and registrar supply points. Official-record identity, associated-body responsibility, certificate-policy authority, endpoint content, chains and revocation remain separate contextual evidence rather than being inferred from local syntax.
 
-Optional contextual assessment compares supplied prior instances, requires certificate-declared self-pointers to return the identical current bytes with a verified matching signer, checks distribution-point byte equality, recognizes directly returned previous archive instances, verifies JSON/XML supply-point responses, and applies explicit signer fingerprints without trusting embedded certificates by default. Every fetch records the normal HTTP/hash evidence and observes timeout, count, concurrency, byte, and duplicate-URL cache bounds. Public-key/SKI pointer identities, archive indexes requiring traversal, register semantics beyond machine-readable syntax, authoritative legal records, certificate-purpose policy, and production chain/revocation trust remain explicit limitations; therefore success still cannot produce a complete TS 119 602 `conformant` verdict.
+Optional contextual assessment compares supplied prior instances, requires self-pointers to return the identical current bytes with a verified signer matching a declared certificate fingerprint, JWK/XML-RSA public-key hash, or X509SKI, checks distribution-point byte equality, recognizes directly returned previous archive instances, verifies JSON/XML supply-point responses, and applies explicit signer fingerprints without trusting embedded certificates by default. Callers may attach per-`LoTELocation` certificate paths and timestamped revocation evidence through `context.pointerSigners`; embedded signer certificates are never copied into that trust input. Every fetch records the normal HTTP/hash evidence and observes timeout, count, concurrency, byte, and duplicate-URL cache bounds. Archive indexes requiring traversal, register semantics beyond machine-readable syntax, authoritative legal records, certificate-purpose policy, non-PKI pointer identities, automatic path discovery, and CRL/OCSP retrieval remain explicit limitations; therefore success still cannot produce a complete TS 119 602 `conformant` verdict.
 
 Core TS 119 602 entity checks enforce binding-specific direct nesting,
 cardinality and allowed children independently of schema success. Multilingual
 names, postal/electronic addresses, service names and `TEInformationURI`
 pointers retain their language tags; all local URI forms are validated, and
 Bulgarian/Greek native terms require the Annex B `bg-Latn`/`el-Latn`
-transliteration entry. Dereferenced pointer-content encoding, parser capability
-and authoritative legal/contact semantics remain explicitly `not_checked`.
+transliteration entry. Certificate, JSON JWK, XML RSA `KeyValue`, and X509SKI
+representations are compared within each service identity. Dereferenced
+pointer-content encoding, parser capability and authoritative legal/contact
+semantics remain explicitly `not_checked`.
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
@@ -554,7 +556,7 @@ from semantic, profile, signature, certificate, and trust results.
 - XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
 - Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
 - The XML signature assessor evaluates the first `ds:Signature`; XML XSD validation and contextual signer-chain trust remain separate from the implemented XAdES Baseline B and Annex H.4 findings.
-- Contextual pointer authentication currently supports X.509 certificate identities. Public-key/SKI-only pointer authentication remains unimplemented.
+- Contextual pointer authentication supports X.509 certificate, JWK/XML-RSA public-key and X509SKI identities. Open-format non-PKI `OtherId` authentication remains `inconclusive`.
 - Archive checks recognize a previous LoTE returned directly by the configured archive URI; HTML indexes and multi-step archive protocols remain `inconclusive`.
 - Supply-point checks establish bounded reachability and machine-processable JSON/XML syntax, not the authoritative semantics of register records.
 - Full legal ETSI conformance requires normative interpretation beyond structural checks, schema checks, and cryptographic checks.

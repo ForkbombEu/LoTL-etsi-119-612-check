@@ -11,6 +11,7 @@ import {
   type Ts119602SchemeField,
 } from "../standards/ts119602Metadata.js";
 import type { CheckResult } from "../types.js";
+import { xmlRsaKeyValue } from "../standards/ts119602Identity.js";
 
 const TSL_NS = "http://uri.etsi.org/02231/v2#";
 const XML_LANG = "http://www.w3.org/XML/1998/namespace";
@@ -282,7 +283,10 @@ function identityFacts(identity: Element | undefined, path: string): Ts119602Ide
   const digitalIds = direct(identity, "DigitalId");
   const alternatives = (name: string) => digitalIds.flatMap((digitalId, digitalIndex) => direct(digitalId, name).map((entry) => ({
     path: `${path}/DigitalId[${digitalIndex + 1}]/${name}`,
-    value: name === "KeyValue" ? { xmlElement: entry.nodeName } : ["X509Certificate", "X509SKI"].includes(name) ? (value(entry) ?? "").replace(/\s+/g, "") : value(entry),
+    value: name === "KeyValue"
+      ? xmlRsaKeyValue(value(descendantsAny(entry, "Modulus")[0]), value(descendantsAny(entry, "Exponent")[0]))
+        ?? { unsupportedXmlKeyValue: entry.nodeName }
+      : ["X509Certificate", "X509SKI"].includes(name) ? (value(entry) ?? "").replace(/\s+/g, "") : value(entry),
   })));
   return {
     path, present: Boolean(identity), certificates: alternatives("X509Certificate"),
@@ -374,6 +378,7 @@ function presenceValue(element: Element | undefined): { present: boolean; value:
 function multilingual(elements: Element[]): Array<{ language: unknown; value: unknown }> { return elements.map((entry) => ({ language: entry.getAttributeNS(XML_LANG, "lang") || entry.getAttribute("xml:lang") || undefined, value: value(entry) })); }
 function values(elements: Element[]): unknown[] { return elements.map(value); }
 function descendants(parent: Element | undefined, name: string): Element[] { return parent ? Array.from(parent.getElementsByTagNameNS(TSL_NS, name)) : []; }
+function descendantsAny(parent: Element | undefined, name: string): Element[] { return parent ? Array.from(parent.getElementsByTagNameNS("*", name)) : []; }
 function direct(parent: Element | undefined, name: string): Element[] { return children(parent).filter((entry) => entry.namespaceURI === TSL_NS && local(entry) === name); }
 function children(parent: Node | undefined): Element[] { return parent ? Array.from(parent.childNodes).filter((entry): entry is Element => entry.nodeType === 1) : []; }
 function local(element: Element): string { return element.localName || element.nodeName.split(":").at(-1) as string; }

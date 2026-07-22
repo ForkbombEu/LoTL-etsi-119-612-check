@@ -1,8 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { X509Certificate, type JsonWebKey } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   buildTs119602EntityFindings,
   type Ts119602EntitiesInput,
 } from "../src/standards/ts119602Entities.js";
+import { inspectTs119602Certificate } from "../src/standards/ts119602Identity.js";
+
+let certificate = "";
+let publicKey: JsonWebKey;
+let ski = "";
+
+beforeAll(async () => {
+  certificate = (await readFile("test/fixtures/ts119612-service-ca.cert.pem", "utf8"))
+    .replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s+/g, "");
+  publicKey = new X509Certificate(Buffer.from(certificate, "base64")).publicKey.export({ format: "jwk" });
+  ski = Buffer.from(inspectTs119602Certificate(certificate).subjectKeyIdentifier!, "hex").toString("base64");
+});
 
 describe("ETSI TS 119 602 clauses 6.4-6.7", () => {
   it("passes complete local entity and service structures", () => {
@@ -29,6 +43,27 @@ describe("ETSI TS 119 602 clauses 6.4-6.7", () => {
     identity.subjectNames = [{ path: "/dn", value: "not a DN" }];
     identity.skis = [{ path: "/ski", value: "AA=" }];
     expect(find(buildTs119602EntityFindings(input), "ts119602.service.digital_identity")).toMatchObject({ status: "fail", severity: "critical" });
+  });
+
+  it("compares certificate, PublicKeyValue, and X509SKI representations", () => {
+    const input = validInput();
+    const identity = input.entities[0].services[0].identity;
+    identity.otherIds = [];
+    identity.certificates = [{ path: "/cert", value: certificate }];
+    identity.publicKeys = [{ path: "/key", value: publicKey }];
+    identity.skis = [{ path: "/ski", value: ski }];
+    expect(find(buildTs119602EntityFindings(input), "ts119602.service.identity_equivalence")).toMatchObject({ status: "pass" });
+
+    identity.skis[0].value = "AQID";
+    expect(find(buildTs119602EntityFindings(input), "ts119602.service.identity_equivalence")).toMatchObject({
+      status: "fail",
+      severity: "critical",
+      evidence: expect.objectContaining({ results: [expect.objectContaining({ diagnostics: expect.arrayContaining([expect.stringContaining("X509SKI does not match")]) })] }),
+    });
+
+    identity.skis[0].value = ski;
+    identity.publicKeys[0].value = { kty: "RSA", n: "AQAB", e: "AQAB" };
+    expect(find(buildTs119602EntityFindings(input), "ts119602.service.identity_equivalence")).toMatchObject({ status: "fail" });
   });
 
   it("requires status when historical information is retained", () => {

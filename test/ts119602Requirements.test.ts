@@ -99,6 +99,10 @@ describe("ETSI TS 119 602 requirements ledger", () => {
     });
   });
 
+  it("keeps pointer authentication partial because open OtherId semantics are profile-dependent", () => {
+    expect(findTs119602Requirement("ts119602.scheme.pointers.authentication")?.implementation.status).toBe("partial");
+  });
+
   it("marks the completed TS602-15 local structure and URI families as implemented", () => {
     for (const id of [
       "ts119602.syntax.uri",

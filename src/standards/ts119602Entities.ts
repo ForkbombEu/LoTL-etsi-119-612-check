@@ -7,6 +7,7 @@ import {
   type Ts119602MultilingualValue,
 } from "./ts119602Syntax.js";
 import type { Ts119602AddressObservation, Ts119602ExtensionObservation } from "./ts119602Metadata.js";
+import { inspectTs119602Identity } from "./ts119602Identity.js";
 
 export interface Ts119602IdentityObservation {
   path: string;
@@ -207,10 +208,11 @@ function serviceNamesFinding(services: Ts119602ServiceObservation[]): CheckResul
 function identityFinding(identities: Ts119602IdentityObservation[], certificateEvidence: Array<{ path: string; value: unknown; lexicalValid: boolean; summary?: CertificateSummary }>): CheckResult {
   if (identities.length === 0) return finding("ts119602.service.digital_identity", "not_applicable", "info", "Service digital identity is not applicable because no service or history identity was observed.");
   const results = identities.map((identity) => {
+    const inspection = inspectTs119602Identity(identity);
     const certificates = certificateEvidence.filter((entry) => identity.certificates.some((candidate) => candidate.path === entry.path));
     const subjects = identity.subjectNames.map((entry) => ({ ...entry, valid: typeof entry.value === "string" && validDistinguishedName(entry.value) }));
     const skis = identity.skis.map((entry) => ({ ...entry, valid: typeof entry.value === "string" && strictBase64(entry.value) }));
-    const publicKeys = identity.publicKeys.map((entry) => ({ ...entry, valid: isNonEmptyObject(entry.value) }));
+    const publicKeys = inspection.publicKeys.map((entry) => ({ ...entry, valid: entry.parsed }));
     const otherIds = identity.otherIds.map((entry) => ({ ...entry, valid: nonEmptyValue(entry.value) }));
     const count = certificates.length + subjects.length + skis.length + publicKeys.length + otherIds.length;
     const valid = identity.present && count > 0 && certificates.every((entry) => entry.lexicalValid && Boolean(entry.summary)) && subjects.every((entry) => entry.valid) && skis.every((entry) => entry.valid) && publicKeys.every((entry) => entry.valid) && otherIds.every((entry) => entry.valid);
@@ -220,8 +222,20 @@ function identityFinding(identities: Ts119602IdentityObservation[], certificateE
 }
 
 function identityEquivalenceFinding(identities: Ts119602IdentityObservation[]): CheckResult {
-  const comparable = identities.filter((identity) => identity.certificates.length > 0 && (identity.publicKeys.length > 0 || identity.skis.length > 0));
-  return finding("ts119602.service.identity_equivalence", comparable.length > 0 ? "not_checked" : "not_applicable", comparable.length > 0 ? "warning" : "info", comparable.length > 0 ? "Certificate/public-key and certificate/SKI equivalence is required but is not implemented by the local identity parser." : "Identity equivalence is not applicable because no identity combines a certificate with PublicKeyValue or X509SKI.", { comparableIdentityPaths: comparable.map((identity) => identity.path) });
+  const comparable = identities.map(inspectTs119602Identity).filter((identity) => identity.comparable);
+  if (comparable.length === 0) {
+    return finding("ts119602.service.identity_equivalence", "not_applicable", "info", "Identity equivalence is not applicable because no identity combines a certificate with PublicKeyValue or X509SKI.", { comparableIdentityPaths: [] });
+  }
+  const valid = comparable.every((identity) => identity.valid);
+  return finding(
+    "ts119602.service.identity_equivalence",
+    valid ? "pass" : "fail",
+    valid ? "info" : "critical",
+    valid
+      ? "Every PublicKeyValue and X509SKI matches a certificate representation in its parent ServiceDigitalIdentity."
+      : "One or more PublicKeyValue or X509SKI representations do not match a certificate in the same ServiceDigitalIdentity.",
+    { results: comparable },
+  );
 }
 
 function serviceStatusFinding(services: Ts119602ServiceObservation[], historyPeriod: unknown): CheckResult {
@@ -330,7 +344,6 @@ function validDistinguishedName(value: string): boolean {
 }
 
 function nonEmptyValue(value: unknown): boolean { return typeof value === "string" ? value.length > 0 : value !== null && value !== undefined; }
-function isNonEmptyObject(value: unknown): boolean { return Boolean(value && typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length > 0); }
 function uriResult(value: unknown): { value: unknown; validation: ReturnType<typeof validateTs119602Uri> } { return { value, validation: validateTs119602Uri(value) }; }
 
 function aggregate(id: string, results: Array<{ valid: boolean }>, passMessage: string, failMessage: string, failSeverity: CheckResult["severity"] = "error"): CheckResult {

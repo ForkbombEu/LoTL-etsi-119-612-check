@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { assessArtifactContent, runAuditFromJson } from "../src/audit.js";
 import { parseCompactJades } from "../src/json/jades.js";
+import { inspectTs119602JsonPointerIdentity } from "../src/standards/ts119602Context.js";
+import { inspectTs119602Certificate, matchTs119602IdentityMaterial } from "../src/standards/ts119602Identity.js";
 
 const originalFetch = globalThis.fetch;
 
@@ -18,7 +20,8 @@ describe("ETSI TS 119 602 contextual validation", () => {
     const prior = structuredClone(parsed.parsedPayload) as ContextPayload;
     prior.LoTE.ListAndSchemeInformation.LoTESequenceNumber = 1;
     prior.LoTE.ListAndSchemeInformation.ListIssueDateTime = "2026-01-01T00:00:00Z";
-    const certificate = new X509Certificate(Buffer.from((parsed.protectedHeader?.x5c as string[])[0], "base64"));
+    const signingCertificate = (parsed.protectedHeader?.x5c as string[])[0];
+    const certificate = new X509Certificate(Buffer.from(signingCertificate, "base64"));
     const trustedFingerprint = certificate.fingerprint256.replace(/:/g, "").toLowerCase();
 
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -40,6 +43,17 @@ describe("ETSI TS 119 602 contextual validation", () => {
         dereference: true,
         priorArtifacts: [{ content: JSON.stringify(prior), source: "prior.json", contentType: "application/json" }],
         trustedSignerFingerprintsSha256: [trustedFingerprint],
+        pointerSigners: [{
+          location: "https://context.example.test/current.jws",
+          trustAnchors: [signingCertificate],
+          revocation: {
+            status: "good",
+            source: "test-status-evidence",
+            checkedAt: "2026-07-21T00:00:00Z",
+            nextUpdate: "2027-07-21T00:00:00Z",
+            signerFingerprintSha256: trustedFingerprint,
+          },
+        }],
         maxDereferences: 8,
         maxBytesPerArtifact: 1_000_000,
         concurrency: 2,
@@ -56,6 +70,71 @@ describe("ETSI TS 119 602 contextual validation", () => {
       expect.objectContaining({ id: "json_lote.signature.jades_signer_trust", status: "pass" }),
     ]));
     expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    expect(find(result, "ts119602.scheme.pointers.authentication")).toMatchObject({
+      evidence: expect.objectContaining({
+        results: [expect.objectContaining({
+          signerTrustEvidence: expect.objectContaining({
+            path: expect.objectContaining({ status: "pass" }),
+            revocation: expect.objectContaining({ status: "pass" }),
+          }),
+        })],
+      }),
+    });
+  });
+
+  it("extracts and matches PublicKeyValue and X509SKI pointer identities", async () => {
+    const current = (await readFile("test/fixtures/ts119602-context-current.jws", "utf8")).trim();
+    const parsed = parseCompactJades(current);
+    const signingCertificate = (parsed.protectedHeader?.x5c as string[])[0];
+    const certificate = new X509Certificate(Buffer.from(signingCertificate, "base64"));
+    const inspected = inspectTs119602Certificate(signingCertificate);
+    const ski = Buffer.from(inspected.subjectKeyIdentifier!, "hex").toString("base64");
+    const signer = {
+      certificateFingerprintsSha256: [inspected.fingerprintSha256!],
+      publicKeyHashesSha256: [inspected.publicKeySha256!],
+      subjectKeyIdentifiers: [inspected.subjectKeyIdentifier!],
+    };
+
+    for (const identity of [
+      { PublicKeyValues: [certificate.publicKey.export({ format: "jwk" })] },
+      { X509SKIs: [ski] },
+    ]) {
+      const declared = inspectTs119602JsonPointerIdentity({ ServiceDigitalIdentities: [identity] });
+      expect(declared.pointerIdentityDiagnostics).toEqual([]);
+      expect(matchTs119602IdentityMaterial(declared.pointerIdentity, signer)).toMatchObject({ matched: true });
+    }
+  });
+
+  it("rejects explicitly revoked pointer signers", async () => {
+    const current = (await readFile("test/fixtures/ts119602-context-current.jws", "utf8")).trim();
+    const parsed = parseCompactJades(current);
+    const signingCertificate = (parsed.protectedHeader?.x5c as string[])[0];
+    const fingerprint = inspectTs119602Certificate(signingCertificate).fingerprintSha256!;
+    globalThis.fetch = vi.fn(async () => new Response(current, { status: 200, headers: { "content-type": "application/jose" } })) as typeof fetch;
+    const result = await assessArtifactContent({
+      content: current,
+      contentType: "application/jose",
+      strict: false,
+      includeJsonLoteChecks: true,
+      timeoutMs: 1_000,
+      context: {
+        dereference: true,
+        maxDereferences: 8,
+        maxBytesPerArtifact: 1_000_000,
+        pointerSigners: [{
+          location: "https://context.example.test/current.jws",
+          trustAnchors: [signingCertificate],
+          revocation: {
+            status: "revoked",
+            source: "test-status-evidence",
+            checkedAt: "2026-07-21T00:00:00Z",
+            nextUpdate: "2027-07-21T00:00:00Z",
+            signerFingerprintSha256: fingerprint,
+          },
+        }],
+      },
+    });
+    expect(find(result, "ts119602.scheme.pointers.authentication")).toMatchObject({ status: "fail" });
   });
 
   it("reports explicit bounds and unsupported pointer identity evidence without inventing success", async () => {

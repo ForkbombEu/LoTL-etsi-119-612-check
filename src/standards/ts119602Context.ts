@@ -1,4 +1,5 @@
-import { certificateFingerprintSha256, sha256Hex } from "../certs.js";
+import { X509Certificate } from "node:crypto";
+import { normalizeBase64Certificate, sha256Hex } from "../certs.js";
 import { detectArtifact } from "../detect.js";
 import { fetchArtifact, type FetchResult } from "../fetcher.js";
 import { asArray, firstString, getPath, parseLotlJson, stringValue } from "../lotl.js";
@@ -9,12 +10,21 @@ import type {
   DetectedFormat,
   TrustedListAuditResult,
   Ts119602ContextOptions,
+  TrustListPointerSignerEvidence,
 } from "../types.js";
 import { assessJsonLote } from "../json/loteChecks.js";
+import { parseCompactJades } from "../json/jades.js";
 import { assessXmlLoteMetadata } from "../xml/loteMetadata.js";
 import { parseXml } from "../xml/parse.js";
 import { nodes, text, texts } from "../xml/xpath.js";
 import { parseTs119602UtcDateTime } from "./ts119602Syntax.js";
+import {
+  inspectTs119602Identity,
+  matchTs119602IdentityMaterial,
+  xmlRsaKeyValue,
+  type Ts119602IdentityMaterial,
+} from "./ts119602Identity.js";
+import type { Ts119602IdentityObservation } from "./ts119602Entities.js";
 
 const DEFAULT_MAX_DEREFERENCES = 16;
 const HARD_MAX_DEREFERENCES = 32;
@@ -28,7 +38,8 @@ type ReferenceKind = "pointer" | "distribution" | "archive" | "supply_point";
 interface ContextReference {
   kind: ReferenceKind;
   location: string;
-  pointerIdentityFingerprintsSha256?: string[];
+  pointerIdentity?: Ts119602IdentityMaterial;
+  pointerIdentityDiagnostics?: string[];
   pointerIdentityCount?: number;
 }
 
@@ -44,6 +55,8 @@ interface ArtifactObservation {
   loteType?: string;
   issueDateTime?: string;
   signerFingerprintsSha256: string[];
+  signerIdentity: Ts119602IdentityMaterial;
+  signerCertificates: string[];
   signatureVerified: boolean;
 }
 
@@ -74,7 +87,7 @@ export async function assessTs119602Context(input: Ts119602ContextAssessmentInpu
 
   return [
     sequenceFinding(current, prior),
-    pointerFinding(current, references, dereferenced, Boolean(input.options.dereference), omittedCount(omittedReferences, "pointer")),
+    pointerFinding(current, references, dereferenced, Boolean(input.options.dereference), omittedCount(omittedReferences, "pointer"), input.options),
     distributionFinding(current, references, dereferenced, Boolean(input.options.dereference), omittedCount(omittedReferences, "distribution")),
     archiveFinding(current, references, prior, dereferenced, Boolean(input.options.dereference), omittedCount(omittedReferences, "archive")),
     supplyPointFinding(references, dereferenced, Boolean(input.options.dereference), omittedCount(omittedReferences, "supply_point")),
@@ -125,7 +138,7 @@ function extractJsonReferences(parsed: unknown): ContextReference[] {
   const pointers = lotl.pointers.map((pointer) => ({
     kind: "pointer" as const,
     location: pointer.location,
-    pointerIdentityFingerprintsSha256: pointer.declared.pointerCertificateFingerprintsSha256,
+    ...inspectTs119602JsonPointerIdentity(pointer.raw),
     pointerIdentityCount: asArray(getPath(pointer.raw, ["ServiceDigitalIdentities"])).length,
   }));
   const distribution = stringValues(getPath(info, ["DistributionPoints"])).map((location) => ({ kind: "distribution" as const, location }));
@@ -153,10 +166,14 @@ function extractXmlReferences(xml: string): ContextReference[] {
     const location = text(pointer, ".//*[local-name()='LoTELocation']");
     if (!location) return [];
     const identities = nodes(pointer, ".//*[local-name()='ServiceDigitalIdentity']");
-    const fingerprints = texts(pointer, ".//*[local-name()='ServiceDigitalIdentity']//*[local-name()='X509Certificate']")
-      .map(certificateFingerprintSha256)
-      .filter((value): value is string => Boolean(value));
-    return [{ kind: "pointer" as const, location, pointerIdentityFingerprintsSha256: fingerprints, pointerIdentityCount: identities.length }];
+    const inspected = identities.map((identity, index) => inspectTs119602Identity(xmlIdentity(identity, `/pointer/identity/${index}`)));
+    return [{
+      kind: "pointer" as const,
+      location,
+      pointerIdentity: mergeIdentityMaterial(inspected),
+      pointerIdentityDiagnostics: inspected.flatMap((entry) => entry.diagnostics),
+      pointerIdentityCount: identities.length,
+    }];
   });
   const distribution = texts(root, ".//*[local-name()='DistributionPoints']//*[local-name()='URI']")
     .map((location) => ({ kind: "distribution" as const, location }));
@@ -212,11 +229,11 @@ async function inspectArtifact(bytes: Buffer, contentType: string | undefined, s
   } else if (detected.artifactKind === "xml_lote") {
     assessed = await assessXmlLoteMetadata(bytes.toString("utf8"));
   }
-  return observationFromAssessment(bytes, contentType, source, detected.format, detected.artifactKind, assessed, fetch);
+  return observationFromAssessment(bytes, contentType, source, detected.format, detected.artifactKind, assessed, fetch, signerCertificates(bytes, detected.format));
 }
 
 function observationFromResult(bytes: Buffer, contentType: string | undefined, result: TrustedListAuditResult): ArtifactObservation {
-  return observationFromAssessment(bytes, contentType, result.source, result.detected.format, result.detected.artifactKind, result, result.fetch);
+  return observationFromAssessment(bytes, contentType, result.source, result.detected.format, result.detected.artifactKind, result, result.fetch, signerCertificates(bytes, result.detected.format));
 }
 
 function observationFromAssessment(
@@ -227,12 +244,14 @@ function observationFromAssessment(
   artifactKind: ArtifactKind,
   assessed?: Pick<TrustedListAuditResult, "ts119602" | "extracted">,
   fetch?: FetchResult["fetch"],
+  signingCertificates: string[] = [],
 ): ArtifactObservation {
   const metadata = assessed?.extracted?.jsonLote;
   const certificates = assessed?.extracted?.certificates ?? [];
   const signatureIds = format === "jws" || format === "json"
     ? ["json_lote.signature.jades_cryptographic_verification_result"]
     : ["signature.cryptographic_verification_result"];
+  const signerInspection = inspectTs119602Identity(identityObservation("/signature", { certificates: signingCertificates }));
   return {
     source,
     fetch,
@@ -248,12 +267,14 @@ function observationFromAssessment(
       .filter((certificate) => certificate.source === "json_signature" || certificate.source === "xml_signature")
       .map((certificate) => certificate.fingerprintSha256)
       .filter((value): value is string => Boolean(value)),
+    signerIdentity: signerInspection,
+    signerCertificates: signingCertificates,
     signatureVerified: Boolean(assessed?.ts119602.checks.some((entry) => signatureIds.includes(entry.id) && entry.status === "pass")),
   };
 }
 
 function failedObservation(source: string, fetch: FetchResult["fetch"]): ArtifactObservation {
-  return { source, fetch, sha256: "", bytes: 0, contentType: fetch.contentType, format: "unknown", artifactKind: "unknown", signerFingerprintsSha256: [], signatureVerified: false };
+  return { source, fetch, sha256: "", bytes: 0, contentType: fetch.contentType, format: "unknown", artifactKind: "unknown", signerFingerprintsSha256: [], signerIdentity: emptyIdentityMaterial(), signerCertificates: [], signatureVerified: false };
 }
 
 function sequenceFinding(current: ArtifactObservation, prior: ArtifactObservation[]): CheckResult {
@@ -279,40 +300,63 @@ function sequenceFinding(current: ArtifactObservation, prior: ArtifactObservatio
   );
 }
 
-function pointerFinding(current: ArtifactObservation, references: ContextReference[], fetched: Array<{ reference: ContextReference; observation: ArtifactObservation }>, enabled: boolean, omitted: number): CheckResult {
+function pointerFinding(
+  current: ArtifactObservation,
+  references: ContextReference[],
+  fetched: Array<{ reference: ContextReference; observation: ArtifactObservation }>,
+  enabled: boolean,
+  omitted: number,
+  options: Ts119602ContextOptions,
+): CheckResult {
   const pointers = references.filter((entry) => entry.kind === "pointer");
   if (pointers.length === 0) return finding("ts119602.scheme.pointers.authentication", "not_applicable", "info", "Pointer authentication is not applicable because no pointers are present.", { pointerCount: 0 });
   if (!enabled) return finding("ts119602.scheme.pointers.authentication", "not_checked", "warning", "Pointer targets were not dereferenced because contextual dereferencing is disabled.", { pointerCount: pointers.length });
   const results = fetched.filter((entry) => entry.reference.kind === "pointer").map(({ reference, observation }) => {
-    const declared = reference.pointerIdentityFingerprintsSha256 ?? [];
-    const normalizedDeclared = declared.map((fingerprint) => fingerprint.toLowerCase());
-    const signerMatch = observation.signerFingerprintsSha256.some((fingerprint) => normalizedDeclared.includes(fingerprint.toLowerCase()));
-    const nonCertificateIdentityOnly = declared.length === 0 && (reference.pointerIdentityCount ?? 0) > 0;
+    const declared = reference.pointerIdentity ?? emptyIdentityMaterial();
+    const identityMatch = matchTs119602IdentityMaterial(declared, observation.signerIdentity);
+    const signerEvidence = options.pointerSigners?.find((entry) => entry.location === reference.location);
+    const trust = pointerSignerTrust(observation.signerCertificates[0], signerEvidence, new Date());
     const selfPointerIdentical = observation.sha256 === current.sha256;
+    const unsupportedIdentityOnly = (reference.pointerIdentityCount ?? 0) > 0
+      && declared.certificateFingerprintsSha256.length === 0
+      && declared.publicKeyHashesSha256.length === 0
+      && declared.subjectKeyIdentifiers.length === 0
+      && (reference.pointerIdentityDiagnostics?.length ?? 0) === 0;
+    const evidenceAcceptable = trust.path.status !== "fail"
+      && trust.revocation.status !== "fail"
+      && trust.revocation.status !== "inconclusive";
     return {
       location: reference.location,
       fetch: observation.fetch,
       target: compactObservation(observation),
       signatureVerified: observation.signatureVerified,
-      declaredIdentityFingerprintsSha256: declared,
-      signerMatch,
-      nonCertificateIdentityOnly,
+      declaredIdentity: declared,
+      declaredIdentityCount: reference.pointerIdentityCount ?? 0,
+      declaredIdentityDiagnostics: reference.pointerIdentityDiagnostics ?? [],
+      signerIdentity: observation.signerIdentity,
+      identityMatch,
+      unsupportedIdentityOnly,
+      signerTrustEvidence: trust,
       selfPointerIdentical,
-      authenticated: Boolean(observation.fetch?.ok && observation.signatureVerified && signerMatch && selfPointerIdentical),
+      authenticated: Boolean(observation.fetch?.ok && observation.signatureVerified && identityMatch.matched && selfPointerIdentical && evidenceAcceptable),
     };
   });
-  const unsupportedIdentity = results.some((entry) => entry.nonCertificateIdentityOnly);
+  const inconclusiveTrust = results.some((entry) => entry.signerTrustEvidence.revocation.status === "inconclusive");
+  const unsupportedIdentity = results.some((entry) => entry.unsupportedIdentityOnly);
+  const definitiveFailure = results.some((entry) => !entry.authenticated
+    && !entry.unsupportedIdentityOnly
+    && entry.signerTrustEvidence.revocation.status !== "inconclusive");
   const valid = results.length === pointers.length && results.every((entry) => entry.authenticated);
-  const status = omitted > 0 || unsupportedIdentity ? "inconclusive" : valid ? "pass" : "fail";
+  const status = definitiveFailure ? "fail" : omitted > 0 || inconclusiveTrust || unsupportedIdentity ? "inconclusive" : valid ? "pass" : "fail";
   return finding(
     "ts119602.scheme.pointers.authentication",
     status,
     status === "pass" ? "info" : status === "fail" ? "critical" : "warning",
     status === "pass"
-      ? "Every self-pointer returned the current LoTE bytes with a verified signature matching at least one pointer certificate identity."
+      ? "Every self-pointer returned the current LoTE bytes with a verified signature matching a declared certificate, PublicKeyValue, or X509SKI identity."
       : status === "inconclusive"
-        ? "Pointer authentication is inconclusive because references were omitted or only unsupported non-certificate identity forms were supplied."
-        : "One or more pointed-to LoTEs could not be authenticated by a declared pointer certificate identity.",
+        ? "Pointer authentication is inconclusive because references were omitted, only non-PKI OtherId forms were supplied, or signer revocation evidence is inconclusive."
+        : "One or more pointed-to LoTEs could not be authenticated by a declared pointer identity or failed supplied path/revocation evidence.",
     { pointerCount: pointers.length, omittedReferences: omitted, results },
   );
 }
@@ -397,9 +441,157 @@ function compactObservation(observation: ArtifactObservation) {
     loteType: observation.loteType,
     issueDateTime: observation.issueDateTime,
     signerFingerprintsSha256: observation.signerFingerprintsSha256,
+    signerIdentity: observation.signerIdentity,
     signatureVerified: observation.signatureVerified,
   };
 }
+
+export function inspectTs119602JsonPointerIdentity(pointer: unknown): {
+  pointerIdentity: Ts119602IdentityMaterial;
+  pointerIdentityDiagnostics: string[];
+} {
+  const identities = asArray(getPath(pointer, ["ServiceDigitalIdentities"])).map((value, index) => {
+    const record = isRecord(value) ? value : {};
+    return inspectTs119602Identity(identityObservation(`/pointer/identity/${index}`, {
+      certificates: asArray(record.X509Certificates).map((entry) => getPath(entry, ["val"]) ?? entry),
+      publicKeys: asArray(record.PublicKeyValues),
+      skis: asArray(record.X509SKIs),
+    }));
+  });
+  return { pointerIdentity: mergeIdentityMaterial(identities), pointerIdentityDiagnostics: identities.flatMap((entry) => entry.diagnostics) };
+}
+
+function xmlIdentity(node: Node, path: string): Ts119602IdentityObservation {
+  const digitalIds = nodes(node, "./*[local-name()='DigitalId']");
+  const entries = (name: string) => digitalIds.flatMap((digitalId) => nodes(digitalId, `./*[local-name()='${name}']`));
+  return {
+    ...identityObservation(path, {
+      certificates: entries("X509Certificate").map((entry) => entry.textContent?.replace(/\s+/g, "") ?? ""),
+      skis: entries("X509SKI").map((entry) => entry.textContent?.replace(/\s+/g, "") ?? ""),
+      publicKeys: entries("KeyValue").map((entry) => xmlRsaKeyValue(
+        text(entry, ".//*[local-name()='RSAKeyValue']/*[local-name()='Modulus']"),
+        text(entry, ".//*[local-name()='RSAKeyValue']/*[local-name()='Exponent']"),
+      ) ?? { unsupportedXmlKeyValue: entry.nodeName }),
+    }),
+    subjectNames: entries("X509SubjectName").map((entry, index) => ({ path: `${path}/subject/${index}`, value: entry.textContent?.trim() })),
+  };
+}
+
+function identityObservation(
+  path: string,
+  values: { certificates?: unknown[]; publicKeys?: unknown[]; skis?: unknown[] },
+): Ts119602IdentityObservation {
+  const located = (name: string, entries: unknown[] | undefined) => (entries ?? []).map((value, index) => ({ path: `${path}/${name}/${index}`, value }));
+  return {
+    path,
+    present: true,
+    certificates: located("certificate", values.certificates),
+    subjectNames: [],
+    publicKeys: located("public-key", values.publicKeys),
+    skis: located("ski", values.skis),
+    otherIds: [],
+  };
+}
+
+function mergeIdentityMaterial(entries: Ts119602IdentityMaterial[]): Ts119602IdentityMaterial {
+  return {
+    certificateFingerprintsSha256: uniqueStrings(entries.flatMap((entry) => entry.certificateFingerprintsSha256)),
+    publicKeyHashesSha256: uniqueStrings(entries.flatMap((entry) => entry.publicKeyHashesSha256)),
+    subjectKeyIdentifiers: uniqueStrings(entries.flatMap((entry) => entry.subjectKeyIdentifiers)),
+  };
+}
+
+function emptyIdentityMaterial(): Ts119602IdentityMaterial {
+  return { certificateFingerprintsSha256: [], publicKeyHashesSha256: [], subjectKeyIdentifiers: [] };
+}
+
+function signerCertificates(bytes: Buffer, format: DetectedFormat): string[] {
+  if (format === "jws") {
+    try {
+      const header = parseCompactJades(bytes.toString("utf8").trim()).protectedHeader;
+      return Array.isArray(header?.x5c) ? header.x5c.filter((entry): entry is string => typeof entry === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+  if (format === "xml") {
+    const root = parseXml(bytes.toString("utf8")).document?.documentElement;
+    return root ? texts(root, ".//*[local-name()='Signature']/*[local-name()='KeyInfo']//*[local-name()='X509Certificate']")
+      .map((value) => value.replace(/\s+/g, "")) : [];
+  }
+  return [];
+}
+
+function pointerSignerTrust(
+  signerCertificate: string | undefined,
+  evidence: TrustListPointerSignerEvidence | undefined,
+  assessmentDate: Date,
+) {
+  return {
+    supplied: Boolean(evidence),
+    path: pointerPathEvidence(signerCertificate, evidence, assessmentDate),
+    revocation: pointerRevocationEvidence(signerCertificate, evidence, assessmentDate),
+  };
+}
+
+function pointerPathEvidence(
+  signerCertificate: string | undefined,
+  evidence: TrustListPointerSignerEvidence | undefined,
+  assessmentDate: Date,
+) {
+  if (!evidence?.trustAnchors?.length) {
+    return { status: "not_checked" as const, suppliedIntermediates: evidence?.intermediateCertificates?.length ?? 0, suppliedTrustAnchors: 0 };
+  }
+  if (!signerCertificate) return { status: "fail" as const, reason: "The pointed artifact has no parseable signing certificate." };
+  try {
+    const chain = [signerCertificate, ...(evidence.intermediateCertificates ?? [])].map(parseCertificate);
+    const anchors = evidence.trustAnchors.map(parseCertificate);
+    const temporalValid = [...chain, ...anchors].every((entry) => assessmentDate >= new Date(entry.validFrom) && assessmentDate <= new Date(entry.validTo));
+    const linksValid = chain.slice(0, -1).every((entry, index) => entry.checkIssued(chain[index + 1]) && entry.verify(chain[index + 1].publicKey));
+    const last = chain.at(-1)!;
+    const anchor = anchors.find((candidate) => fingerprint(candidate) === fingerprint(last)
+      || (last.checkIssued(candidate) && last.verify(candidate.publicKey)));
+    const valid = temporalValid && linksValid && Boolean(anchor);
+    return {
+      status: valid ? "pass" as const : "fail" as const,
+      temporalValid,
+      linksValid,
+      anchorMatched: Boolean(anchor),
+      signerFingerprintSha256: fingerprint(chain[0]),
+      anchorFingerprintSha256: anchor ? fingerprint(anchor) : undefined,
+    };
+  } catch (error) {
+    return { status: "fail" as const, reason: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+function pointerRevocationEvidence(
+  signerCertificate: string | undefined,
+  evidence: TrustListPointerSignerEvidence | undefined,
+  assessmentDate: Date,
+) {
+  if (!evidence?.revocation) return { status: "not_checked" as const };
+  const signer = signerCertificate ? inspectTs119602Identity(identityObservation("/pointer/signer", { certificates: [signerCertificate] })) : undefined;
+  const fingerprintSha256 = signer?.certificateFingerprintsSha256[0];
+  const checkedAt = parseDate(evidence.revocation.checkedAt);
+  const nextUpdate = evidence.revocation.nextUpdate ? parseDate(evidence.revocation.nextUpdate) : undefined;
+  const fingerprintMatches = Boolean(fingerprintSha256)
+    && evidence.revocation.signerFingerprintSha256.toLowerCase() === fingerprintSha256;
+  const temporallyApplicable = Boolean(checkedAt && checkedAt <= assessmentDate
+    && (!evidence.revocation.nextUpdate || (nextUpdate && nextUpdate >= assessmentDate)));
+  if (!fingerprintMatches || !temporallyApplicable) {
+    return { status: "inconclusive" as const, fingerprintMatches, temporallyApplicable, supplied: evidence.revocation };
+  }
+  return { status: evidence.revocation.status === "good" ? "pass" as const : evidence.revocation.status === "revoked" ? "fail" as const : "inconclusive" as const, supplied: evidence.revocation };
+}
+
+function parseCertificate(value: string): X509Certificate {
+  return new X509Certificate(Buffer.from(normalizeBase64Certificate(value), "base64"));
+}
+function fingerprint(value: X509Certificate): string { return value.fingerprint256.replaceAll(":", "").toLowerCase(); }
+function parseDate(value: string): Date | undefined { const parsed = new Date(value); return Number.isNaN(parsed.getTime()) ? undefined : parsed; }
+function uniqueStrings(values: string[]): string[] { return [...new Set(values.map((value) => value.toLowerCase()))].sort(); }
+function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 
 function stringValues(value: unknown): string[] {
   return asArray(value).map(stringValue).filter((entry): entry is string => Boolean(entry));

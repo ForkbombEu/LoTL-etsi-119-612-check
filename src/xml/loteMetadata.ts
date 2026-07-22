@@ -17,6 +17,7 @@ import {
   type Ts119602MetadataInput,
 } from "../standards/ts119602Metadata.js";
 import { summarizeTs119602Requirements } from "../standards/ts119602Requirements.js";
+import { xmlRsaKeyValue } from "../standards/ts119602Identity.js";
 import { buildTs119602ProfileFindings } from "../standards/ts119602Profiles.js";
 import { parseTs119602UtcDateTime, validateTs119602Uri } from "../standards/ts119602Syntax.js";
 import {
@@ -533,7 +534,10 @@ function xmlIdentity(node: Node | undefined, fallbackPath: string): Ts119602Iden
     return digitalIds.flatMap((digitalId) => nodes(digitalId, `./*[local-name()='${localName}']`).map((entry) => ({
       path: xmlNodePath(entry),
       value: localName === "KeyValue"
-        ? { xmlElement: entry.nodeName }
+        ? xmlRsaKeyValue(
+          text(entry, ".//*[local-name()='RSAKeyValue']/*[local-name()='Modulus']"),
+          text(entry, ".//*[local-name()='RSAKeyValue']/*[local-name()='Exponent']"),
+        ) ?? { unsupportedXmlKeyValue: entry.nodeName }
         : ["X509Certificate", "X509SKI"].includes(localName)
           ? nodeText(entry).replace(/\s+/g, "")
           : nodeText(entry),

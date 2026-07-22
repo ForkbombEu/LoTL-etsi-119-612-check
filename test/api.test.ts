@@ -429,6 +429,9 @@ describe("API server", () => {
     expect(parsedYaml.components.schemas.Ts119602ContextOptions).toEqual(parsedJson.components.schemas.Ts119602ContextOptions);
     expect(parsedJson.components.schemas.Ts119612SignerEvidence.properties.revocation.required)
       .toContain("signerFingerprintSha256");
+    expect(parsedJson.components.schemas.Ts119602ContextOptions.properties.pointerSigners.items.$ref)
+      .toBe("#/components/schemas/TrustListPointerSignerEvidence");
+    expect(parsedJson.components.schemas.TrustListPointerSignerEvidence.required).toContain("location");
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
     expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(6);
     expect(parsedJson.components.schemas.TrustedListAuditResult.required).toContain("referenceProfiles");

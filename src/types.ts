@@ -120,12 +120,19 @@ export interface Ts119612SignerEvidence {
   revocation?: Ts119612RevocationEvidence;
 }
 
+export interface TrustListPointerSignerEvidence extends Ts119612SignerEvidence {
+  /** Exact LoTELocation to which this separately supplied evidence applies. */
+  location: string;
+}
+
 /** Optional evidence and limits shared by TS 119 612 and TS 119 602 contextual checks. */
 export interface TrustListContextOptions {
   dereference?: boolean;
   priorArtifacts?: ContextArtifactInput[];
   trustedSignerFingerprintsSha256?: string[];
   ts119612Signer?: Ts119612SignerEvidence;
+  /** Separately supplied path/revocation evidence keyed by exact pointer location. */
+  pointerSigners?: TrustListPointerSignerEvidence[];
   maxDereferences?: number;
   maxBytesPerArtifact?: number;
   concurrency?: number;

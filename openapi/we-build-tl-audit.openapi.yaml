@@ -505,6 +505,10 @@ components:
           items: { type: string, pattern: '^[A-Fa-f0-9]{64}$' }
         ts119612Signer:
           $ref: '#/components/schemas/Ts119612SignerEvidence'
+        pointerSigners:
+          type: array
+          maxItems: 32
+          items: { $ref: '#/components/schemas/TrustListPointerSignerEvidence' }
         maxDereferences: { type: integer, minimum: 1, maximum: 32, default: 16 }
         maxBytesPerArtifact: { type: integer, minimum: 1, maximum: 20971520, default: 5242880 }
         concurrency: { type: integer, minimum: 1, maximum: 32, default: 4 }
@@ -514,6 +518,31 @@ components:
       additionalProperties: false
       description: Separately supplied certificate-path and revocation evidence for a TS 119 612 TLSO signer. Embedded KeyInfo certificates are never implicit trust anchors.
       properties:
+        intermediateCertificates:
+          type: array
+          maxItems: 16
+          items: { type: string, minLength: 1 }
+        trustAnchors:
+          type: array
+          maxItems: 16
+          items: { type: string, minLength: 1 }
+        revocation:
+          type: object
+          additionalProperties: false
+          required: [status, source, checkedAt, signerFingerprintSha256]
+          properties:
+            status: { type: string, enum: [good, revoked, unknown] }
+            source: { type: string, minLength: 1 }
+            checkedAt: { type: string, format: date-time }
+            nextUpdate: { type: string, format: date-time }
+            signerFingerprintSha256: { type: string, pattern: '^[A-Fa-f0-9]{64}$' }
+    TrustListPointerSignerEvidence:
+      type: object
+      required: [location]
+      additionalProperties: false
+      description: Separately supplied certificate-path and revocation evidence for the signer at one exact LoTELocation.
+      properties:
+        location: { type: string, format: uri }
         intermediateCertificates:
           type: array
           maxItems: 16

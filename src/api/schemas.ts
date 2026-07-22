@@ -73,6 +73,15 @@ const ts119612SignerEvidence = {
   },
 } as const;
 
+const pointerSignerEvidence = {
+  ...ts119612SignerEvidence,
+  required: ["location"],
+  properties: {
+    location: { type: "string", format: "uri" },
+    ...ts119612SignerEvidence.properties,
+  },
+} as const;
+
 const contextualEvidence = {
   type: "object",
   additionalProperties: false,
@@ -81,6 +90,7 @@ const contextualEvidence = {
     priorArtifacts: { type: "array", items: contextArtifact, maxItems: 32 },
     trustedSignerFingerprintsSha256: { type: "array", items: { type: "string", pattern: "^[A-Fa-f0-9]{64}$" }, maxItems: 64 },
     ts119612Signer: ts119612SignerEvidence,
+    pointerSigners: { type: "array", items: pointerSignerEvidence, maxItems: 32 },
     maxDereferences: { type: "integer", minimum: 1, maximum: 32, default: 16 },
     maxBytesPerArtifact: { type: "integer", minimum: 1, maximum: 20971520, default: 5242880 },
     concurrency: { type: "integer", minimum: 1, maximum: 32, default: 4 },
