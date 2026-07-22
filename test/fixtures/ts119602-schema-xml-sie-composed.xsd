@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="http://uri.etsi.org/019602/v1/ServiceInformationExtensions" elementFormDefault="qualified">
+  <xsd:import namespace="http://uri.etsi.org/019602/v1#" schemaLocation="../../schemas/etsi-ts-119-602/v1.1.1/1960201_xml_schema/1960201_xsd_schema.xsd"/>
+  <xsd:element name="ServiceUniqueIdentifier" type="lote:NonEmptyURIType" xmlns:lote="http://uri.etsi.org/019602/v1#"/>
+</xsd:schema>

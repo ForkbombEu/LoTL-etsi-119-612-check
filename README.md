@@ -363,6 +363,15 @@ file parity, lossless JSON-to-Markdown finding IDs/statuses/severities, exact
 API Markdown re-rendering and an executable OpenAPI report example. This gate
 does not promote partial, contextual or unsupported families to implemented.
 
+TS 119 602 uses the equivalent ledger guard in
+`test/fixtures/ts119602-implemented-coverage.json`: all 39 currently
+implemented families are linked to deterministic positive and focused negative
+evidence. Dedicated fixtures cover the JSON and XML base, service-information
+extension and trusted-entity extension schema shapes. The pinned SIE/TIE XSDs
+remain unchanged even though their missing base-namespace import prevents
+standalone compilation; explicitly labelled test compositions exercise the
+intended instance shapes without being reported as official schema success.
+
 The report does not claim full legal or normative ETSI conformance.
 
 XML findings are implemented structural, date, schema, signature, certificate, and service-metadata checks. They are evidence-oriented results rather than a claim of full ETSI TS 119 612 conformance.

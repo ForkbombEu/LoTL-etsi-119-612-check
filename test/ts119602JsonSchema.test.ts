@@ -122,4 +122,24 @@ describe("official ETSI TS 119 602 JSON Schema validation", () => {
       }),
     ]));
   });
+
+  it.each([
+    ["base", "test/fixtures/ts119602-schema-json-base-valid.json", "test/fixtures/ts119602-schema-json-base-invalid.json", "1960201_json_schema.json"],
+    ["serviceInformationExtension", "test/fixtures/ts119602-schema-json-sie-valid.json", "test/fixtures/ts119602-schema-json-sie-invalid.json", "1960201_json_schema_sie.json"],
+    ["trustedEntityInformationExtension", "test/fixtures/ts119602-schema-json-tie-valid.json", "test/fixtures/ts119602-schema-json-tie-invalid.json", "1960201_json_schema_tie.json"],
+  ] as const)("validates positive and focused negative %s fixtures", async (target, positivePath, negativePath, sourceName) => {
+    const positive: unknown = JSON.parse(await readFile(positivePath, "utf8"));
+    const negative: unknown = JSON.parse(await readFile(negativePath, "utf8"));
+
+    expect(validateTs119602JsonSchema(positive, target)).toMatchObject({
+      valid: true,
+      schema: { sourcePath: expect.stringContaining(sourceName) },
+      errors: [],
+    });
+    expect(validateTs119602JsonSchema(negative, target)).toMatchObject({
+      valid: false,
+      schema: { sourcePath: expect.stringContaining(sourceName) },
+      errors: expect.any(Array),
+    });
+  });
 });

@@ -85,6 +85,14 @@ export const TS119602_INTERPRETATIONS = Object.freeze([
     "Do not claim that schema validation closes ServiceDigitalIdentity; enforce only explicitly implemented semantic identity rules.",
   ),
   interpretation(
+    "ts119602-v1.1.1-xml-extension-base-import",
+    "XML extension schema base-namespace import",
+    "The published SIE and TIE XSDs reference types in the base LoTE namespace without importing that namespace, so conforming XSD processors reject the extension schemas as standalone entrypoints.",
+    ["1960201_xsd_schema_sie.xsd", "1960201_xsd_schema_tie.xsd", "W3C XML Schema 1.0 Structures section 4.2.3"],
+    "unresolved",
+    "Preserve the pinned extension schemas unchanged, do not report standalone extension-schema success, and use an explicitly identified composition schema only for deterministic fixture-shape tests.",
+  ),
+  interpretation(
     "ts119602-v1.1.1-alternative-binding-version",
     "Alternative XML binding version identifier",
     "Table A.1 maps LoTEVersionIdentifier to TSLVersionIdentifier; Annex H requires the mapped LoTE value 1 while ETSI TS 119 612 V2.4.1 requires TSLVersionIdentifier 6.",

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListOfTrustedEntities xmlns="http://uri.etsi.org/019602/v1#" LOTETag="https://uri.etsi.org/19602/LOTETag/">
+  <ListAndSchemeInformation>
+    <LoTEVersionIdentifier>1</LoTEVersionIdentifier>
+    <LoTESequenceNumber>1</LoTESequenceNumber>
+    <LoTEType>http://uri.etsi.org/19602/LoTEType/EUWalletProvidersList</LoTEType>
+    <SchemeOperatorName><Name xml:lang="en">Fixture operator</Name></SchemeOperatorName>
+    <SchemeOperatorAddress>
+      <PostalAddresses><PostalAddress xml:lang="en"><StreetAddress>1 Fixture Street</StreetAddress><Locality>Fixture City</Locality><CountryName>EU</CountryName></PostalAddress></PostalAddresses>
+      <ElectronicAddress><URI xml:lang="en">https://example.test/operator</URI></ElectronicAddress>
+    </SchemeOperatorAddress>
+    <SchemeName><Name xml:lang="en">EU:Fixture list</Name></SchemeName>
+    <SchemeInformationURI><URI xml:lang="en">https://example.test/list</URI></SchemeInformationURI>
+    <StatusDeterminationApproach>http://uri.etsi.org/19602/WalletProvidersList/StatusDetn/EU</StatusDeterminationApproach>
+    <ListIssueDateTime>2026-01-01T00:00:00Z</ListIssueDateTime>
+    <NextUpdate><dateTime>2026-07-01T00:00:00Z</dateTime></NextUpdate>
+  </ListAndSchemeInformation>
+</ListOfTrustedEntities>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tie:OtherAssociatedBodies xmlns:tie="http://uri.etsi.org/019602/v1/TrustedEntityExtensions" xmlns:lote="http://uri.etsi.org/019602/v1#">
+  <tie:AssociatedBody>
+    <tie:AssociatedBodyName><lote:Name xml:lang="en">Associated body</lote:Name></tie:AssociatedBodyName>
+  </tie:AssociatedBody>
+</tie:OtherAssociatedBodies>

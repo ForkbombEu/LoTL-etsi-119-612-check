@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "standard": "ETSI TS 119 602 V1.1.1",
+  "fixtureSets": {
+    "jsonCore": {
+      "positive": ["test/fixtures/ts119602-wallet-profile.json"],
+      "negative": ["test/fixtures/ts119602-clause61-invalid.json", "test/fixtures/ts119602-entities-invalid.json"]
+    },
+    "xmlCore": {
+      "positive": ["test/fixtures/ts119602-schema-xml-base-valid.xml"],
+      "negative": ["test/fixtures/ts119602-schema-xml-base-invalid.xml"]
+    },
+    "context": {
+      "positive": ["test/fixtures/ts119602-wallet-profile.json", "test/fixtures/ts119602-context-current.jws"],
+      "negative": ["test/fixtures/ts119602-entities-invalid.json", "test/fixtures/ts119602-closed.json"]
+    },
+    "profile": {
+      "positive": ["test/fixtures/ts119602-wallet-profile.json"],
+      "negative": ["test/fixtures/ts119602-clause61-invalid.json"]
+    },
+    "jades": {
+      "positive": ["test/fixtures/ts119602-jades-compact.jws"],
+      "negative": ["test/fixtures/ts119602-wallet-profile.json"]
+    },
+    "xades": {
+      "positive": ["test/fixtures/ts119602-pub-eaa-xades-b.xml"],
+      "negative": ["test/fixtures/tsl-valid-ish.xml"]
+    },
+    "alternative": {
+      "positive": ["test/fixtures/ts119602-alternative-pub-eaa.xml"],
+      "negative": ["test/fixtures/ts119602-schema-xml-base-invalid.xml"]
+    },
+    "jsonSchema": {
+      "positive": ["test/fixtures/ts119602-schema-json-base-valid.json", "test/fixtures/ts119602-schema-json-sie-valid.json", "test/fixtures/ts119602-schema-json-tie-valid.json"],
+      "negative": ["test/fixtures/ts119602-schema-json-base-invalid.json", "test/fixtures/ts119602-schema-json-sie-invalid.json", "test/fixtures/ts119602-schema-json-tie-invalid.json"]
+    }
+  },
+  "requirements": [
+    { "requirementId": "ts119602.binding.supported", "findingId": "ts119602.binding.supported", "testFile": "test/ts119602Classification.test.ts", "fixtureSet": "alternative" },
+    { "requirementId": "ts119602.syntax.uri", "findingId": "ts119602.syntax.uri", "testFile": "test/loteChecks.test.ts", "fixtureSet": "jsonCore" },
+    { "requirementId": "ts119602.syntax.date_time", "findingId": "ts119602.syntax.date_time", "testFile": "test/loteChecks.test.ts", "fixtureSet": "jsonCore" },
+    { "requirementId": "ts119602.scheme.sequence.history", "findingId": "ts119602.scheme.sequence.history", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.operator_name", "findingId": "ts119602.context.authoritative_identity", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.operator_address", "findingId": "ts119602.context.authoritative_identity", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.information_uri", "findingId": "ts119602.context.scheme_resources", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.community_rules", "findingId": "ts119602.context.scheme_resources", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.policy_or_legal_notice", "findingId": "ts119602.context.scheme_resources", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.next_update", "findingId": "ts119602.scheme.final_closed_list", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.scheme.distribution_consistency", "findingId": "ts119602.scheme.distribution_consistency", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.entities.structure", "findingId": "ts119602.entities.structure", "testFile": "test/ts119602Entities.test.ts", "fixtureSet": "jsonCore" },
+    { "requirementId": "ts119602.entity.information", "findingId": "ts119602.entity.information", "testFile": "test/ts119602Entities.test.ts", "fixtureSet": "jsonCore" },
+    { "requirementId": "ts119602.entity.names", "findingId": "ts119602.context.authoritative_identity", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.entity.address", "findingId": "ts119602.context.authoritative_identity", "testFile": "test/ts119602Context.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.service.information", "findingId": "ts119602.service.information", "testFile": "test/ts119602Entities.test.ts", "fixtureSet": "jsonCore" },
+    { "requirementId": "ts119602.signature.baseline_b", "findingId": "signature.present", "testFile": "test/signature.test.ts", "fixtureSet": "xades" },
+    { "requirementId": "ts119602.binding.json_schema", "findingId": "ts119602.binding.json_schema", "testFile": "test/loteChecks.test.ts", "fixtureSet": "jsonSchema" },
+    { "requirementId": "ts119602.binding.xml_schema", "findingId": "ts119602.binding.xml_schema", "testFile": "test/ts119602XmlSchema.test.ts", "fixtureSet": "xmlCore" },
+    { "requirementId": "ts119602.binding.ts119612_mapping", "findingId": "ts119602.binding.ts119612_mapping", "testFile": "test/ts119602AlternativeXml.test.ts", "fixtureSet": "alternative" },
+    { "requirementId": "ts119602.uri_registry.annex_c", "findingId": "ts119602.profile.dispatch", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "profile" },
+    { "requirementId": "ts119602.profile.pid_providers.binding", "findingId": "ts119602.profile.pid_providers.binding", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "profile" },
+    { "requirementId": "ts119602.profile.pid_providers.scheme_information", "findingId": "ts119602.profile.pid_providers.scheme_information", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.profile.pid_providers.signature", "findingId": "ts119602.profile.pid_providers.signature", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "jades" },
+    { "requirementId": "ts119602.profile.wallet_providers.binding", "findingId": "ts119602.profile.wallet_providers.binding", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "profile" },
+    { "requirementId": "ts119602.profile.wallet_providers.scheme_information", "findingId": "ts119602.profile.wallet_providers.scheme_information", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.profile.wallet_providers.signature", "findingId": "ts119602.profile.wallet_providers.signature", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "jades" },
+    { "requirementId": "ts119602.profile.wrpac_providers.binding", "findingId": "ts119602.profile.wrpac_providers.binding", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "profile" },
+    { "requirementId": "ts119602.profile.wrpac_providers.scheme_information", "findingId": "ts119602.profile.wrpac_providers.scheme_information", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.profile.wrpac_providers.signature", "findingId": "ts119602.profile.wrpac_providers.signature", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "jades" },
+    { "requirementId": "ts119602.profile.wrprc_providers.binding", "findingId": "ts119602.profile.wrprc_providers.binding", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "profile" },
+    { "requirementId": "ts119602.profile.wrprc_providers.scheme_information", "findingId": "ts119602.profile.wrprc_providers.scheme_information", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.profile.wrprc_providers.signature", "findingId": "ts119602.profile.wrprc_providers.signature", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "jades" },
+    { "requirementId": "ts119602.profile.pub_eaa_providers.binding", "findingId": "ts119602.profile.pub_eaa_providers.binding", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "alternative" },
+    { "requirementId": "ts119602.profile.pub_eaa_providers.scheme_information", "findingId": "ts119602.profile.pub_eaa_providers.scheme_information", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.profile.pub_eaa_providers.signature", "findingId": "ts119602.profile.pub_eaa_providers.signature", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "xades" },
+    { "requirementId": "ts119602.profile.registrars_and_registers.binding", "findingId": "ts119602.profile.registrars_and_registers.binding", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "profile" },
+    { "requirementId": "ts119602.profile.registrars_and_registers.scheme_information", "findingId": "ts119602.profile.registrars_and_registers.scheme_information", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "context" },
+    { "requirementId": "ts119602.profile.registrars_and_registers.signature", "findingId": "ts119602.profile.registrars_and_registers.signature", "testFile": "test/ts119602Profiles.test.ts", "fixtureSet": "jades" }
+  ]
+}

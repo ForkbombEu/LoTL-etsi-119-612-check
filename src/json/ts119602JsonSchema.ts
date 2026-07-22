@@ -54,20 +54,29 @@ export interface Ts119602JsonSchemaValidation {
   errors: Ts119602JsonSchemaDiagnostic[];
 }
 
-const schemaIdentity = loadSchemaIdentity();
-const validateBaseSchema = buildValidator();
+export type Ts119602JsonSchemaTarget =
+  | "base"
+  | "serviceInformationExtension"
+  | "trustedEntityInformationExtension";
+
+const schemaIdentities = loadSchemaIdentities();
+const validators = buildValidators();
 
 /** Validate the published V1.1.1 JSON binding with no network-capable loader. */
-export function validateTs119602JsonSchema(value: unknown): Ts119602JsonSchemaValidation {
-  const valid = validateBaseSchema(value) === true;
+export function validateTs119602JsonSchema(
+  value: unknown,
+  target: Ts119602JsonSchemaTarget = "base",
+): Ts119602JsonSchemaValidation {
+  const validator = validators[target];
+  const valid = validator(value) === true;
   return {
     valid,
-    schema: schemaIdentity,
-    errors: valid ? [] : (validateBaseSchema.errors ?? []).map((error) => diagnostic(error, value)),
+    schema: schemaIdentities[target],
+    errors: valid ? [] : (validator.errors ?? []).map((error) => diagnostic(error, value)),
   };
 }
 
-function buildValidator(): ValidateFunction {
+function buildValidators(): Record<Ts119602JsonSchemaTarget, ValidateFunction> {
   const ajv = new Ajv({
     allErrors: true,
     strict: false,
@@ -87,20 +96,24 @@ function buildValidator(): ValidateFunction {
 
   // Force compilation now so unresolved references fail deterministically at
   // process startup instead of triggering a runtime or network fallback.
-  const sieValidator = ajv.getSchema(SIE_SCHEMA_ID);
-  const tieValidator = ajv.getSchema(TIE_SCHEMA_ID);
+  const sieValidator = ajv.getSchema(`${SIE_SCHEMA_ID}#/definitions/ServiceUniqueIdentifier`);
+  const tieValidator = ajv.getSchema(`${TIE_SCHEMA_ID}#/definitions/OtherAssociatedBodies`);
   const validator = ajv.getSchema(BASE_SCHEMA_ID);
   if (!validator || !sieValidator || !tieValidator) {
     throw new Error("The pinned ETSI TS 119 602 JSON schema set could not be compiled.");
   }
-  return validator;
+  return {
+    base: validator,
+    serviceInformationExtension: sieValidator,
+    trustedEntityInformationExtension: tieValidator,
+  };
 }
 
 function readSchema(bundlePath: string): AnySchema {
   return JSON.parse(readFileSync(resolve(TS119602_SCHEMA_BUNDLE_DIRECTORY, bundlePath), "utf8")) as AnySchema;
 }
 
-function loadSchemaIdentity(): Ts119602JsonSchemaIdentity {
+function loadSchemaIdentities(): Record<Ts119602JsonSchemaTarget, Ts119602JsonSchemaIdentity> {
   const manifest = JSON.parse(readFileSync(
     resolve(TS119602_SCHEMA_BUNDLE_DIRECTORY, "manifest.json"),
     "utf8",
@@ -111,25 +124,29 @@ function loadSchemaIdentity(): Ts119602JsonSchemaIdentity {
     sources: { etsiForge: { repository: string; tag: string; commit: string } };
     files: Array<{ path: string; sha256: string }>;
   };
-  const file = manifest.files.find((candidate) => candidate.path === BASE_SCHEMA_PATH);
+  const files = {
+    base: manifest.files.find((candidate) => candidate.path === BASE_SCHEMA_PATH),
+    serviceInformationExtension: manifest.files.find((candidate) => candidate.path === SIE_SCHEMA_PATH),
+    trustedEntityInformationExtension: manifest.files.find((candidate) => candidate.path === TIE_SCHEMA_PATH),
+  };
   if (
     manifest.standard !== "ETSI TS 119 602"
     || manifest.standardVersion !== "1.1.1"
     || manifest.bindingSchemaDraft !== "http://json-schema.org/draft-07/schema#"
-    || !file
+    || Object.values(files).some((file) => !file)
   ) {
     throw new Error("The pinned ETSI TS 119 602 JSON schema identity is incomplete.");
   }
-  return {
+  return Object.fromEntries(Object.entries(files).map(([target, file]) => [target, {
     standard: "ETSI TS 119 602",
     version: "1.1.1",
     draft: "http://json-schema.org/draft-07/schema#",
-    sourcePath: BASE_SCHEMA_PATH,
+    sourcePath: file!.path,
     sourceRepository: manifest.sources.etsiForge.repository,
     sourceTag: manifest.sources.etsiForge.tag,
     sourceCommit: manifest.sources.etsiForge.commit,
-    sha256: file.sha256,
-  };
+    sha256: file!.sha256,
+  }])) as Record<Ts119602JsonSchemaTarget, Ts119602JsonSchemaIdentity>;
 }
 
 function diagnostic(error: ErrorObject, value: unknown): Ts119602JsonSchemaDiagnostic {

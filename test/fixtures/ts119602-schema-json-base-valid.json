@@ -1,0 +1,11 @@
+{
+  "LoTE": {
+    "ListAndSchemeInformation": {
+      "LoTEVersionIdentifier": 1,
+      "LoTESequenceNumber": 1,
+      "SchemeOperatorName": [{ "lang": "en", "value": "Fixture operator" }],
+      "ListIssueDateTime": "2026-01-01T00:00:00Z",
+      "NextUpdate": "2026-07-01T00:00:00Z"
+    }
+  }
+}

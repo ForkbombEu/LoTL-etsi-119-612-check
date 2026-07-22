@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListOfTrustedEntities xmlns="http://uri.etsi.org/019602/v1#">
+  <ListAndSchemeInformation>
+    <LoTEVersionIdentifier>not-an-integer</LoTEVersionIdentifier>
+  </ListAndSchemeInformation>
+</ListOfTrustedEntities>

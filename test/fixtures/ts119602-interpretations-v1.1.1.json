@@ -1,0 +1,65 @@
+{
+  "registryVersion": "2026-07-22",
+  "interpretations": [
+    {
+      "id": "ts119602-v1.1.1-uri-annex-reference",
+      "status": "unresolved",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.1.2", "ETSI TS 119 602 V1.1.1 Annex C", "ETSI TS 119 602 V1.1.1 Annex H"]
+    },
+    {
+      "id": "ts119602-v1.1.1-language-annex-reference",
+      "status": "unresolved",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.1.4", "ETSI TS 119 602 V1.1.1 Annex B", "ETSI TS 119 602 V1.1.1 Annex G"]
+    },
+    {
+      "id": "ts119602-v1.1.1-wrprc-uri-typo",
+      "status": "unresolved",
+      "sources": ["ETSI TS 119 602 V1.1.1 Annex C.2.2", "ETSI TS 119 602 V1.1.1 Table G.1"]
+    },
+    {
+      "id": "ts119602-v1.1.1-next-update-null",
+      "status": "document_text_prevails",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.3.15", "1960201_json_schema.json#/definitions/NextUpdate", "1960201_xsd_schema.xsd#NextUpdateType"]
+    },
+    {
+      "id": "ts119602-v1.1.1-postal-address-xml",
+      "status": "document_text_prevails",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.3.5.1", "1960201_xsd_schema.xsd#PostalAddressType"]
+    },
+    {
+      "id": "ts119602-v1.1.1-table1-xml-cardinality",
+      "status": "document_text_prevails",
+      "sources": ["ETSI TS 119 602 V1.1.1 Table 1", "1960201_xsd_schema.xsd#LoTEListAndSchemeInformationType"]
+    },
+    {
+      "id": "ts119602-v1.1.1-implicit-container-binding",
+      "status": "document_text_prevails",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.3.0", "1960201_json_schema.json#/definitions/LoTE", "1960201_xsd_schema.xsd#ListOfTrustedEntitiesType"]
+    },
+    {
+      "id": "ts119602-v1.1.1-signature-cardinality",
+      "status": "document_text_prevails",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.8", "1960201_xsd_schema.xsd#ListOfTrustedEntitiesType"]
+    },
+    {
+      "id": "ts119602-v1.1.1-json-service-identity-closure",
+      "status": "unresolved",
+      "sources": ["1960201_json_schema.json#/definitions/ServiceDigitalIdentity/properties/additionalProperties"]
+    },
+    {
+      "id": "ts119602-v1.1.1-xml-extension-base-import",
+      "status": "unresolved",
+      "sources": ["1960201_xsd_schema_sie.xsd", "1960201_xsd_schema_tie.xsd", "W3C XML Schema 1.0 Structures section 4.2.3"]
+    },
+    {
+      "id": "ts119602-v1.1.1-alternative-binding-version",
+      "status": "unresolved",
+      "sources": ["ETSI TS 119 602 V1.1.1 Table A.1", "ETSI TS 119 602 V1.1.1 Table H.1", "ETSI TS 119 612 V2.4.1 clause 5.3.1"]
+    },
+    {
+      "id": "ts119602-v1.1.1-alternative-binding-tag",
+      "status": "unresolved",
+      "sources": ["ETSI TS 119 602 V1.1.1 clause 6.2", "ETSI TS 119 602 V1.1.1 Table A.1", "ETSI TS 119 612 V2.4.1 Annex C TSLTag"]
+    }
+  ]
+}

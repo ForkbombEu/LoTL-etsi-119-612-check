@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:tie="http://uri.etsi.org/019602/v1/TrustedEntityExtensions" xmlns:lote="http://uri.etsi.org/019602/v1#" targetNamespace="http://uri.etsi.org/019602/v1/TrustedEntityExtensions" elementFormDefault="qualified">
+  <xsd:import namespace="http://uri.etsi.org/019602/v1#" schemaLocation="../../schemas/etsi-ts-119-602/v1.1.1/1960201_xml_schema/1960201_xsd_schema.xsd"/>
+  <xsd:element name="OtherAssociatedBodies" type="tie:OtherAssociatedBodiesType"/>
+  <xsd:complexType name="OtherAssociatedBodiesType">
+    <xsd:sequence><xsd:element ref="tie:AssociatedBody"/></xsd:sequence>
+  </xsd:complexType>
+  <xsd:element name="AssociatedBody" type="tie:AssociatedBodyType"/>
+  <xsd:complexType name="AssociatedBodyType">
+    <xsd:sequence>
+      <xsd:element name="AssociatedBodyName" type="lote:InternationalNamesType"/>
+      <xsd:element name="AssociatedBodyTradeName" type="lote:InternationalNamesType" minOccurs="0"/>
+      <xsd:element name="AssociatedBodyAddress" type="lote:AddressType"/>
+      <xsd:element name="AssociatedBodyInformationURI" type="lote:NonEmptyMultiLangURIListType"/>
+      <xsd:element name="AssociatedBodyInformationExtensions" type="lote:ExtensionsListType" minOccurs="0"/>
+    </xsd:sequence>
+  </xsd:complexType>
+</xsd:schema>

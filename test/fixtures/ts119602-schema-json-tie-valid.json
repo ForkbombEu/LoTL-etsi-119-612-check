@@ -1,0 +1,6 @@
+[
+  {
+    "AssociatedBodyName": [{ "lang": "en", "value": "Associated body" }],
+    "AssociatedBodyInformationURI": [{ "lang": "en", "uriValue": "https://example.test/body" }]
+  }
+]

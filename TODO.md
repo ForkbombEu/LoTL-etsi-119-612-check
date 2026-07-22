@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-12 and TS602-18.
+Last reconciled: 2026-07-22, through TS612-12 and TS602-19.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -35,7 +35,7 @@ bounded, and write only under ignored artifact directories.
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity, fingerprints, public-key hashes, SKI, basic constraints, key usage and self-signature evidence; compare TS 119 612 service identities; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors; service checks do not establish revocation or chain trust |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 44 test files and 259 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 46 test files and 269 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -177,6 +177,7 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | TS602-16 | Validate locally asserted ETSI registration-identifier syntax, associated-body payloads, registration/certificate identity consistency, Annex role/law URIs, and certificate purpose through BasicConstraints/KeyUsage | Complete; TS602-18 adds authoritative identity/relationship evidence, while certificate policy/chain authority remains explicit |
 | TS602-17 | Compare certificate/JWK/XML-RSA-key/SKI representations and authenticate pointer signers through every supported PKI identity form with optional per-location path/revocation evidence | Complete; non-PKI `OtherId` and automatic revocation retrieval remain explicit |
 | TS602-18 | Bind reviewed scheme-page assertions to fetched hashes, compare operator/entity claims with authoritative records, traverse bounded same-origin archive indexes, authenticate compact-JWS register data, verify complete retained history, and apply explicit expired-status policy to final lists | Complete; unsupported archive/register protocols and absent external evidence remain inconclusive |
+| TS602-19 | Cover all six base/extension schema entrypoints with positive/focused negative fixtures, link every implemented ledger family to deterministic evidence, and pin the complete interpretation registry in regression data | Complete; the published SIE/TIE XSD missing-import defect remains explicit and test compositions are not conformance schemas |
 
 ### Remaining TS 119 602 gaps
 
@@ -186,8 +187,11 @@ implemented. Therefore TS 119 602 as a whole is not complete.
   not map `LOTETag` and maps fixed version fields whose TS 119 612 V2.4.1 and
   TS 119 602 Annex H required values conflict. Both remain explicit
   `inconclusive` evidence rather than compatibility normalization.
-- Positive and negative fixtures do not yet cover every JSON/XML extension
-  schema type.
+- Positive and focused negative fixtures cover the JSON/XML base, service-
+  information-extension and trusted-entity-extension schema shapes. The
+  published SIE/TIE XSDs cannot compile standalone because they omit the base-
+  namespace import; test-only composition schemas make fixture intent explicit
+  without altering or overstating the pinned ETSI files.
 - Schema success remains evidence only; the normative document prevails over
   known electronic-schema conflicts.
 
@@ -232,8 +236,8 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Complete; authoritative identity/role evidence is handled by TS602-18, while certificate-policy authority remains partial |
 | TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Complete; non-PKI `OtherId` and automatic certificate discovery remain explicit |
 | TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Complete |
-| TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | **Next cross-standard task** |
-| TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | Planned |
+| TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | Complete |
+| TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | **Next cross-standard task** |
 
 ### Published TS 119 602 conflicts that must remain explicit
 
@@ -251,13 +255,18 @@ these issues rather than silently normalize them:
    shape.
 5. Clause 6.3.5.1 postal-address text and the XML schema disagree about
    `Locality` and `Country`/`CountryName`.
-6. Clause 6.8 requires a signature while the XML schema makes `ds:Signature`
+6. Table 1 requires explicit-mode fields which the XML schema marks optional.
+7. Clause 6.3.0 permits implicit core fields which the published binding
+   schemas cannot represent directly.
+8. Clause 6.8 requires a signature while the XML schema makes `ds:Signature`
    optional.
-7. The JSON Schema's `additionalProperties` placement does not by itself close
+9. The JSON Schema's `additionalProperties` placement does not by itself close
    every intended object.
-8. Table A.1 maps `LoTEVersionIdentifier` to `TSLVersionIdentifier`, while
+10. The published SIE/TIE XSDs use base LoTE types without importing the base
+    namespace, so they do not compile as standalone schema entrypoints.
+11. Table A.1 maps `LoTEVersionIdentifier` to `TSLVersionIdentifier`, while
    Annex H requires value `1` and TS 119 612 V2.4.1 requires value `6`.
-9. Clause 6.2 requires `LOTETag`, but Table A.1 has no corresponding mapping
+12. Clause 6.2 requires `LOTETag`, but Table A.1 has no corresponding mapping
    and the TS 119 612 source uses `TSLTag`.
 
 Unresolved conflicts must be `inconclusive` or linked to an explicit,
@@ -274,8 +283,8 @@ The recommended implementation sequence is:
    signature, trust, semantic and contextual families in their respective
    standards. Complete.
 4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
-   and perform ledger-driven completion audits. TS612-12 is complete;
-   **TS602-19 is next.**
+   and perform ledger-driven completion audits. TS612-12 and TS602-19 are
+   complete; **TS602-20 is next.**
 
 Tasks that do not share files may be developed independently, but the stated
 dependencies must still be satisfied before a conformance claim is enabled.
