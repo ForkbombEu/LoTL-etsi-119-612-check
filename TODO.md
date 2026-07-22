@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-03.
+Last reconciled: 2026-07-22, through TS612-04.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -35,7 +35,7 @@ bounded, and write only under ignored artifact directories.
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity and SHA-256 fingerprints; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 34 test files and 187 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 35 test files and 193 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -59,8 +59,8 @@ bounded, and write only under ignored artifact directories.
 ### Implemented baseline
 
 The existing TS 119 612 assessor provides useful evidence and is inventoried
-by a 69-family requirements ledger. Only 2 families are implemented completely;
-29 are partial and 38 are not implemented, so it must not be treated as a
+by a 69-family requirements ledger. Only 5 families are implemented completely;
+32 are partial and 32 are not implemented, so it must not be treated as a
 complete conformance validator.
 
 | Baseline task | Implemented scope | Status |
@@ -70,6 +70,7 @@ complete conformance validator.
 | TS612-B03 | Automatic integrity-checked canonical TLv6 validation through `xmllint --nonet`, explicit override support, offline catalog resolution and source-identified diagnostics | Complete |
 | TS612-B04 | XMLDSig/XAdES evidence, local-reference policy, `xmlsec1` cryptographic verification, embedded certificate parsing, validity evidence, and first-list/signing-certificate equality for LoTL/LoTE types | Complete task scope; trust/profile coverage partial |
 | TS612-B05 | Separate `ts119612` result/report summary, CLI/API/OpenAPI exposure, Markdown rendering, and focused malformed/namespace/date/XSD/signature fixtures | Complete |
+| TS612-B06 | Exact direct `SchemeInformation` order/cardinality and locally decidable V2.4.1 syntax/semantics, including calendar-month and closed-list next-update handling | Complete task scope; contextual coverage remains explicit |
 
 #### What TS 119 612 does not yet prove
 
@@ -82,8 +83,9 @@ complete conformance validator.
 - V2.4.1 is the only selected normative version. The observed EUDI RI
   namespace variant remains a warning-only compatibility input whose normative
   status is not established.
-- Date-time lexical rules, exact calendar update periods, sequence progression,
-  closed-list behavior, and historical retention are incomplete.
+- Date-time lexical rules, exact calendar update periods, local sequence shape,
+  and closed-list status evidence are checked. Sequence progression and
+  historical retention consequences require contextual/history evidence.
 - TSP/service information, service history, qualifiers, extensions, digital
   identities, status transitions, and certificate-purpose rules are only
   partially inspected.
@@ -104,8 +106,8 @@ Each row is intended to be one focused implementation prompt and one commit.
 | TS612-01 | Establish the exact supported TS 119 612 version/profile source set; create a clause/table requirements ledger with stable `ts119612.*` IDs, applicability, severity, citations and implementation status; gate verdicts on coverage so incomplete assessment cannot report full conformance | Baseline | Complete |
 | TS612-02 | Pin the applicable official base/extension XSDs, XMLDSig dependencies, licenses, immutable provenance, hashes and an offline catalog; add bundle integrity verification | TS612-01 | Complete |
 | TS612-03 | Route every supported TS 119 612 namespace/version to the correct pinned schema automatically; retain `--xsd` only as an explicit override; report source-identified line diagnostics and document namespace/profile ambiguity | TS612-02 | Complete |
-| TS612-04 | Implement scheme-information structure and semantics: exact order/cardinality, version, sequence, type, operator name/address, scheme name/information URI, status approach, community rules, territory, policy/legal notice, issue/next-update, distribution points and extensions | TS612-01, TS612-03 | **Next** |
-| TS612-05 | Implement TSP and service-information structure: exact nesting/cardinality, multilingual names/addresses/URIs, service types/names, digital identities, status/start time, supply points, definitions and extensions | TS612-04 | Planned |
+| TS612-04 | Implement scheme-information structure and semantics: exact order/cardinality, version, sequence, type, operator name/address, scheme name/information URI, status approach, community rules, territory, policy/legal notice, issue/next-update, distribution points and extensions | TS612-01, TS612-03 | Complete |
+| TS612-05 | Implement TSP and service-information structure: exact nesting/cardinality, multilingual names/addresses/URIs, service types/names, digital identities, status/start time, supply points, definitions and extensions | TS612-04 | **Next** |
 | TS612-06 | Implement service history, qualifiers and certificate semantics: history ordering/retention, status transitions, qualifier vocabularies, identity equivalence, certificate roles/purpose and deterministic certificate evidence | TS612-05 | Planned |
 | TS612-07 | Implement the exact applicable XML signature/XAdES profile: reference/transform/property rules, signer metadata, certificate path/revocation inputs and explicit signer-trust separation | TS612-03, TS612-06 | Planned |
 | TS612-08 | Implement LoTL `OtherTSLPointer` semantics: pointer structure, MIME/type/community qualifiers, service identities, signing-certificate rules, rollover and supported namespace/profile dispatch | TS612-04, TS612-07 | Planned |
@@ -226,7 +228,7 @@ versioned interpretation; they must never be silently corrected.
 
 The recommended implementation sequence is:
 
-1. **TS612-02 through TS612-06** — establish pinned schemas and reliable local
+1. **TS612-05 through TS612-06** — complete reliable local
    TS 119 612 facts.
 2. **TS602-14** — implement the alternative-binding mapping using those facts.
 3. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete

@@ -323,8 +323,8 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 2
-families as implemented, 29 as partial, and 38 as not implemented. Every
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 5
+families as implemented, 32 as partial, and 32 as not implemented. Every
 applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
@@ -332,6 +332,14 @@ failures remain visible as partial/non-conformance evidence.
 The report does not claim full legal or normative ETSI conformance.
 
 XML findings are implemented structural, date, schema, signature, certificate, and service-metadata checks. They are evidence-oriented results rather than a claim of full ETSI TS 119 612 conformance.
+
+`SchemeInformation` assessment validates direct namespace-aware child
+cardinality/order and locally decidable V2.4.1 rules for version, sequence,
+type, multilingual operator/name/address/pointers, territory, policy choice,
+history period, strict UTC issuance, exact six-calendar-month next update,
+distribution URIs and extension criticality. Registry recognition, referenced
+URI content, sequence progression, distribution equality, legal authority and
+historical retention remain explicit contextual limitations.
 
 For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, Reference URIs, expected-root coverage, whether cryptographic verification was attempted, its result or limitation, and XAdES-property detection. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence.
 

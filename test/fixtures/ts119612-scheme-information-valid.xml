@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList
+  xmlns="http://uri.etsi.org/02231/v2#"
+  TSLTag="http://uri.etsi.org/TrstSvc/TrustedList/TSLTag"
+  Id="SCHEME-VALID">
+  <SchemeInformation>
+    <TSLVersionIdentifier>6</TSLVersionIdentifier>
+    <TSLSequenceNumber>1</TSLSequenceNumber>
+    <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType>
+    <SchemeOperatorName>
+      <Name xml:lang="en">Italian Test Scheme Operator</Name>
+    </SchemeOperatorName>
+    <SchemeOperatorAddress>
+      <PostalAddresses>
+        <PostalAddress xml:lang="en">
+          <StreetAddress>Via Example 1</StreetAddress>
+          <Locality>Rome</Locality>
+          <PostalCode>00100</PostalCode>
+          <CountryName>IT</CountryName>
+        </PostalAddress>
+      </PostalAddresses>
+      <ElectronicAddress>
+        <URI xml:lang="en">mailto:trust-list@example.test</URI>
+        <URI xml:lang="en">https://example.test/trusted-list-help</URI>
+        <URI xml:lang="en">tel:+39061234567</URI>
+      </ElectronicAddress>
+    </SchemeOperatorAddress>
+    <SchemeName>
+      <Name xml:lang="en">IT:Italian test trusted-list scheme</Name>
+    </SchemeName>
+    <SchemeInformationURI>
+      <URI xml:lang="en">https://example.test/scheme-information</URI>
+    </SchemeInformationURI>
+    <StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate</StatusDeterminationApproach>
+    <SchemeTypeCommunityRules>
+      <URI xml:lang="en">http://uri.etsi.org/TrstSvc/TrustedList/schemerules/EUcommon</URI>
+      <URI xml:lang="en">http://uri.etsi.org/TrstSvc/TrustedList/schemerules/IT</URI>
+    </SchemeTypeCommunityRules>
+    <SchemeTerritory>IT</SchemeTerritory>
+    <PolicyOrLegalNotice>
+      <TSLLegalNotice xml:lang="en">Test policy and legal notice.</TSLLegalNotice>
+    </PolicyOrLegalNotice>
+    <HistoricalInformationPeriod>65535</HistoricalInformationPeriod>
+    <PointersToOtherTSL>
+      <OtherTSLPointer>
+        <TSLLocation>https://example.test/eu-lotl.xml</TSLLocation>
+      </OtherTSLPointer>
+    </PointersToOtherTSL>
+    <ListIssueDateTime>2026-01-31T00:00:00Z</ListIssueDateTime>
+    <NextUpdate>
+      <dateTime>2026-07-31T00:00:00Z</dateTime>
+    </NextUpdate>
+    <DistributionPoints>
+      <URI>https://example.test/current-tl.xml</URI>
+    </DistributionPoints>
+  </SchemeInformation>
+</TrustServiceStatusList>

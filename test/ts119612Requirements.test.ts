@@ -55,9 +55,9 @@ describe("ETSI TS 119 612 requirements ledger", () => {
   it("reports incomplete coverage without implying conformance", () => {
     expect(summarizeTs119612Requirements()).toMatchObject({
       total: 69,
-      implemented: 2,
-      partial: 29,
-      notImplemented: 38,
+      implemented: 5,
+      partial: 32,
+      notImplemented: 32,
       complete: false,
     });
   });

@@ -5,8 +5,10 @@ import {
   TS119612_COMPATIBILITY_INPUTS,
   TS119612_SOURCE,
 } from "../standards/ts119612Requirements.js";
+import { validateTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
+import { assessTs119612SchemeInformation } from "./ts119612SchemeInformation.js";
 import { validateTs119612XmlSchema } from "./ts119612Xsd.js";
 import type { XsdValidationDependencies } from "./xsd.js";
 import { D, L, has, nodes, text, texts } from "./xpath.js";
@@ -114,6 +116,7 @@ export async function assessTs119612Xml(
 
   const scheme = text(document, `/*[local-name()='TrustServiceStatusList']/${L("SchemeInformation")}`);
   push(checks, "structure.scheme_information", "structure", scheme ? "pass" : "fail", "critical", "SchemeInformation element exists.");
+  checks.push(...assessTs119612SchemeInformation(document, artifactKind));
 
   checks.push(bindingSelectionCheck(rootNs, extracted.tslVersionIdentifier));
   checkExists(checks, document, "structure.tsl_version_identifier", D("TSLVersionIdentifier"), "TSLVersionIdentifier exists.", "error");
@@ -141,7 +144,12 @@ export async function assessTs119612Xml(
     push(checks, "structure.trust_service_provider_list", "structure", "not_applicable", "info", "TrustServiceProviderList is not required by this implemented check for an XML LoTL artifact.");
   }
 
-  checks.push(...dateChecks(extracted.listIssueDateTime, extracted.nextUpdate, assessmentDate));
+  checks.push(...dateChecks(
+    extracted.listIssueDateTime,
+    extracted.nextUpdate,
+    assessmentDate,
+    has(document, D("NextUpdate")),
+  ));
   const serviceAssessment = assessServices(document, assessmentDate, artifactKind === "ts119612_xml_tsl");
   checks.push(...serviceAssessment.checks);
   certificates.push(...serviceAssessment.certificates);
@@ -307,34 +315,67 @@ function assessServices(document: Document, assessmentDate: Date, expectTspConte
   return { checks, certificates, tspCount: tsps.length, serviceCount: services.length };
 }
 
-function dateChecks(issueValue: string | undefined, nextValue: string | undefined, assessmentDate: Date): CheckResult[] {
+function dateChecks(
+  issueValue: string | undefined,
+  nextValue: string | undefined,
+  assessmentDate: Date,
+  nextUpdatePresent: boolean,
+): CheckResult[] {
   const checks: CheckResult[] = [];
   const issue = parseDate(issueValue);
   const next = parseDate(nextValue);
-  push(checks, "dates.issue_valid", "dates", issue ? "pass" : "fail", "error", "ListIssueDateTime is a valid ISO timestamp.", issueValue);
-  push(checks, "dates.next_update_valid", "dates", next ? "pass" : "fail", "error", "NextUpdate is a valid ISO timestamp.", nextValue);
+  push(checks, "dates.issue_valid", "dates", issue ? "pass" : "fail", "error", "ListIssueDateTime uses the required UTC seconds lexical form.", issueValue);
+  if (!nextValue && nextUpdatePresent) {
+    push(checks, "dates.next_update_valid", "dates", "not_applicable", "info", "NextUpdate date-time syntax is not applicable to an explicitly closed TL.");
+  } else {
+    push(checks, "dates.next_update_valid", "dates", next ? "pass" : "fail", "error", "NextUpdate uses the required UTC seconds lexical form.", nextValue);
+  }
   if (issue && next) {
     push(checks, "dates.next_after_issue", "dates", next > issue ? "pass" : "fail", "error", "NextUpdate is after ListIssueDateTime.", { issue: issue.toISOString(), nextUpdate: next.toISOString() });
-    const days = Math.round((next.getTime() - issue.getTime()) / 86_400_000);
-    push(checks, "dates.update_period_days", "dates", days <= 183 ? "pass" : "warn", "warning", "Update period is not longer than six months.", days);
-    if (assessmentDate > next) {
-      checks.push({
-        id: "dates.next_update_expired",
-        category: "dates",
-        status: "warn",
-        severity: "warning",
-        message: "Current assessment date is after NextUpdate; trusted list appears expired.",
-        evidence: { assessmentDate: assessmentDate.toISOString(), nextUpdate: next.toISOString() },
-      });
-    }
+    const limit = addUtcCalendarMonths(issue, 6);
+    push(
+      checks,
+      "dates.update_period_days",
+      "dates",
+      next <= limit ? "pass" : "fail",
+      "error",
+      "NextUpdate is no later than six calendar months after ListIssueDateTime.",
+      { issue: issue.toISOString(), nextUpdate: next.toISOString(), sixCalendarMonthLimit: limit.toISOString() },
+    );
+  }
+  if (next) {
+    const expired = assessmentDate > next;
+    checks.push({
+      id: "dates.next_update_expired",
+      category: "dates",
+      status: expired ? "warn" : "pass",
+      severity: expired ? "warning" : "info",
+      message: expired
+        ? "Current assessment date is after NextUpdate; trusted list appears expired."
+        : "Current assessment date is not after NextUpdate.",
+      evidence: { assessmentDate: assessmentDate.toISOString(), nextUpdate: next.toISOString() },
+    });
   }
   return checks;
 }
 
 function parseDate(value: string | undefined): Date | undefined {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
+  return validateTs119602UtcDateTime(value).outcome === "valid" ? new Date(value as string) : undefined;
+}
+
+function addUtcCalendarMonths(value: Date, months: number): Date {
+  const monthIndex = value.getUTCMonth() + months;
+  const year = value.getUTCFullYear() + Math.floor(monthIndex / 12);
+  const month = ((monthIndex % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(
+    year,
+    month,
+    Math.min(value.getUTCDate(), lastDay),
+    value.getUTCHours(),
+    value.getUTCMinutes(),
+    value.getUTCSeconds(),
+  ));
 }
 
 function checkExists(checks: CheckResult[], context: Node, id: string, expression: string, message: string, severity: "critical" | "error" | "warning"): void {
