@@ -54,7 +54,7 @@ describe("runAudit", () => {
     expect(report.summary.fetched).toBe(2);
     expect(report.summary.fetchFailed).toBe(1);
     expect(report.summary.jsonArtifacts).toBe(1);
-    expect(report.schemaVersion).toBe(6);
+    expect(report.schemaVersion).toBe(7);
     expect(report.results[0]).toMatchObject({
       id: expect.stringMatching(/^artifact-001-[a-f0-9]{12}$/),
       source: "https://example.test/tl.xml",
@@ -85,6 +85,12 @@ describe("runAudit", () => {
       binding: "scheme_explicit_json",
       bindingStatus: "selected",
     });
+    expect(report.results[1].ts119602Coverage).toMatchObject({
+      selection: { binding: "scheme_explicit_json", schemeMode: "explicit" },
+      ledger: { total: 81 },
+      completeVerdictEligible: false,
+    });
+    expect(report.results[1].ts119602Coverage?.requirements).toHaveLength(81);
     expect(report.summary.ts119602.nonConformant).toBe(1);
     expect(report.summary.ts119602.unsupported).toBe(0);
     expect(report.results[1].standardApplicability).toEqual({
@@ -112,6 +118,7 @@ describe("runAudit", () => {
     expect(markdown).toContain("### EUDI RI TS 119 612 reference profile");
     expect(markdown).toContain("### WE BUILD TS 119 612 reference profile");
     expect(markdown).toContain("### ETSI TS 119 612 ledger coverage");
+    expect(markdown).toContain("### ETSI TS 119 602 ledger coverage");
     expect(markdown).toContain("| ts119612.operations.availability | applicable | not_implemented | contextual | not_implemented | none |");
     expect(markdown).toContain("TS 119 602 classification: data model=ts119602; binding=scheme_explicit_json (selected)");
     expect(markdown).toContain("Can this trust-list bundle be used as a wallet trust fixture?");
@@ -124,6 +131,9 @@ describe("runAudit", () => {
         expect(markdown).toContain(`**${finding.id}** (${finding.status}; ${finding.severity})`);
       }
       for (const requirement of result.ts119612Coverage?.requirements ?? []) {
+        expect(markdown).toContain(`| ${requirement.requirementId} |`);
+      }
+      for (const requirement of result.ts119602Coverage?.requirements ?? []) {
         expect(markdown).toContain(`| ${requirement.requirementId} |`);
       }
     }

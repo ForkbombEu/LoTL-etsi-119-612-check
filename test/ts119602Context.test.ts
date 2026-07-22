@@ -316,9 +316,15 @@ describe("ETSI TS 119 602 contextual validation", () => {
       fetch: true,
       context: { dereference: false, priorArtifacts: [{ content: JSON.stringify(prior), contentType: "application/json" }] },
     }, "test");
-    expect(result.json.schemaVersion).toBe(6);
+    expect(result.json.schemaVersion).toBe(7);
+    expect(result.json.results[0].ts119602Coverage).toMatchObject({
+      ledger: { total: 81 },
+      completeVerdictEligible: false,
+    });
+    expect(result.json.results[0].ts119602Coverage?.requirements).toHaveLength(81);
     expect(result.json.results[0].ts119602.checks).toContainEqual(expect.objectContaining({ id: "ts119602.scheme.sequence.history", status: "pass" }));
     expect(result.markdown).toContain("**ts119602.scheme.sequence.history**");
+    expect(result.markdown).toContain("### ETSI TS 119 602 ledger coverage");
   });
 });
 

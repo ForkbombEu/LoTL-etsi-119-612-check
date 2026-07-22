@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: WE BUILD Trusted List Audit API
   version: 0.1.0
-  description: HTTP API for auditing trusted-list pointers and assessing ETSI TS 119 612 / TS 119 602 artifacts. Scheme-explicit TS 119 602 XML is validated against the integrity-checked pinned V1.1.1 XSD and offline catalog when xmllint is available.
+  description: HTTP API for auditing trusted-list pointers and assessing ETSI TS 119 612 / TS 119 602 artifacts. Scheme-explicit TS 119 602 XML is validated against the integrity-checked pinned V1.1.1 XSD and offline catalog when xmllint is available. Applicable artifacts expose synchronized 69-family TS 119 612 or 81-family TS 119 602 coverage audits and audit-driven complete-verdict eligibility.
 servers:
   - url: http://127.0.0.1:3000
 paths:
@@ -181,7 +181,7 @@ paths:
   /api/v1/artifact/assess-url:
     post:
       summary: Assess one referenced artifact URL
-      description: TS 119 602 scheme-explicit XML automatically receives a separate pinned offline XML Schema finding; unavailable local validator support is reported as unsupported.
+      description: TS 119 602 scheme-explicit XML automatically receives a separate pinned offline XML Schema finding; unavailable local validator support is reported as unsupported. Applicable TS 119 602 artifacts also return the complete 81-family ledger coverage audit used by the verdict gate.
       requestBody:
         required: true
         content:
@@ -244,7 +244,7 @@ paths:
               emptyReport:
                 value:
                   report:
-                    schemaVersion: 6
+                    schemaVersion: 7
                     tool: { name: we-build-tl-audit, version: 0.1.0 }
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
@@ -326,7 +326,7 @@ paths:
   /api/audit/artifact:
     post:
       summary: Assess raw XML, JSON, or compact JAdES TL/LoTE content with optional bounded contextual evidence
-      description: TS 119 602 scheme-explicit XML automatically receives a separate pinned offline XML Schema finding; unavailable local validator support is reported as unsupported.
+      description: TS 119 602 scheme-explicit XML automatically receives a separate pinned offline XML Schema finding; unavailable local validator support is reported as unsupported. Applicable TS 119 602 artifacts also return the complete 81-family ledger coverage audit used by the verdict gate.
       requestBody:
         required: true
         content:
@@ -717,7 +717,7 @@ components:
       type: object
       required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors, summary, results]
       properties:
-        schemaVersion: { type: integer, const: 6 }
+        schemaVersion: { type: integer, const: 7 }
         tool:
           type: object
           required: [name, version]
@@ -948,6 +948,8 @@ components:
             eudiTrustRole: { $ref: '#/components/schemas/ApplicabilityStatus' }
         ts119612Coverage:
           $ref: '#/components/schemas/Ts119612CoverageAudit'
+        ts119602Coverage:
+          $ref: '#/components/schemas/Ts119602CoverageAudit'
         referenceProfiles:
           type: object
           required: [eudiRiTs119612, weBuildTs119612]
@@ -1113,6 +1115,89 @@ components:
           type: string
           enum: [pass, fail, warn, not_applicable, not_checked, unsupported, inconclusive, partial, not_implemented]
         conclusive: { type: boolean }
+    Ts119602CoverageAudit:
+      type: object
+      additionalProperties: false
+      required: [standard, selection, ledger, applicableImplemented, blockers, completeVerdictEligible, requirements]
+      properties:
+        standard:
+          type: object
+          additionalProperties: false
+          required: [document, version, publicationDate]
+          properties:
+            document: { type: string }
+            version: { type: string }
+            publicationDate: { type: string }
+        selection:
+          type: object
+          additionalProperties: false
+          required: [binding, bindingStatus, profile, profileStatus, schemeMode]
+          properties:
+            binding:
+              type: string
+              enum: [scheme_explicit_json, scheme_explicit_xml, ts119612_alternative_xml, unknown]
+            bindingStatus:
+              type: string
+              enum: [selected, candidate, unsupported, not_applicable]
+            profile:
+              type: string
+              enum: [pid_providers, wallet_providers, wrpac_providers, wrprc_providers, pub_eaa_providers, registrars_and_registers, unknown]
+            profileStatus:
+              type: string
+              enum: [selected, not_selected, conflict]
+            schemeMode:
+              type: string
+              enum: [implicit, explicit, unknown]
+        ledger:
+          type: object
+          additionalProperties: false
+          required: [total, applicable, notApplicable, implemented, partial, notImplemented, contextual]
+          properties:
+            total: { type: integer, minimum: 0 }
+            applicable: { type: integer, minimum: 0 }
+            notApplicable: { type: integer, minimum: 0 }
+            implemented: { type: integer, minimum: 0 }
+            partial: { type: integer, minimum: 0 }
+            notImplemented: { type: integer, minimum: 0 }
+            contextual: { type: integer, minimum: 0 }
+        applicableImplemented:
+          type: object
+          additionalProperties: false
+          required: [total, conclusive, nonConclusive]
+          properties:
+            total: { type: integer, minimum: 0 }
+            conclusive: { type: integer, minimum: 0 }
+            nonConclusive: { type: integer, minimum: 0 }
+        blockers:
+          type: object
+          additionalProperties: false
+          required: [partialRequirementIds, notImplementedRequirementIds, nonConclusiveImplementedRequirementIds, contextualRequirementIds, selection]
+          properties:
+            partialRequirementIds:
+              type: array
+              items: { type: string }
+            notImplementedRequirementIds:
+              type: array
+              items: { type: string }
+            nonConclusiveImplementedRequirementIds:
+              type: array
+              items: { type: string }
+            contextualRequirementIds:
+              type: array
+              items: { type: string }
+            selection:
+              type: array
+              items:
+                type: string
+                enum: [binding_not_selected, profile_conflict, scheme_mode_unknown]
+        completeVerdictEligible: { type: boolean }
+        requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ts119602RequirementCoverage'
+    Ts119602RequirementCoverage:
+      allOf:
+        - $ref: '#/components/schemas/Ts119612RequirementCoverage'
     Ts119602Classification:
       type: object
       required: [dataModel, binding, bindingStatus, profile, profileStatus, applicability, reasons, evidence]

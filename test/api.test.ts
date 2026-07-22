@@ -235,7 +235,13 @@ describe("API server", () => {
           expect.objectContaining({ id: "json_lote.signature.jades_cryptographic_verification_result", status: "pass" }),
         ]),
       },
+      ts119602Coverage: {
+        ledger: { total: 81 },
+        completeVerdictEligible: false,
+        requirements: expect.any(Array),
+      },
     });
+    expect(jadesResponse.json().result.ts119602Coverage.requirements).toHaveLength(81);
 
     const chainResponse = await app.inject({
       method: "POST",
@@ -345,7 +351,7 @@ describe("API server", () => {
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
-      schemaVersion: 6,
+      schemaVersion: 7,
       tool: { name: "we-build-tl-audit", version: "0.1.0" },
       generatedAt: "2026-07-16T00:00:00.000Z",
       input: { source: "request-body", kind: "json" },
@@ -464,11 +470,15 @@ describe("API server", () => {
     expect(parsedJson.components.schemas.Ts119602ResourceEvidence.required).toContain("sha256");
     expect(parsedJson.components.schemas.TrustListPointerSignerEvidence.required).toContain("location");
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
-    expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(6);
+    expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(7);
     expect(parsedJson.components.schemas.TrustedListAuditResult.required).toContain("referenceProfiles");
     expect(parsedJson.components.schemas.TrustedListAuditResult.properties.ts119612Coverage.$ref)
       .toBe("#/components/schemas/Ts119612CoverageAudit");
     expect(parsedJson.components.schemas.Ts119612CoverageAudit.required).toContain("completeVerdictEligible");
+    expect(parsedJson.components.schemas.TrustedListAuditResult.properties.ts119602Coverage.$ref)
+      .toBe("#/components/schemas/Ts119602CoverageAudit");
+    expect(parsedJson.components.schemas.Ts119602CoverageAudit.required).toContain("completeVerdictEligible");
+    expect(parsedJson.components.schemas.Ts119602CoverageAudit.properties.selection.required).toContain("schemeMode");
     expect(parsedJson.components.schemas.Ts119612RequirementCoverage.properties.outcome.enum)
       .toContain("not_implemented");
     expect(parsedJson.components.schemas.ReferenceProfileAssessment.required).toContain("checks");
@@ -477,7 +487,7 @@ describe("API server", () => {
     const documentedExample = parsedJson.paths["/api/v1/report/markdown"].post.requestBody.content["application/json"].examples.emptyReport.value;
     const exampleResponse = await app.inject({ method: "POST", url: "/api/v1/report/markdown", payload: documentedExample });
     expect(exampleResponse.statusCode).toBe(200);
-    expect(exampleResponse.json().markdown).toContain("Report schema: v6");
+    expect(exampleResponse.json().markdown).toContain("Report schema: v7");
     await app.close();
   });
 

@@ -15,6 +15,7 @@ import { buildStandardAssessment } from "./standards/assessment.js";
 import { assessTs119602AlternativeXml } from "./standards/ts119602AlternativeXml.js";
 import { classifyTs119602Artifact, createUnknownTs119602Classification } from "./standards/ts119602Classification.js";
 import { assessTs119602Context } from "./standards/ts119602Context.js";
+import { auditTs119602Coverage, inferTs119602CoverageSchemeMode, ts119602CoverageFinding } from "./standards/ts119602Coverage.js";
 import { assessTs119612Context } from "./standards/ts119612Context.js";
 import { auditTs119612Coverage, ts119612CoverageFinding } from "./standards/ts119612Coverage.js";
 import { buildAuditReport } from "./report/jsonReport.js";
@@ -361,7 +362,7 @@ async function assessArtifactBytes(
         },
       };
     }
-    return applyTs119612Context(result, bytes, contentType, options);
+    return finalizeTs119602Coverage(await applyTs119612Context(result, bytes, contentType, options));
   }
 
   if (detected.artifactKind === "xml_lote") {
@@ -407,19 +408,33 @@ async function applyContext(
   contentType: string | undefined,
   options: Pick<AuditCoreOptions, "context"> & { timeoutMs?: number },
 ): Promise<TrustedListAuditResult> {
-  if (!options.context || !result.ts119602.applicable) return result;
-  const contextual = await assessTs119602Context({
-    currentBytes: bytes,
-    currentContentType: contentType,
-    currentResult: result,
-    timeoutMs: options.timeoutMs ?? 15_000,
-    options: options.context,
-  });
-  const replacementIds = new Set(contextual.map((entry) => entry.id));
-  result.ts119602 = buildStandardAssessment([
-    ...result.ts119602.checks.filter((entry) => !replacementIds.has(entry.id)),
-    ...contextual,
-  ], { coverageComplete: false });
+  if (options.context && result.ts119602.applicable) {
+    const contextual = await assessTs119602Context({
+      currentBytes: bytes,
+      currentContentType: contentType,
+      currentResult: result,
+      timeoutMs: options.timeoutMs ?? 15_000,
+      options: options.context,
+    });
+    const replacementIds = new Set(contextual.map((entry) => entry.id));
+    result.ts119602 = buildStandardAssessment([
+      ...result.ts119602.checks.filter((entry) => !replacementIds.has(entry.id)),
+      ...contextual,
+    ], { coverageComplete: false });
+  }
+  return finalizeTs119602Coverage(result);
+}
+
+function finalizeTs119602Coverage(result: TrustedListAuditResult): TrustedListAuditResult {
+  if (!result.ts119602.applicable || result.ts119602Classification.applicability !== "applicable") return result;
+  const checks = result.ts119602.checks.filter((entry) => entry.id !== "ts119602.coverage.complete");
+  const coverage = auditTs119602Coverage({
+    classification: result.ts119602Classification,
+    schemeMode: inferTs119602CoverageSchemeMode(checks),
+  }, checks);
+  checks.push(ts119602CoverageFinding(coverage));
+  result.ts119602Coverage = coverage;
+  result.ts119602 = buildStandardAssessment(checks, { coverageComplete: coverage.completeVerdictEligible });
   return result;
 }
 
@@ -611,7 +626,7 @@ function normalizeDeclared(declared?: Partial<TrustedListAuditResult["declared"]
 
 function mergeResult(
   base: TrustedListAuditResult,
-  assessed: Partial<Pick<TrustedListAuditResult, "ts119612" | "ts119612Coverage" | "ts119602" | "extracted" | "detected">>,
+  assessed: Partial<Pick<TrustedListAuditResult, "ts119612" | "ts119612Coverage" | "ts119602" | "ts119602Coverage" | "extracted" | "detected">>,
 ): TrustedListAuditResult {
   return {
     ...base,
@@ -619,6 +634,7 @@ function mergeResult(
     ts119612: mergeStandardAssessment(base.ts119612, assessed.ts119612),
     ts119612Coverage: assessed.ts119612Coverage ?? base.ts119612Coverage,
     ts119602: mergeStandardAssessment(base.ts119602, assessed.ts119602),
+    ts119602Coverage: assessed.ts119602Coverage ?? base.ts119602Coverage,
     extracted: assessed.extracted,
   };
 }

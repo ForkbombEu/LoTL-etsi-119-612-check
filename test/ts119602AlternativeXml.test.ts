@@ -41,6 +41,12 @@ describe("ETSI TS 119 602 Annex A.2.2 alternative XML binding", () => {
       includeJsonLoteChecks: false,
     });
     expect(result.ts119602Classification).toMatchObject({ binding: "ts119612_alternative_xml", profile: "pub_eaa_providers", applicability: "applicable" });
+    expect(result.ts119602Coverage).toMatchObject({
+      selection: { binding: "ts119612_alternative_xml", profile: "pub_eaa_providers", schemeMode: "explicit" },
+      ledger: { total: 81 },
+      completeVerdictEligible: false,
+    });
+    expect(result.ts119602Coverage?.requirements).toHaveLength(81);
     expect(result.ts119602.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: "ts119602.binding.ts119612_mapping",

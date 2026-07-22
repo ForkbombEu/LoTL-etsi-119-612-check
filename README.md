@@ -98,6 +98,11 @@ requests, review checks and retention rules, is documented in
 remain reference evidence and never become implicit normative or production
 trust decisions.
 
+The corresponding bounded TS 119 602 procedure for the WE BUILD JSON/XML LoTL
+inputs and human-selected EUDI RI artifacts is documented in
+[`docs/ts119602-live-smoke.md`](docs/ts119602-live-smoke.md). Both procedures
+are manual and keep outputs beneath ignored `artifacts/reference-smoke/` paths.
+
 With local ETSI TS 119 612 XSD and strict structural scoring:
 
 ```bash
@@ -468,9 +473,9 @@ The official ETSI TS 119 602 V1.1.1 JSON and XML binding schemas are pinned unde
 
 TS 119 602 JSON and scheme-explicit XML assessments use these pinned schemas automatically. XML validation verifies every bundled file against the manifest before invoking `xmllint` with `--nonet` and the pinned catalog through `XML_CATALOG_FILES`. Its separate `ts119602.binding.xml_schema` finding records source commit/hash, bundle integrity, and structured line/column diagnostics. If `xmllint` is unavailable, the finding is `unsupported`; it never pretends validation passed. Schema success alone does not imply normative conformance because the ETSI specification prevails over conflicting electronic schemas.
 
-## Report schema v6
+## Report schema v7
 
-Reports now include `schemaVersion: 6`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, optional structured `ts119612Coverage` for applicable XML, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders every stored standard and profile finding with its status and severity, including `not_applicable` findings, plus the same 69-family TS 119 612 coverage audit; profile observations are not inserted into ETSI conformance scoring.
+Reports now include `schemaVersion: 7`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, structured `ts119612Coverage` or `ts119602Coverage` when the corresponding standard applies, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders every stored standard and profile finding with its status and severity, including `not_applicable` findings, plus the same 69-family TS 119 612 and 81-family TS 119 602 coverage audits; profile observations are not inserted into ETSI conformance scoring.
 
 ## WE BUILD profile checks
 
@@ -516,7 +521,7 @@ When a fetched artifact is JSON and contains a `LoTE` root, the tool classifies 
 Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; this artifact should be assessed under ETSI TS 119 602 / WE BUILD profile rules instead.
 ```
 
-Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v6 also has a separate `summary.ts119602`, `results[].ts119602Classification`, structured TS 119 612 coverage and isolated TS 119 612 reference-profile results.
+Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v7 also has a separate `summary.ts119602`, `results[].ts119602Classification`, structured coverage audits for both standards and isolated TS 119 612 reference-profile results.
 
 JSON LoTE assessment now validates the official object/array model against the pinned V1.1.1 Draft-07 schema entirely offline. URI and date-time formats are enforced, and schema failures report JSON Pointer, schema path/keyword, expected value, observed value/type, and the exact schema source commit and SHA-256. The official `TrustedEntitiesList[]` and nested service arrays are parsed directly. The legacy WE BUILD/TSL-like `TrustedEntitiesList.TrustServiceProvider[]` shape is handled only by an isolated compatibility adapter and receives explicit schema and compatibility failures while retaining extractable evidence.
 
@@ -524,7 +529,7 @@ Compact JAdES Baseline B is detected as JWS rather than as a JSON `signature` pr
 
 Exact embedded `LoTEType` values dispatch Annex D-I local profile checks. Each selected profile receives separate binding, scheme-information, trusted-entity, service/history, and signature findings. The implementation checks the registered status/rules/service URIs, six-calendar-month update limit, profile history/pointer shape, contact and country-role URIs, locally asserted ETSI registration-identifier syntax, associated-body payload validity, certificate name/registration consistency, BasicConstraints/KeyUsage purpose, Wallet `ServiceUniqueIdentifier`, Pub-EAA certificate/status/SKI-history rules, and registrar supply points. Official-record identity and associated-body responsibility can be evaluated from explicit source-identified records; certificate-policy authority, chains and revocation remain separate evidence rather than being inferred from local syntax.
 
-Optional contextual assessment compares a complete supplied prior sequence, requires self-pointers to return identical current bytes with a verified signer matching a declared certificate fingerprint, JWK/XML-RSA public-key hash, or X509SKI, checks distribution-point byte equality, and follows bounded same-origin links from HTML or JSON-style archive indexes. Scheme information, rules and policy semantics pass only when caller-supplied review assertions match the exact fetched SHA-256. Source-identified authoritative evidence can compare operator/entity names, registration identifiers, contacts and associated-body relationships. Annex I compact-JWS register data is authenticated against the declaring service identity, never-remove history is checked across the complete prior sequence, and a final null `NextUpdate` uses explicitly supplied status URIs whose semantics are `expired`. Callers may also attach per-`LoTELocation` certificate paths and timestamped revocation evidence through `context.pointerSigners`; embedded signer certificates are never copied into trust input. Every fetch observes timeout, count, concurrency, byte, depth and duplicate-URL cache bounds. Unsupported archive protocols, non-JWS register signatures/seals, non-PKI pointer identities, finite retention policy, automatic path discovery, certificate-purpose policy, and CRL/OCSP retrieval remain explicit limitations; therefore success still cannot produce a complete TS 119 602 `conformant` verdict.
+Optional contextual assessment compares a complete supplied prior sequence, requires self-pointers to return identical current bytes with a verified signer matching a declared certificate fingerprint, JWK/XML-RSA public-key hash, or X509SKI, checks distribution-point byte equality, and follows bounded same-origin links from HTML or JSON-style archive indexes. Scheme information, rules and policy semantics pass only when caller-supplied review assertions match the exact fetched SHA-256. Source-identified authoritative evidence can compare operator/entity names, registration identifiers, contacts and associated-body relationships. Annex I compact-JWS register data is authenticated against the declaring service identity, never-remove history is checked across the complete prior sequence, and a final null `NextUpdate` uses explicitly supplied status URIs whose semantics are `expired`. Callers may also attach per-`LoTELocation` certificate paths and timestamped revocation evidence through `context.pointerSigners`; embedded signer certificates are never copied into trust input. Every fetch observes timeout, count, concurrency, byte, depth and duplicate-URL cache bounds. Unsupported archive protocols, non-JWS register signatures/seals, non-PKI pointer identities, finite retention policy, automatic path discovery, certificate-purpose policy, and CRL/OCSP retrieval remain explicit limitations.
 
 Core TS 119 602 entity checks enforce binding-specific direct nesting,
 cardinality and allowed children independently of schema success. Multilingual
@@ -539,7 +544,15 @@ explicitly `not_checked`.
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The current audit records 39 implemented and 42 partial families. The ledger is an engineering inventory, not proof of complete conformance.
 
-Report schema v6 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
+For every applicable artifact, `results[].ts119602Coverage` audits all 81
+families against the selected binding, profile and implicit/explicit scheme
+mode. It retains non-applicable entries, linked/observed finding IDs, outcomes,
+partial/contextual/non-conclusive blockers and `completeVerdictEligible`. The
+verdict gate can open only when every applicable family is implemented, every
+implemented family is conclusive and artifact selection is unambiguous. The
+current 42 partial families therefore keep complete conformance disabled.
+
+Report schema v7 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
 
 For scheme-explicit TS 119 602 XML, the normative entity path implemented by
 the tool is

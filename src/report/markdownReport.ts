@@ -1,4 +1,5 @@
 import type { AuditReport, CheckResult, TrustedListAuditResult } from "../types.js";
+import type { Ts119602CoverageAudit } from "../standards/ts119602Coverage.js";
 import type { Ts119612CoverageAudit } from "../standards/ts119612Coverage.js";
 
 export function renderMarkdownReport(report: AuditReport): string {
@@ -96,8 +97,30 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   renderStandardAssessment(lines, "ETSI TS 119 612", result.ts119612);
   renderTs119612Coverage(lines, result.ts119612Coverage);
   renderStandardAssessment(lines, "ETSI TS 119 602", result.ts119602);
+  renderTs119602Coverage(lines, result.ts119602Coverage);
   renderMetadata(lines, result);
   renderCertificateEvidence(lines, result);
+}
+
+function renderTs119602Coverage(lines: string[], audit: Ts119602CoverageAudit | undefined): void {
+  if (!audit) return;
+  lines.push("### ETSI TS 119 602 ledger coverage");
+  lines.push("");
+  lines.push(`- Selection: binding=${audit.selection.binding} (${audit.selection.bindingStatus}); profile=${audit.selection.profile} (${audit.selection.profileStatus}); scheme mode=${audit.selection.schemeMode}`);
+  lines.push(`- Ledger families: ${audit.ledger.total}; applicable: ${audit.ledger.applicable}; not applicable: ${audit.ledger.notApplicable}`);
+  lines.push(`- Applicable implementation: implemented=${audit.ledger.implemented}; partial=${audit.ledger.partial}; not implemented=${audit.ledger.notImplemented}`);
+  lines.push(`- Applicable implemented results: conclusive=${audit.applicableImplemented.conclusive}; non-conclusive=${audit.applicableImplemented.nonConclusive}`);
+  lines.push(`- Complete-verdict eligible: ${audit.completeVerdictEligible ? "yes" : "no"}`);
+  lines.push("");
+  lines.push("| Requirement | Applicability | Implementation | Evidence scope | Outcome | Observed findings |");
+  lines.push("|---|---|---|---|---|---|");
+  for (const requirement of audit.requirements) {
+    const observed = requirement.observedFindings
+      .map((finding) => `${finding.id}=${finding.status}`)
+      .join("; ") || "none";
+    lines.push(`| ${requirement.requirementId} | ${requirement.applicability} | ${requirement.implementationStatus} | ${requirement.evidenceScope} | ${requirement.outcome} | ${escapeCell(observed)} |`);
+  }
+  lines.push("");
 }
 
 function renderTs119612Coverage(lines: string[], audit: Ts119612CoverageAudit | undefined): void {

@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-12 and TS602-19.
+Last reconciled: 2026-07-22, through TS612-12 and TS602-20.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -30,12 +30,12 @@ bounded, and write only under ignored artifact directories.
 | --- | --- | --- |
 | Input | Local files, URLs, JSON objects/strings, raw XML/JSON/JWS API content, certificates/chains | Network fetches are bounded and must be explicit |
 | Classification | XML/JSON/JWS/HTML/unknown detection; TS 119 612 and TS 119 602 applicability are separate | Profile declarations cannot override conflicting embedded evidence |
-| Reports | Stable JSON report schema v6 plus Markdown rendering of standard findings, the TS 119 612 ledger audit and isolated reference-profile findings | No Markdown-only findings |
+| Reports | Stable JSON report schema v7 plus Markdown rendering of standard findings, both ledger audits and isolated reference-profile findings | No Markdown-only findings |
 | API | POST assessment routes, OpenAPI, Stoplight Elements UI | Core functions are reused; the API does not shell out to the CLI |
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity, fingerprints, public-key hashes, SKI, basic constraints, key usage and self-signature evidence; compare TS 119 612 service identities; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors; service checks do not establish revocation or chain trust |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 46 test files and 269 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 47 test files and 275 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -178,6 +178,7 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | TS602-17 | Compare certificate/JWK/XML-RSA-key/SKI representations and authenticate pointer signers through every supported PKI identity form with optional per-location path/revocation evidence | Complete; non-PKI `OtherId` and automatic revocation retrieval remain explicit |
 | TS602-18 | Bind reviewed scheme-page assertions to fetched hashes, compare operator/entity claims with authoritative records, traverse bounded same-origin archive indexes, authenticate compact-JWS register data, verify complete retained history, and apply explicit expired-status policy to final lists | Complete; unsupported archive/register protocols and absent external evidence remain inconclusive |
 | TS602-19 | Cover all six base/extension schema entrypoints with positive/focused negative fixtures, link every implemented ledger family to deterministic evidence, and pin the complete interpretation registry in regression data | Complete; the published SIE/TIE XSD missing-import defect remains explicit and test compositions are not conformance schemas |
+| TS602-20 | Emit an applicability-aware 81-family audit after contextual assessment, gate complete verdicts dynamically, synchronize JSON/Markdown/CLI/API/OpenAPI as report schema v7, and document bounded manual TS 119 602 live smoke checks | Complete; 42 applicable-family definitions remain partial and continue to block complete conformance |
 
 ### Remaining TS 119 602 gaps
 
@@ -237,7 +238,7 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Complete; non-PKI `OtherId` and automatic certificate discovery remain explicit |
 | TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Complete |
 | TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | Complete |
-| TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | **Next cross-standard task** |
+| TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | Complete |
 
 ### Published TS 119 602 conflicts that must remain explicit
 
@@ -283,8 +284,12 @@ The recommended implementation sequence is:
    signature, trust, semantic and contextual families in their respective
    standards. Complete.
 4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
-   and perform ledger-driven completion audits. TS612-12 and TS602-19 are
-   complete; **TS602-20 is next.**
+   and perform ledger-driven completion audits. Complete.
+
+The sequenced cross-standard roadmap is complete for its bounded task scopes.
+Neither standard is fully implemented: select follow-up work from the explicit
+partial/not-implemented families in the two ledger audits rather than treating
+roadmap completion as normative conformance.
 
 Tasks that do not share files may be developed independently, but the stated
 dependencies must still be satisfied before a conformance claim is enabled.

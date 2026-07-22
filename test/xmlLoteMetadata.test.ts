@@ -92,6 +92,12 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       strict: false,
       includeJsonLoteChecks: false,
     });
+    expect(result.ts119602Coverage).toMatchObject({
+      selection: { binding: "scheme_explicit_xml", schemeMode: "explicit" },
+      ledger: { total: 81 },
+      completeVerdictEligible: false,
+    });
+    expect(result.ts119602Coverage?.requirements).toHaveLength(81);
 
     expect(result.detected.artifactKind).toBe("xml_lote");
     expect(result.ts119612.conformanceLevel).toBe("not_applicable");

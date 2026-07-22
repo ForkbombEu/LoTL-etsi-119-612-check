@@ -1,4 +1,5 @@
 import type { EudiTrustRole } from "./eudi/roles.js";
+import type { Ts119602CoverageAudit } from "./standards/ts119602Coverage.js";
 import type { Ts119612CoverageAudit } from "./standards/ts119612Coverage.js";
 
 export type ConformanceLevel =
@@ -234,7 +235,7 @@ export interface ArtifactReferenceProfiles {
 }
 
 export interface AuditReport {
-  schemaVersion: 6;
+  schemaVersion: 7;
   tool: {
     name: "we-build-tl-audit";
     version: string;
@@ -339,6 +340,8 @@ export interface TrustedListAuditResult {
   standardApplicability: StandardApplicability;
   /** Full 69-family engineering coverage audit for applicable TS 119 612 XML artifacts. */
   ts119612Coverage?: Ts119612CoverageAudit;
+  /** Full 81-family engineering coverage audit for applicable TS 119 602 artifacts. */
+  ts119602Coverage?: Ts119602CoverageAudit;
   referenceProfiles: ArtifactReferenceProfiles;
   ts119612: StandardAssessment;
   ts119602: StandardAssessment;
