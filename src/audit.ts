@@ -16,6 +16,7 @@ import { assessTs119602AlternativeXml } from "./standards/ts119602AlternativeXml
 import { classifyTs119602Artifact, createUnknownTs119602Classification } from "./standards/ts119602Classification.js";
 import { assessTs119602Context } from "./standards/ts119602Context.js";
 import { assessTs119612Context } from "./standards/ts119612Context.js";
+import { auditTs119612Coverage, ts119612CoverageFinding } from "./standards/ts119612Coverage.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
 import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult, TrustListContextOptions } from "./types.js";
@@ -436,11 +437,18 @@ async function applyTs119612Context(
     timeoutMs: options.timeoutMs ?? 15_000,
     options: options.context,
   });
-  const replacementIds = new Set(contextual.map((entry) => entry.id));
-  result.ts119612 = buildStandardAssessment([
+  const replacementIds = new Set([
+    "ts119612.coverage.complete",
+    ...contextual.map((entry) => entry.id),
+  ]);
+  const checks = [
     ...result.ts119612.checks.filter((entry) => !replacementIds.has(entry.id)),
     ...contextual,
-  ], { coverageComplete: false });
+  ];
+  const coverage = auditTs119612Coverage(result.detected.artifactKind, checks);
+  checks.push(ts119612CoverageFinding(coverage));
+  result.ts119612Coverage = coverage;
+  result.ts119612 = buildStandardAssessment(checks, { coverageComplete: coverage.completeVerdictEligible });
   return result;
 }
 
@@ -603,12 +611,13 @@ function normalizeDeclared(declared?: Partial<TrustedListAuditResult["declared"]
 
 function mergeResult(
   base: TrustedListAuditResult,
-  assessed: Partial<Pick<TrustedListAuditResult, "ts119612" | "ts119602" | "extracted" | "detected">>,
+  assessed: Partial<Pick<TrustedListAuditResult, "ts119612" | "ts119612Coverage" | "ts119602" | "extracted" | "detected">>,
 ): TrustedListAuditResult {
   return {
     ...base,
     detected: assessed.detected ?? base.detected,
     ts119612: mergeStandardAssessment(base.ts119612, assessed.ts119612),
+    ts119612Coverage: assessed.ts119612Coverage ?? base.ts119612Coverage,
     ts119602: mergeStandardAssessment(base.ts119602, assessed.ts119602),
     extracted: assessed.extracted,
   };

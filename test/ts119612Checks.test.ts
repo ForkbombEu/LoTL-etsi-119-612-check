@@ -16,6 +16,11 @@ describe("assessTs119612Xml", () => {
     expect(result.extracted?.trustServiceProviderCount).toBe(1);
     expect(result.extracted?.serviceCount).toBeGreaterThan(0);
     expect(result.ts119612.conformanceLevel).not.toBe("conformant");
+    expect(result.ts119612Coverage).toMatchObject({
+      ledger: { total: 69, applicable: 69, implemented: 15, partial: 45, notImplemented: 9 },
+      completeVerdictEligible: false,
+    });
+    expect(result.ts119612Coverage?.requirements).toHaveLength(69);
     expect(result.ts119612.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "parse.xml", status: "pass" }),
@@ -25,7 +30,13 @@ describe("assessTs119612Xml", () => {
         expect.objectContaining({
           id: "ts119612.coverage.complete",
           status: "not_checked",
-          evidence: expect.objectContaining({ total: 69, implemented: 15, complete: false }),
+          evidence: expect.objectContaining({
+            total: 69,
+            implemented: 15,
+            complete: false,
+            applicable: 69,
+            completeVerdictEligible: false,
+          }),
         }),
       ]),
     );

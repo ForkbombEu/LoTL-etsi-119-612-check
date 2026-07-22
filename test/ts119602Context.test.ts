@@ -108,7 +108,7 @@ describe("ETSI TS 119 602 contextual validation", () => {
       fetch: true,
       context: { dereference: false, priorArtifacts: [{ content: JSON.stringify(prior), contentType: "application/json" }] },
     }, "test");
-    expect(result.json.schemaVersion).toBe(5);
+    expect(result.json.schemaVersion).toBe(6);
     expect(result.json.results[0].ts119602.checks).toContainEqual(expect.objectContaining({ id: "ts119602.scheme.sequence.history", status: "pass" }));
     expect(result.markdown).toContain("**ts119602.scheme.sequence.history**");
   });

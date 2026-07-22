@@ -92,6 +92,12 @@ npm run package-reference-smoke -- we-build-lotl-json 20260717T120000Z
 
 This creates the ignored sibling archive `artifacts/reference-smoke/we-build-lotl-json/20260717T120000Z-review.zip`, containing only that timestamped smoke directory. The runner and packager are manual commands and never run from `npm test`.
 
+The bounded TS 119 612 procedure, including direct EUDI RI and WE BUILD XML
+requests, review checks and retention rules, is documented in
+[`docs/ts119612-live-smoke.md`](docs/ts119612-live-smoke.md). Live observations
+remain reference evidence and never become implicit normative or production
+trust decisions.
+
 With local ETSI TS 119 612 XSD and strict structural scoring:
 
 ```bash
@@ -338,6 +344,15 @@ applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
 
+For each applicable XML artifact, `results[].ts119612Coverage` audits all 69
+ledger families. It records artifact applicability, implementation status,
+local/contextual/mixed evidence scope, linked and observed finding IDs, the
+family outcome, blocker lists and `completeVerdictEligible`. The complete
+verdict gate is computed from this audit: every applicable family must be
+implemented and every applicable implemented family must be conclusive.
+Concrete failures remain conclusive evidence and are handled by the separate
+assessment verdict; they never turn into a coverage gap.
+
 Every currently implemented TS 119 612 family is linked to deterministic
 positive and focused negative evidence in
 `test/fixtures/ts119612-implemented-coverage.json`. Run
@@ -444,9 +459,9 @@ The official ETSI TS 119 602 V1.1.1 JSON and XML binding schemas are pinned unde
 
 TS 119 602 JSON and scheme-explicit XML assessments use these pinned schemas automatically. XML validation verifies every bundled file against the manifest before invoking `xmllint` with `--nonet` and the pinned catalog through `XML_CATALOG_FILES`. Its separate `ts119602.binding.xml_schema` finding records source commit/hash, bundle integrity, and structured line/column diagnostics. If `xmllint` is unavailable, the finding is `unsupported`; it never pretends validation passed. Schema success alone does not imply normative conformance because the ETSI specification prevails over conflicting electronic schemas.
 
-## Report schema v5
+## Report schema v6
 
-Reports now include `schemaVersion: 5`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders every stored standard and profile finding with its status and severity, including `not_applicable` findings; profile observations are not inserted into ETSI conformance scoring.
+Reports now include `schemaVersion: 6`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, optional structured `ts119612Coverage` for applicable XML, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders every stored standard and profile finding with its status and severity, including `not_applicable` findings, plus the same 69-family TS 119 612 coverage audit; profile observations are not inserted into ETSI conformance scoring.
 
 ## WE BUILD profile checks
 
@@ -492,7 +507,7 @@ When a fetched artifact is JSON and contains a `LoTE` root, the tool classifies 
 Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; this artifact should be assessed under ETSI TS 119 602 / WE BUILD profile rules instead.
 ```
 
-Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v5 also has a separate `summary.ts119602`, `results[].ts119602Classification`, and isolated TS 119 612 reference-profile results.
+Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v6 also has a separate `summary.ts119602`, `results[].ts119602Classification`, structured TS 119 612 coverage and isolated TS 119 612 reference-profile results.
 
 JSON LoTE assessment now validates the official object/array model against the pinned V1.1.1 Draft-07 schema entirely offline. URI and date-time formats are enforced, and schema failures report JSON Pointer, schema path/keyword, expected value, observed value/type, and the exact schema source commit and SHA-256. The official `TrustedEntitiesList[]` and nested service arrays are parsed directly. The legacy WE BUILD/TSL-like `TrustedEntitiesList.TrustServiceProvider[]` shape is handled only by an isolated compatibility adapter and receives explicit schema and compatibility failures while retaining extractable evidence.
 
@@ -504,7 +519,7 @@ Optional contextual assessment compares supplied prior instances, requires certi
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
-Report schema v5 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
+Report schema v6 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
 
 For scheme-explicit TS 119 602 XML, the normative entity path implemented by
 the tool is

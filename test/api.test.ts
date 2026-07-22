@@ -209,6 +209,12 @@ describe("API server", () => {
       },
     });
     expect(signedArtifactResponse.statusCode).toBe(200);
+    expect(signedArtifactResponse.json().result.ts119612Coverage).toMatchObject({
+      ledger: { total: 69 },
+      completeVerdictEligible: false,
+      requirements: expect.any(Array),
+    });
+    expect(signedArtifactResponse.json().result.ts119612Coverage.requirements).toHaveLength(69);
     expect(signedArtifactResponse.json().result.ts119612.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "ts119612.signature.certificate_path", status: "pass" }),
       expect.objectContaining({ id: "ts119612.signature.revocation", status: "pass" }),
@@ -311,7 +317,7 @@ describe("API server", () => {
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
-      schemaVersion: 5,
+      schemaVersion: 6,
       tool: { name: "we-build-tl-audit", version: "0.1.0" },
       generatedAt: "2026-07-16T00:00:00.000Z",
       input: { source: "request-body", kind: "json" },
@@ -351,6 +357,8 @@ describe("API server", () => {
           nonConformant: 0,
           notApplicable: 0,
           notChecked: 0,
+          unsupported: 0,
+          inconclusive: 0,
           parseFailed: 0,
         },
         ts119602: {
@@ -422,15 +430,20 @@ describe("API server", () => {
     expect(parsedJson.components.schemas.Ts119612SignerEvidence.properties.revocation.required)
       .toContain("signerFingerprintSha256");
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
-    expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(5);
+    expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(6);
     expect(parsedJson.components.schemas.TrustedListAuditResult.required).toContain("referenceProfiles");
+    expect(parsedJson.components.schemas.TrustedListAuditResult.properties.ts119612Coverage.$ref)
+      .toBe("#/components/schemas/Ts119612CoverageAudit");
+    expect(parsedJson.components.schemas.Ts119612CoverageAudit.required).toContain("completeVerdictEligible");
+    expect(parsedJson.components.schemas.Ts119612RequirementCoverage.properties.outcome.enum)
+      .toContain("not_implemented");
     expect(parsedJson.components.schemas.ReferenceProfileAssessment.required).toContain("checks");
     expect(parsedJson.info.description).toContain("pinned V1.1.1 XSD and offline catalog");
     expect(parsedJson.paths["/api/audit/artifact"].post.description).toContain("separate pinned offline XML Schema finding");
     const documentedExample = parsedJson.paths["/api/v1/report/markdown"].post.requestBody.content["application/json"].examples.emptyReport.value;
     const exampleResponse = await app.inject({ method: "POST", url: "/api/v1/report/markdown", payload: documentedExample });
     expect(exampleResponse.statusCode).toBe(200);
-    expect(exampleResponse.json().markdown).toContain("Report schema: v5");
+    expect(exampleResponse.json().markdown).toContain("Report schema: v6");
     await app.close();
   });
 

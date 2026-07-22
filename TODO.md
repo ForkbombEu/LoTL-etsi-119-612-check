@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-11 and TS602-14.
+Last reconciled: 2026-07-22, through TS612-12 and TS602-14.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -30,12 +30,12 @@ bounded, and write only under ignored artifact directories.
 | --- | --- | --- |
 | Input | Local files, URLs, JSON objects/strings, raw XML/JSON/JWS API content, certificates/chains | Network fetches are bounded and must be explicit |
 | Classification | XML/JSON/JWS/HTML/unknown detection; TS 119 612 and TS 119 602 applicability are separate | Profile declarations cannot override conflicting embedded evidence |
-| Reports | Stable JSON report schema v5 plus Markdown rendering of standard and isolated reference-profile findings | No Markdown-only findings |
+| Reports | Stable JSON report schema v6 plus Markdown rendering of standard findings, the TS 119 612 ledger audit and isolated reference-profile findings | No Markdown-only findings |
 | API | POST assessment routes, OpenAPI, Stoplight Elements UI | Core functions are reused; the API does not shell out to the CLI |
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity, fingerprints, public-key hashes, SKI, basic constraints, key usage and self-signature evidence; compare TS 119 612 service identities; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors; service checks do not establish revocation or chain trust |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 43 test files and 232 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 44 test files and 238 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -78,6 +78,7 @@ complete conformance validator.
 | TS612-B11 | Supplied prior-list sequence and retained-state comparison, distribution byte equality, pointer signer-certificate authentication, duplicate-fetch caching, cycle detection and bounded cross-list traversal | Complete task scope; dereferencing remains opt-in and public-key/SKI-only authentication remains unsupported |
 | TS612-B12 | Isolated EUDI RI and WE BUILD TS 119 612 reference-profile recognition, endpoint/artifact shape, role classification, role trust-anchor evidence and distribution observations in JSON, Markdown and OpenAPI | Complete task scope; observed reference behavior is non-normative and never implies production trust |
 | TS612-B13 | Ledger-linked deterministic positive/negative coverage for every implemented family, lossless standard-finding Markdown rendering, CLI report-file parity, API re-render parity and an executable OpenAPI report example | Complete task scope; partial and not-implemented families remain explicit for TS612-12 |
+| TS612-B14 | Structured 69-family per-artifact coverage audit, explicit partial/not-implemented/contextual blockers, audit-driven complete-verdict eligibility and bounded manual EUDI RI/WE BUILD live-smoke procedure | Complete task scope; the current 45 partial and 9 not-implemented families keep complete verdicts disabled |
 
 #### What TS 119 612 does not yet prove
 
@@ -110,8 +111,10 @@ complete conformance validator.
 - EUDI RI and WE BUILD XML reference profiles are reported separately from the
   TS 119 612 assessment. Recognition is based on exact source hosts/paths or
   embedded profile evidence and never establishes ETSI conformance or trust.
-- Coverage gating prevents an incomplete requirements ledger from producing a
-  complete conformance verdict.
+- The JSON and Markdown coverage audit inventories all 69 families per
+  applicable artifact. Its dynamic gate prevents a complete verdict while an
+  applicable family is partial/not implemented or an implemented family is
+  non-conclusive.
 
 ### TS 119 612 sequential task plan
 
@@ -130,7 +133,7 @@ Each row is intended to be one focused implementation prompt and one commit.
 | TS612-09 | Add contextual validation for sequence progression, distribution equality, archive/history evidence, pointer dereferencing/authentication and bounded cross-list traversal | TS612-08 | Complete |
 | TS612-10 | Add explicit EUDI RI and WE BUILD TS 119 612 profile checks without treating reference-service behavior as normative ETSI behavior | TS612-05 through TS612-09 | Complete |
 | TS612-11 | Add deterministic positive and focused negative fixtures for every implemented requirement family; synchronize CLI, API, OpenAPI, JSON/Markdown and report compatibility tests | TS612-10 | Complete |
-| TS612-12 | Perform a coverage audit against the ledger, leave unsupported/contextual rules explicit, document manual live smoke procedures, and enable a complete verdict only if every applicable implemented requirement is conclusive | TS612-11 | **Next cross-standard task** |
+| TS612-12 | Perform a coverage audit against the ledger, leave unsupported/contextual rules explicit, document manual live smoke procedures, and enable a complete verdict only if every applicable implemented requirement is conclusive | TS612-11 | Complete |
 
 #### TS 119 612 implementation rules
 
@@ -212,7 +215,7 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
 | TS602-14 | Implement Annex A.2.2/Table A.1 component mapping for the TS 119 612 alternative XML binding, consuming validated TS 119 612 facts rather than reparsing with ad hoc XPath | TS602-13, TS612-06 | Complete |
-| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | Next TS 119 602 task; planned after TS612-07 in the cross-standard order |
+| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | **Next cross-standard task** |
 | TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Planned |
 | TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Planned |
 | TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Planned |
@@ -258,8 +261,8 @@ The recommended implementation sequence is:
    signature, trust, semantic and contextual families in their respective
    standards. TS612-10 is complete.
 4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
-   and perform ledger-driven completion audits. TS612-11 is complete;
-   **TS612-12 is next.**
+   and perform ledger-driven completion audits. TS612-12 is complete;
+   **TS602-15 is next.**
 
 Tasks that do not share files may be developed independently, but the stated
 dependencies must still be satisfied before a conformance claim is enabled.

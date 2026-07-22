@@ -1,9 +1,9 @@
 import type { CertificateSummary, CheckResult, ConformanceLevel, TrustedListAuditResult, Ts119612SignerEvidence } from "../types.js";
 import {
-  summarizeTs119612Requirements,
   TS119612_COMPATIBILITY_INPUTS,
   TS119612_SOURCE,
 } from "../standards/ts119612Requirements.js";
+import { auditTs119612Coverage, ts119612CoverageFinding } from "../standards/ts119612Coverage.js";
 import { validateTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
@@ -32,7 +32,7 @@ const EUDI_RI_ETSI_NS_VARIANT = "http://uri.etsi.org/19612/v2.4.1#";
 const EU_APPROPRIATE = "http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate";
 const PUB_EAA_LOTE_TYPE = "http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersList";
 
-export interface Ts119612XmlAssessment extends Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected"> {
+export interface Ts119612XmlAssessment extends Pick<TrustedListAuditResult, "ts119612" | "ts119612Coverage" | "extracted" | "detected"> {
   ts119612Facts?: Ts119612ValidatedFacts;
 }
 
@@ -172,14 +172,8 @@ export async function assessTs119612Xml(
   extracted.certificates = certificates;
   extracted.trustServiceProviderCount = serviceAssessment.tspCount;
   extracted.serviceCount = serviceAssessment.serviceCount;
-  checks.push({
-    id: "ts119612.coverage.complete",
-    category: "profile",
-    status: "not_checked",
-    severity: "warning",
-    message: "Complete ETSI TS 119 612 V2.4.1 normative coverage is not implemented; the assessment remains evidence-only.",
-    evidence: summarizeTs119612Requirements(),
-  });
+  const ts119612Coverage = auditTs119612Coverage(artifactKind, checks);
+  checks.push(ts119612CoverageFinding(ts119612Coverage));
 
   const mandatoryFailures = checks
     .filter((check) => check.status === "fail" && (check.severity === "critical" || check.severity === "error"))
@@ -188,7 +182,7 @@ export async function assessTs119612Xml(
     .filter((check) => ["warn", "not_checked", "unsupported", "inconclusive"].includes(check.status))
     .map((check) => `${check.id}: ${check.message}`);
   const score = scoreChecks(checks, options.strict);
-  const conformanceLevel = determineLevel(checks, mandatoryFailures, options.strict, false);
+  const conformanceLevel = determineLevel(checks, mandatoryFailures, options.strict, ts119612Coverage.completeVerdictEligible);
   const ts119612Facts = extractTs119612ValidatedFacts(document, checks, assessmentDate);
 
   return {
@@ -201,6 +195,7 @@ export async function assessTs119612Xml(
       mandatoryFailures,
       warnings,
     },
+    ts119612Coverage,
     extracted,
     ts119612Facts,
   };
@@ -371,9 +366,12 @@ function determineLevel(checks: CheckResult[], mandatoryFailures: string[], stri
   const criticalFailures = checks.filter((check) => check.status === "fail" && check.severity === "critical");
   if (criticalFailures.length > 0 || mandatoryFailures.length >= 3) return "non_conformant";
   if (mandatoryFailures.length > 0) return strict ? "non_conformant" : "partially_conformant";
+  if (checks.some((check) => check.status === "unsupported")) return "unsupported";
+  if (checks.some((check) => check.status === "inconclusive")) return "inconclusive";
   if (!coverageComplete) return "not_checked";
-  const importantNotChecked = checks.some((check) => check.status === "not_checked" && ["schema", "signature"].includes(check.category));
+  const notChecked = checks.some((check) => check.status === "not_checked");
   const warnings = checks.some((check) => check.status === "warn");
-  if (importantNotChecked || warnings) return "partially_conformant";
+  if (notChecked) return "not_checked";
+  if (warnings) return "partially_conformant";
   return "conformant";
 }

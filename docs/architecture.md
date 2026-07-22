@@ -48,6 +48,7 @@ CLI (--input path-or-url)                 HTTP API (JSON body or URL)
 | TS 119 612 contextual validation | `src/standards/ts119612Context.ts` | Compares supplied prior instances, authenticates dereferenced pointer edges, checks distribution equality, caches duplicate fetches, detects cycles and enforces count/depth/concurrency/byte bounds. |
 | TS 119 612 reference profiles | `src/profiles/ts119612ReferenceProfiles.ts` | Recognizes EUDI RI and WE BUILD XML reference inputs, records non-normative shape/distribution evidence, classifies EUDI trust roles and keeps all profile findings separate from ETSI scoring. |
 | TS 119 612 fixture coverage | `test/fixtures/ts119612-implemented-coverage.json`, `test/ts119612ImplementedCoverage.test.ts` | Keeps every implemented ledger family linked to deterministic positive and focused negative evidence and rejects stale fixture, test or finding references. |
+| TS 119 612 runtime coverage | `src/standards/ts119612Coverage.ts` | Audits all 69 ledger families per applicable artifact, exposes partial/not-implemented/contextual blockers, and is the sole complete-verdict eligibility gate. |
 | JSON LoTE checks | `src/json/loteChecks.ts` | Marks TS 119 612 as not applicable for JSON LoTE and optionally performs basic JSON LoTE metadata checks. |
 | Certificate helpers | `src/certs.ts` | Computes SHA-256 values and parses available Base64 X.509 material into reportable certificate summaries. |
 | Report rendering | `src/report/jsonReport.ts`, `src/report/markdownReport.ts`, `src/types.ts` | Defines the report contract, aggregates summary counts, and renders Markdown only from JSON report findings. |
@@ -99,7 +100,7 @@ Explicit source selection (local, URL, named reference source)
        stable JSON report and matching Markdown/API output
 ```
 
-Future stages should add only explicit checks and preserve the distinction between parsed facts, inferred relationships, and checks that are not implemented. Named EUDI RI and WE BUILD sources are reference inputs for optional/manual assessment; they must not become implicit production trust roots. Live fetches remain opt-in for tests and bounded in normal operation.
+Future stages should add only explicit checks and preserve the distinction between parsed facts, inferred relationships, and checks that are not implemented. Named EUDI RI and WE BUILD sources are reference inputs for optional/manual assessment; they must not become implicit production trust roots. Live fetches remain opt-in for tests and bounded in normal operation. The manual TS 119 612 procedure is maintained in `docs/ts119612-live-smoke.md`.
 
 ## Validation coverage
 

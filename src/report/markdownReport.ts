@@ -1,4 +1,5 @@
 import type { AuditReport, CheckResult, TrustedListAuditResult } from "../types.js";
+import type { Ts119612CoverageAudit } from "../standards/ts119612Coverage.js";
 
 export function renderMarkdownReport(report: AuditReport): string {
   const lines: string[] = [];
@@ -93,9 +94,30 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   renderReferenceProfile(lines, "EUDI RI TS 119 612 reference profile", result.referenceProfiles.eudiRiTs119612);
   renderReferenceProfile(lines, "WE BUILD TS 119 612 reference profile", result.referenceProfiles.weBuildTs119612);
   renderStandardAssessment(lines, "ETSI TS 119 612", result.ts119612);
+  renderTs119612Coverage(lines, result.ts119612Coverage);
   renderStandardAssessment(lines, "ETSI TS 119 602", result.ts119602);
   renderMetadata(lines, result);
   renderCertificateEvidence(lines, result);
+}
+
+function renderTs119612Coverage(lines: string[], audit: Ts119612CoverageAudit | undefined): void {
+  if (!audit) return;
+  lines.push("### ETSI TS 119 612 ledger coverage");
+  lines.push("");
+  lines.push(`- Ledger families: ${audit.ledger.total}; applicable: ${audit.ledger.applicable}; not applicable: ${audit.ledger.notApplicable}`);
+  lines.push(`- Applicable implementation: implemented=${audit.ledger.implemented}; partial=${audit.ledger.partial}; not implemented=${audit.ledger.notImplemented}`);
+  lines.push(`- Applicable implemented results: conclusive=${audit.applicableImplemented.conclusive}; non-conclusive=${audit.applicableImplemented.nonConclusive}`);
+  lines.push(`- Complete-verdict eligible: ${audit.completeVerdictEligible ? "yes" : "no"}`);
+  lines.push("");
+  lines.push("| Requirement | Applicability | Implementation | Evidence scope | Outcome | Observed findings |");
+  lines.push("|---|---|---|---|---|---|");
+  for (const requirement of audit.requirements) {
+    const observed = requirement.observedFindings
+      .map((finding) => `${finding.id}=${finding.status}`)
+      .join("; ") || "none";
+    lines.push(`| ${requirement.requirementId} | ${requirement.applicability} | ${requirement.implementationStatus} | ${requirement.evidenceScope} | ${requirement.outcome} | ${escapeCell(observed)} |`);
+  }
+  lines.push("");
 }
 
 function renderReferenceProfile(

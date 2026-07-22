@@ -168,6 +168,21 @@ describe("ETSI TS 119 612 contextual validation", () => {
       expect.objectContaining({ id: "ts119612.scheme.pointers.authentication", status: "not_checked" }),
       expect.objectContaining({ id: "ts119612.context.traversal", status: "not_checked" }),
     ]));
+    expect(result.ts119612Coverage).toMatchObject({
+      applicableImplemented: { total: 15 },
+      completeVerdictEligible: false,
+      blockers: {
+        nonConclusiveImplementedRequirementIds: expect.arrayContaining([
+          "ts119612.scheme.pointers.authentication",
+          "ts119612.scheme.distribution_consistency",
+        ]),
+      },
+    });
+    expect(result.ts119612Coverage?.requirements).toContainEqual(expect.objectContaining({
+      requirementId: "ts119612.scheme.sequence.history",
+      outcome: "pass",
+      conclusive: true,
+    }));
   });
 });
 

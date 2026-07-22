@@ -13,7 +13,7 @@ export function buildAuditReport(args: {
 }): AuditReport {
   const results = args.results;
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     tool: { name: "we-build-tl-audit", version: args.version },
     generatedAt: args.generatedAt,
     input: args.input,
@@ -35,6 +35,8 @@ export function buildAuditReport(args: {
         nonConformant: countLevel(results, "ts119612", "non_conformant"),
         notApplicable: countLevel(results, "ts119612", "not_applicable"),
         notChecked: countLevel(results, "ts119612", "not_checked"),
+        unsupported: countLevel(results, "ts119612", "unsupported"),
+        inconclusive: countLevel(results, "ts119612", "inconclusive"),
         parseFailed: countLevel(results, "ts119612", "parse_failed"),
       },
       ts119602: {

@@ -244,7 +244,7 @@ paths:
               emptyReport:
                 value:
                   report:
-                    schemaVersion: 5
+                    schemaVersion: 6
                     tool: { name: we-build-tl-audit, version: 0.1.0 }
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
@@ -281,6 +281,8 @@ paths:
                         nonConformant: 0
                         notApplicable: 0
                         notChecked: 0
+                        unsupported: 0
+                        inconclusive: 0
                         parseFailed: 0
                       ts119602:
                         conformant: 0
@@ -434,6 +436,9 @@ components:
     ConformanceLevel:
       type: string
       enum: [conformant, partially_conformant, non_conformant, not_applicable, not_checked, unsupported, inconclusive, fetch_failed, parse_failed]
+    CheckStatus:
+      type: string
+      enum: [pass, fail, warn, not_applicable, not_checked, unsupported, inconclusive]
     AuditOptions:
       type: object
       additionalProperties: false
@@ -576,7 +581,7 @@ components:
       type: object
       required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors, summary, results]
       properties:
-        schemaVersion: { type: integer, const: 5 }
+        schemaVersion: { type: integer, const: 6 }
         tool:
           type: object
           required: [name, version]
@@ -615,13 +620,15 @@ components:
             unknownArtifacts: { type: integer, minimum: 0 }
             ts119612:
               type: object
-              required: [conformant, partiallyConformant, nonConformant, notApplicable, notChecked, parseFailed]
+              required: [conformant, partiallyConformant, nonConformant, notApplicable, notChecked, unsupported, inconclusive, parseFailed]
               properties:
                 conformant: { type: integer, minimum: 0 }
                 partiallyConformant: { type: integer, minimum: 0 }
                 nonConformant: { type: integer, minimum: 0 }
                 notApplicable: { type: integer, minimum: 0 }
                 notChecked: { type: integer, minimum: 0 }
+                unsupported: { type: integer, minimum: 0 }
+                inconclusive: { type: integer, minimum: 0 }
                 parseFailed: { type: integer, minimum: 0 }
             ts119602:
               type: object
@@ -803,6 +810,8 @@ components:
             ts119602: { $ref: '#/components/schemas/ApplicabilityStatus' }
             weBuildProfile: { $ref: '#/components/schemas/ApplicabilityStatus' }
             eudiTrustRole: { $ref: '#/components/schemas/ApplicabilityStatus' }
+        ts119612Coverage:
+          $ref: '#/components/schemas/Ts119612CoverageAudit'
         referenceProfiles:
           type: object
           required: [eudiRiTs119612, weBuildTs119612]
@@ -868,6 +877,106 @@ components:
         warnings:
           type: array
           items: { type: string }
+    Ts119612CoverageAudit:
+      type: object
+      additionalProperties: false
+      required: [standard, artifactKind, ledger, applicableImplemented, blockers, completeVerdictEligible, requirements]
+      properties:
+        standard:
+          type: object
+          additionalProperties: false
+          required: [document, version, publicationDate]
+          properties:
+            document: { type: string }
+            version: { type: string }
+            publicationDate: { type: string }
+        artifactKind:
+          type: string
+          enum: [ts119612_xml_tsl, ts119612_xml_lotl]
+        ledger:
+          type: object
+          additionalProperties: false
+          required: [total, applicable, notApplicable, implemented, partial, notImplemented, contextual]
+          properties:
+            total: { type: integer, minimum: 0 }
+            applicable: { type: integer, minimum: 0 }
+            notApplicable: { type: integer, minimum: 0 }
+            implemented: { type: integer, minimum: 0 }
+            partial: { type: integer, minimum: 0 }
+            notImplemented: { type: integer, minimum: 0 }
+            contextual: { type: integer, minimum: 0 }
+        applicableImplemented:
+          type: object
+          additionalProperties: false
+          required: [total, conclusive, nonConclusive]
+          properties:
+            total: { type: integer, minimum: 0 }
+            conclusive: { type: integer, minimum: 0 }
+            nonConclusive: { type: integer, minimum: 0 }
+        blockers:
+          type: object
+          additionalProperties: false
+          required: [partialRequirementIds, notImplementedRequirementIds, nonConclusiveImplementedRequirementIds, contextualRequirementIds]
+          properties:
+            partialRequirementIds:
+              type: array
+              items: { type: string }
+            notImplementedRequirementIds:
+              type: array
+              items: { type: string }
+            nonConclusiveImplementedRequirementIds:
+              type: array
+              items: { type: string }
+            contextualRequirementIds:
+              type: array
+              items: { type: string }
+        completeVerdictEligible: { type: boolean }
+        requirements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ts119612RequirementCoverage'
+    Ts119612RequirementCoverage:
+      type: object
+      additionalProperties: false
+      required: [requirementId, title, citations, applicability, evidenceScope, implementationStatus, linkedCheckIds, observedFindings, outcome, conclusive]
+      properties:
+        requirementId: { type: string }
+        title: { type: string }
+        citations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [location]
+            properties:
+              location: { type: string }
+              title: { type: string }
+        applicability:
+          type: string
+          enum: [applicable, not_applicable]
+        evidenceScope:
+          type: string
+          enum: [local, contextual, mixed]
+        implementationStatus:
+          type: string
+          enum: [implemented, partial, not_implemented]
+        linkedCheckIds:
+          type: array
+          items: { type: string }
+        observedFindings:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, status]
+            properties:
+              id: { type: string }
+              status:
+                $ref: '#/components/schemas/CheckStatus'
+        outcome:
+          type: string
+          enum: [pass, fail, warn, not_applicable, not_checked, unsupported, inconclusive, partial, not_implemented]
+        conclusive: { type: boolean }
     Ts119602Classification:
       type: object
       required: [dataModel, binding, bindingStatus, profile, profileStatus, applicability, reasons, evidence]
@@ -939,8 +1048,7 @@ components:
           type: string
           enum: [fetch, parse, schema, structure, dates, signature, xades, services, certificates, profile]
         status:
-          type: string
-          enum: [pass, fail, warn, not_applicable, not_checked, unsupported, inconclusive]
+          $ref: '#/components/schemas/CheckStatus'
         severity:
           type: string
           enum: [info, warning, error, critical]
