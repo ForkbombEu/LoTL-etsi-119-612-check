@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, after commit `0aa5192`.
+Last reconciled: 2026-07-22, through TS612-01.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -35,7 +35,7 @@ bounded, and write only under ignored artifact directories.
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity and SHA-256 fingerprints; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 31 test files and 170 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 32 test files and 175 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -58,8 +58,9 @@ bounded, and write only under ignored artifact directories.
 
 ### Implemented baseline
 
-The existing TS 119 612 assessor provides useful evidence, but it is not yet
-driven by a clause-by-clause requirements ledger and must not be treated as a
+The existing TS 119 612 assessor provides useful evidence and is inventoried
+by a 68-family requirements ledger. Only 1 family is implemented completely;
+30 are partial and 37 are not implemented, so it must not be treated as a
 complete conformance validator.
 
 | Baseline task | Implemented scope | Status |
@@ -77,8 +78,9 @@ complete conformance validator.
 - No pinned, integrity-checked official TS 119 612 XSD/catalog bundle is used
   automatically. `schema.xsd` remains `not_checked` unless CLI `--xsd` is
   supplied.
-- The canonical-version/profile source set and every supported namespace have
-  not been captured in a versioned requirements/interpretation ledger.
+- V2.4.1 is the only selected normative version. The observed EUDI RI
+  namespace variant remains a warning-only compatibility input whose normative
+  status is not established.
 - Date-time lexical rules, exact calendar update periods, sequence progression,
   closed-list behavior, and historical retention are incomplete.
 - TSP/service information, service history, qualifiers, extensions, digital
@@ -99,8 +101,8 @@ Each row is intended to be one focused implementation prompt and one commit.
 
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
-| TS612-01 | Establish the exact supported TS 119 612 version/profile source set; create a clause/table requirements ledger with stable `ts119612.*` IDs, applicability, severity, citations and implementation status; gate verdicts on coverage so incomplete assessment cannot report full conformance | Baseline | **Next** |
-| TS612-02 | Pin the applicable official base/extension XSDs, XMLDSig dependencies, licenses, immutable provenance, hashes and an offline catalog; add bundle integrity verification | TS612-01 | Planned |
+| TS612-01 | Establish the exact supported TS 119 612 version/profile source set; create a clause/table requirements ledger with stable `ts119612.*` IDs, applicability, severity, citations and implementation status; gate verdicts on coverage so incomplete assessment cannot report full conformance | Baseline | Complete |
+| TS612-02 | Pin the applicable official base/extension XSDs, XMLDSig dependencies, licenses, immutable provenance, hashes and an offline catalog; add bundle integrity verification | TS612-01 | **Next** |
 | TS612-03 | Route every supported TS 119 612 namespace/version to the correct pinned schema automatically; retain `--xsd` only as an explicit override; report source-identified line diagnostics and document namespace/profile ambiguity | TS612-02 | Planned |
 | TS612-04 | Implement scheme-information structure and semantics: exact order/cardinality, version, sequence, type, operator name/address, scheme name/information URI, status approach, community rules, territory, policy/legal notice, issue/next-update, distribution points and extensions | TS612-01, TS612-03 | Planned |
 | TS612-05 | Implement TSP and service-information structure: exact nesting/cardinality, multilingual names/addresses/URIs, service types/names, digital identities, status/start time, supply points, definitions and extensions | TS612-04 | Planned |
@@ -224,15 +226,13 @@ versioned interpretation; they must never be silently corrected.
 
 The recommended implementation sequence is:
 
-1. **TS612-01** — create the missing TS 119 612 normative ledger and prevent
-   optimistic verdicts before adding more checks.
-2. **TS612-02 through TS612-06** — establish pinned schemas and reliable local
+1. **TS612-02 through TS612-06** — establish pinned schemas and reliable local
    TS 119 612 facts.
-3. **TS602-14** — implement the alternative-binding mapping using those facts.
-4. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete
+2. **TS602-14** — implement the alternative-binding mapping using those facts.
+3. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete
    signature, trust, semantic and contextual families in their respective
    standards.
-5. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
+4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
    and perform ledger-driven completion audits.
 
 Tasks that do not share files may be developed independently, but the stated

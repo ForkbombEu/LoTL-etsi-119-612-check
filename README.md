@@ -309,8 +309,24 @@ For XML artifacts, the tool performs layered best-effort ETSI TS 119 612 checks:
 Conformance levels are deliberately limited:
 
 ```ts
-conformant | partially_conformant | non_conformant | not_applicable | not_checked | fetch_failed | parse_failed
+conformant | partially_conformant | non_conformant | not_applicable | not_checked | unsupported | inconclusive | fetch_failed | parse_failed
 ```
+
+The selected normative TS 119 612 source is
+[V2.4.1 (2025-08)](https://www.etsi.org/deliver/etsi_TS/119600_119699/119612/02.04.01_60/ts_119612v020401p.pdf),
+with TL format version `6` and canonical namespace
+`http://uri.etsi.org/02231/v2#`. The observed
+`http://uri.etsi.org/19612/v2.4.1#` EUDI RI namespace is retained as an
+explicit warning-only compatibility input; its normative status is not
+assumed.
+
+The TS 119 612 requirements ledger in
+`src/standards/ts119612Requirements.ts` inventories 68 coherent families
+across clauses 4-6 and normative Annexes B-E/J. It currently records 1 family
+as implemented, 30 as partial, and 37 as not implemented. Every applicable
+assessment includes `ts119612.coverage.complete`; incomplete coverage prevents
+the result from ever becoming `conformant`, while concrete failures remain
+visible as partial/non-conformance evidence.
 
 The report does not claim full legal or normative ETSI conformance.
 

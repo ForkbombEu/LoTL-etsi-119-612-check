@@ -1,5 +1,10 @@
 import type { CertificateSummary, CheckResult, ConformanceLevel, TrustedListAuditResult } from "../types.js";
 import { tryCertificateFromBase64 } from "../certs.js";
+import {
+  summarizeTs119612Requirements,
+  TS119612_COMPATIBILITY_INPUTS,
+  TS119612_SOURCE,
+} from "../standards/ts119612Requirements.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
 import { validateXsd } from "./xsd.js";
@@ -104,6 +109,7 @@ export async function assessTs119612Xml(
   push(checks, "structure.scheme_information", "structure", scheme ? "pass" : "fail", "critical", "SchemeInformation element exists.");
 
   const extracted = extractMetadata(document);
+  checks.push(bindingSelectionCheck(rootNs, extracted.tslVersionIdentifier));
   checkExists(checks, document, "structure.tsl_version_identifier", D("TSLVersionIdentifier"), "TSLVersionIdentifier exists.", "error");
   if (extracted.tslVersionIdentifier) {
     push(checks, "structure.tsl_version_identifier.value", "structure", extracted.tslVersionIdentifier === "6" ? "pass" : "warn", "warning", "TSLVersionIdentifier expected value is 6 for ETSI TS 119 612 v2.4.1 / TLv6.", extracted.tslVersionIdentifier);
@@ -136,15 +142,23 @@ export async function assessTs119612Xml(
   extracted.certificates = certificates;
   extracted.trustServiceProviderCount = serviceAssessment.tspCount;
   extracted.serviceCount = serviceAssessment.serviceCount;
+  checks.push({
+    id: "ts119612.coverage.complete",
+    category: "profile",
+    status: "not_checked",
+    severity: "warning",
+    message: "Complete ETSI TS 119 612 V2.4.1 normative coverage is not implemented; the assessment remains evidence-only.",
+    evidence: summarizeTs119612Requirements(),
+  });
 
   const mandatoryFailures = checks
     .filter((check) => check.status === "fail" && (check.severity === "critical" || check.severity === "error"))
     .map((check) => `${check.id}: ${check.message}`);
   const warnings = checks
-    .filter((check) => check.status === "warn" || check.status === "not_checked")
+    .filter((check) => ["warn", "not_checked", "unsupported", "inconclusive"].includes(check.status))
     .map((check) => `${check.id}: ${check.message}`);
   const score = scoreChecks(checks, options.strict);
-  const conformanceLevel = determineLevel(checks, mandatoryFailures, options.strict);
+  const conformanceLevel = determineLevel(checks, mandatoryFailures, options.strict, false);
 
   return {
     detected: { format: "xml", artifactKind },
@@ -162,6 +176,37 @@ export async function assessTs119612Xml(
 
 function isTs119612Namespace(namespace: string | undefined): boolean {
   return namespace === CANONICAL_ETSI_NS || namespace === EUDI_RI_ETSI_NS_VARIANT;
+}
+
+function bindingSelectionCheck(namespace: string | undefined, versionIdentifier: string | undefined): CheckResult {
+  const canonical = namespace === TS119612_SOURCE.canonicalNamespace;
+  const versionMatches = versionIdentifier === String(TS119612_SOURCE.tslVersionIdentifier);
+  const compatibilityInput = TS119612_COMPATIBILITY_INPUTS.find((entry) => entry.namespace === namespace);
+  if (canonical && versionMatches) {
+    return {
+      id: "ts119612.binding.supported",
+      category: "profile",
+      status: "pass",
+      severity: "info",
+      message: "Artifact evidence selects the supported ETSI TS 119 612 V2.4.1 XML binding.",
+      evidence: { standard: TS119612_SOURCE, observedNamespace: namespace, observedTslVersionIdentifier: versionIdentifier },
+    };
+  }
+  return {
+    id: "ts119612.binding.supported",
+    category: "profile",
+    status: canonical ? "fail" : "warn",
+    severity: canonical ? "error" : "warning",
+    message: canonical
+      ? "The canonical namespace is present, but TSLVersionIdentifier does not select the supported V2.4.1 format version."
+      : "The artifact uses an observed compatibility namespace whose normative TS 119 612 V2.4.1 status is not established.",
+    evidence: {
+      standard: TS119612_SOURCE,
+      observedNamespace: namespace,
+      observedTslVersionIdentifier: versionIdentifier,
+      compatibilityInput,
+    },
+  };
 }
 
 function isLotlTslType(tslType: string | undefined): boolean {
@@ -326,10 +371,11 @@ function scoreChecks(checks: CheckResult[], strict: boolean): number {
   return Math.max(0, score);
 }
 
-function determineLevel(checks: CheckResult[], mandatoryFailures: string[], strict: boolean): ConformanceLevel {
+function determineLevel(checks: CheckResult[], mandatoryFailures: string[], strict: boolean, coverageComplete: boolean): ConformanceLevel {
   const criticalFailures = checks.filter((check) => check.status === "fail" && check.severity === "critical");
   if (criticalFailures.length > 0 || mandatoryFailures.length >= 3) return "non_conformant";
   if (mandatoryFailures.length > 0) return strict ? "non_conformant" : "partially_conformant";
+  if (!coverageComplete) return "not_checked";
   const importantNotChecked = checks.some((check) => check.status === "not_checked" && ["schema", "signature"].includes(check.category));
   const warnings = checks.some((check) => check.status === "warn");
   if (importantNotChecked || warnings) return "partially_conformant";

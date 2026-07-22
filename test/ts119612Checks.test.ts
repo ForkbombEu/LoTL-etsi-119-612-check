@@ -14,10 +14,16 @@ describe("assessTs119612Xml", () => {
     expect(result.extracted?.tslVersionIdentifier).toBe("6");
     expect(result.extracted?.trustServiceProviderCount).toBe(1);
     expect(result.extracted?.serviceCount).toBeGreaterThan(0);
+    expect(result.ts119612.conformanceLevel).not.toBe("conformant");
     expect(result.ts119612.checks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "parse.xml", status: "pass" }),
         expect.objectContaining({ id: "structure.trust_service_provider_list", status: "pass" }),
+        expect.objectContaining({
+          id: "ts119612.coverage.complete",
+          status: "not_checked",
+          evidence: expect.objectContaining({ total: 68, implemented: 1, complete: false }),
+        }),
       ]),
     );
   });
@@ -62,6 +68,13 @@ describe("assessTs119612Xml", () => {
       status: "warn",
       severity: "warning",
     }));
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "ts119612.binding.supported",
+      status: "warn",
+      evidence: expect.objectContaining({
+        compatibilityInput: expect.objectContaining({ normativeStatus: "not_established" }),
+      }),
+    }));
   });
 
   it("accepts the canonical namespace without a namespace warning", async () => {
@@ -74,6 +87,28 @@ describe("assessTs119612Xml", () => {
       status: "pass",
       severity: "info",
     }));
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "ts119612.binding.supported",
+      status: "pass",
+      evidence: expect.objectContaining({
+        observedTslVersionIdentifier: "6",
+        standard: expect.objectContaining({ version: "V2.4.1" }),
+      }),
+    }));
+    expect(result.ts119612.conformanceLevel).not.toBe("conformant");
+  });
+
+  it("does not select V2.4.1 when the canonical namespace has another format version", async () => {
+    const xml = (await readFile("test/fixtures/tsl-valid-ish.xml", "utf8"))
+      .replace("http://uri.etsi.org/19612/v2.4.1#", "http://uri.etsi.org/02231/v2#")
+      .replace("<tsl:TSLVersionIdentifier>6</tsl:TSLVersionIdentifier>", "<tsl:TSLVersionIdentifier>5</tsl:TSLVersionIdentifier>");
+    const result = await assessTs119612Xml(xml, { strict: false });
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "ts119612.binding.supported",
+      status: "fail",
+      severity: "error",
+    }));
+    expect(result.ts119612.conformanceLevel).not.toBe("conformant");
   });
 
   it("warns when NextUpdate is expired at assessment time", async () => {
