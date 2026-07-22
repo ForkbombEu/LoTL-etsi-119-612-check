@@ -8,6 +8,7 @@ import { validateTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
 import { assessTs119612SchemeInformation } from "./ts119612SchemeInformation.js";
+import { assessTs119612ServiceSemantics } from "./ts119612ServiceSemantics.js";
 import { assessTs119612TspServices } from "./ts119612TspServices.js";
 import { validateTs119612XmlSchema } from "./ts119612Xsd.js";
 import type { XsdValidationDependencies } from "./xsd.js";
@@ -146,6 +147,7 @@ export async function assessTs119612Xml(
   ));
   const serviceAssessment = assessTs119612TspServices(document, artifactKind, assessmentDate);
   checks.push(...serviceAssessment.checks);
+  if (artifactKind === "ts119612_xml_tsl") checks.push(...assessTs119612ServiceSemantics(document));
   certificates.push(...serviceAssessment.certificates);
   extracted.certificates = certificates;
   extracted.trustServiceProviderCount = serviceAssessment.tspCount;

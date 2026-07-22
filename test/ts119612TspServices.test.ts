@@ -163,6 +163,8 @@ describe("ETSI TS 119 612 TSP and current service information", () => {
       expect.objectContaining({ id: "ts119612.providers.list", status: "pass" }),
       expect.objectContaining({ id: "ts119612.tsp.1.trade_name", status: "pass" }),
       expect.objectContaining({ id: "ts119612.service.1.1.digital_identity", status: "pass" }),
+      expect.objectContaining({ id: "ts119612.service.1.1.identity_equivalence", status: "pass" }),
+      expect.objectContaining({ id: "ts119612.service.1.1.history.structure", status: "not_checked" }),
     ]));
   });
 });

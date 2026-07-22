@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-05.
+Last reconciled: 2026-07-22, through TS612-06.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -33,9 +33,9 @@ bounded, and write only under ignored artifact directories.
 | Reports | Stable JSON report schema v4 plus Markdown rendering of the same findings | No Markdown-only findings |
 | API | POST assessment routes, OpenAPI, Stoplight Elements UI | Core functions are reused; the API does not shell out to the CLI |
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
-| Certificates | Parse subject, issuer, serial, validity and SHA-256 fingerprints; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors |
+| Certificates | Parse subject, issuer, serial, validity, fingerprints, public-key hashes, SKI, basic constraints, key usage and self-signature evidence; compare TS 119 612 service identities; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors; service checks do not establish revocation or chain trust |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 36 test files and 201 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 37 test files and 207 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -59,8 +59,8 @@ bounded, and write only under ignored artifact directories.
 ### Implemented baseline
 
 The existing TS 119 612 assessor provides useful evidence and is inventoried
-by a 69-family requirements ledger. Only 7 families are implemented completely;
-37 are partial and 25 are not implemented, so it must not be treated as a
+by a 69-family requirements ledger. Only 9 families are implemented completely;
+46 are partial and 14 are not implemented, so it must not be treated as a
 complete conformance validator.
 
 | Baseline task | Implemented scope | Status |
@@ -72,6 +72,7 @@ complete conformance validator.
 | TS612-B05 | Separate `ts119612` result/report summary, CLI/API/OpenAPI exposure, Markdown rendering, and focused malformed/namespace/date/XSD/signature fixtures | Complete |
 | TS612-B06 | Exact direct `SchemeInformation` order/cardinality and locally decidable V2.4.1 syntax/semantics, including calendar-month and closed-list next-update handling | Complete task scope; contextual coverage remains explicit |
 | TS612-B07 | Exact TSP/current-service nesting, the 52 registered service-type URIs, multilingual/contact/definition fields, PKI/non-PKI identity shape, EU status families, status-start ordering, supply points and base extension criticality | Complete task scope; history, equivalence and target-content coverage remain explicit |
+| TS612-B08 | Service-history structure/order, registered statuses and modern transitions, predefined service-extension families, qualifier vocabulary, certificate/SKI/RSA-key identity equivalence, duplicate-key detection and deterministic certificate role evidence | Complete task scope; retention completeness, custom registries, legacy migration, takeover authority, certificate chain and revocation remain explicit |
 
 #### What TS 119 612 does not yet prove
 
@@ -87,9 +88,11 @@ complete conformance validator.
 - Date-time lexical rules, exact calendar update periods, local sequence shape,
   and closed-list status evidence are checked. Sequence progression and
   historical retention consequences require contextual/history evidence.
-- Current TSP/service information has exact local structure and base semantic
-  checks. Service history, identity equivalence, qualifiers, detailed
-  extensions, status transitions, and certificate-purpose rules remain partial.
+- Current and historical service information has local structure, registered
+  vocabulary, identity-equivalence, status-transition, predefined-extension and
+  certificate-purpose checks. Complete history retention, custom registrations,
+  Annex J migration, referenced takeover/definition content, chain validation
+  and revocation remain contextual or partial.
 - XML signature verification does not by itself establish the complete TS
   119 612 signature profile, certificate path, revocation, or signer trust.
 - LoTL `OtherTSLPointer` structure, type/community qualifiers, pointer
@@ -109,8 +112,8 @@ Each row is intended to be one focused implementation prompt and one commit.
 | TS612-03 | Route every supported TS 119 612 namespace/version to the correct pinned schema automatically; retain `--xsd` only as an explicit override; report source-identified line diagnostics and document namespace/profile ambiguity | TS612-02 | Complete |
 | TS612-04 | Implement scheme-information structure and semantics: exact order/cardinality, version, sequence, type, operator name/address, scheme name/information URI, status approach, community rules, territory, policy/legal notice, issue/next-update, distribution points and extensions | TS612-01, TS612-03 | Complete |
 | TS612-05 | Implement TSP and service-information structure: exact nesting/cardinality, multilingual names/addresses/URIs, service types/names, digital identities, status/start time, supply points, definitions and extensions | TS612-04 | Complete |
-| TS612-06 | Implement service history, qualifiers and certificate semantics: history ordering/retention, status transitions, qualifier vocabularies, identity equivalence, certificate roles/purpose and deterministic certificate evidence | TS612-05 | **Next** |
-| TS612-07 | Implement the exact applicable XML signature/XAdES profile: reference/transform/property rules, signer metadata, certificate path/revocation inputs and explicit signer-trust separation | TS612-03, TS612-06 | Planned |
+| TS612-06 | Implement service history, qualifiers and certificate semantics: history ordering/retention, status transitions, qualifier vocabularies, identity equivalence, certificate roles/purpose and deterministic certificate evidence | TS612-05 | Complete |
+| TS612-07 | Implement the exact applicable XML signature/XAdES profile: reference/transform/property rules, signer metadata, certificate path/revocation inputs and explicit signer-trust separation | TS612-03, TS612-06 | Planned after TS602-14 |
 | TS612-08 | Implement LoTL `OtherTSLPointer` semantics: pointer structure, MIME/type/community qualifiers, service identities, signing-certificate rules, rollover and supported namespace/profile dispatch | TS612-04, TS612-07 | Planned |
 | TS612-09 | Add contextual validation for sequence progression, distribution equality, archive/history evidence, pointer dereferencing/authentication and bounded cross-list traversal | TS612-08 | Planned |
 | TS612-10 | Add explicit EUDI RI and WE BUILD TS 119 612 profile checks without treating reference-service behavior as normative ETSI behavior | TS612-05 through TS612-09 | Planned |
@@ -193,8 +196,8 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
-| TS602-14 | Implement Annex A.2.2/Table A.1 component mapping for the TS 119 612 alternative XML binding, consuming validated TS 119 612 facts rather than reparsing with ad hoc XPath | TS602-13, TS612-06 | Planned |
-| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | **Next runnable TS 119 602 task** |
+| TS602-14 | Implement Annex A.2.2/Table A.1 component mapping for the TS 119 612 alternative XML binding, consuming validated TS 119 612 facts rather than reparsing with ad hoc XPath | TS602-13, TS612-06 | **Next cross-standard task** |
+| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | Planned after TS602-14 in the cross-standard order |
 | TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Planned |
 | TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Planned |
 | TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Planned |
@@ -229,9 +232,9 @@ versioned interpretation; they must never be silently corrected.
 
 The recommended implementation sequence is:
 
-1. **TS612-06** — complete reliable local
-   TS 119 612 facts.
+1. **TS612-06** — complete reliable local TS 119 612 facts. Complete.
 2. **TS602-14** — implement the alternative-binding mapping using those facts.
+   This is the next task.
 3. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete
    signature, trust, semantic and contextual families in their respective
    standards.
