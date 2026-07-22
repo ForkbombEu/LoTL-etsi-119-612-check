@@ -27,6 +27,15 @@ export interface XsdValidationOptions {
   catalogPath?: string;
   schemaEvidence?: Record<string, unknown>;
   unavailableStatus?: Extract<CheckResult["status"], "not_checked" | "unsupported">;
+  diagnosticSources?: XsdDiagnosticSources;
+}
+
+export interface XsdDiagnosticSources {
+  artifactLabel: string;
+  files: readonly {
+    path: string;
+    label: string;
+  }[];
 }
 
 export async function validateXsd(
@@ -98,7 +107,7 @@ export async function validateXsd(
     const result = options.catalogPath
       ? await commandRunner("xmllint", args, { env: { XML_CATALOG_FILES: options.catalogPath } })
       : await commandRunner("xmllint", args);
-    const diagnostics = parseXsdDiagnostics(result.stderr || result.stdout, xmlPath);
+    const diagnostics = parseXsdDiagnostics(result.stderr || result.stdout, xmlPath, options.diagnosticSources);
     return {
       id,
       category: "schema",
@@ -115,27 +124,61 @@ export async function validateXsd(
 }
 
 export interface XsdDiagnostic {
+  source?: string;
   line?: number;
   column?: number;
   message: string;
 }
 
-export function parseXsdDiagnostics(output: string, xmlPath?: string): XsdDiagnostic[] {
+export function parseXsdDiagnostics(
+  output: string,
+  xmlPath?: string,
+  sources?: XsdDiagnosticSources,
+): XsdDiagnostic[] {
   if (!output.trim()) return [];
   const normalizedPath = xmlPath?.replaceAll("\\", "/");
   return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
     const normalizedLine = line.replaceAll("\\", "/");
-    const withoutPath = normalizedPath && normalizedLine.startsWith(`${normalizedPath}:`)
-      ? normalizedLine.slice(normalizedPath.length + 1)
-      : normalizedLine;
+    const identified = identifyDiagnosticSource(normalizedLine, normalizedPath, sources);
+    const withoutPath = identified.line;
     const located = /^(\d+):(?:(\d+):)?\s*(.*)$/.exec(withoutPath);
-    if (!located) return { message: redactTemporaryPath(normalizedLine) };
+    if (!located) {
+      return {
+        ...(identified.source ? { source: identified.source } : {}),
+        message: redactTemporaryPath(withoutPath),
+      };
+    }
     return {
+      ...(identified.source ? { source: identified.source } : {}),
       line: Number(located[1]),
       column: located[2] ? Number(located[2]) : undefined,
       message: located[3].trim(),
     };
   });
+}
+
+function identifyDiagnosticSource(
+  line: string,
+  artifactPath: string | undefined,
+  sources: XsdDiagnosticSources | undefined,
+): { line: string; source?: string } {
+  if (!sources) {
+    return {
+      line: artifactPath && line.startsWith(`${artifactPath}:`)
+        ? line.slice(artifactPath.length + 1)
+        : line,
+    };
+  }
+  if (artifactPath && line.startsWith(`${artifactPath}:`)) {
+    return { line: line.slice(artifactPath.length + 1), source: sources.artifactLabel };
+  }
+  for (const candidate of sources.files) {
+    const normalizedCandidate = candidate.path.replaceAll("\\", "/");
+    if (line.startsWith(`${normalizedCandidate}:`)) {
+      return { line: line.slice(normalizedCandidate.length + 1), source: candidate.label };
+    }
+  }
+  return { line };
 }
 
 async function targetNamespace(xsdPath: string): Promise<string | undefined> {

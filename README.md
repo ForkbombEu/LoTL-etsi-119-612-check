@@ -304,7 +304,8 @@ For XML artifacts, the tool performs layered best-effort ETSI TS 119 612 checks:
 - XAdES qualifying-property detection;
 - trust service provider and service metadata checks;
 - service digital identity X.509 extraction and validity warnings;
-- optional XSD validation with `xmllint` when `--xsd` is passed to CLI.
+- automatic integrity-checked V2.4.1 XSD validation for canonical TLv6
+  artifacts, with an optional CLI `--xsd` override.
 
 Conformance levels are deliberately limited:
 
@@ -322,11 +323,11 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 1 family
-as implemented, 30 as partial, and 38 as not implemented. Every applicable
-assessment includes `ts119612.coverage.complete`; incomplete coverage prevents
-the result from ever becoming `conformant`, while concrete failures remain
-visible as partial/non-conformance evidence.
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 2
+families as implemented, 29 as partial, and 38 as not implemented. Every
+applicable assessment includes `ts119612.coverage.complete`; incomplete
+coverage prevents the result from ever becoming `conformant`, while concrete
+failures remain visible as partial/non-conformance evidence.
 
 The report does not claim full legal or normative ETSI conformance.
 
@@ -346,9 +347,23 @@ certificate is not treated as trusted merely because its signature verifies.
 XAdES detection is evidence only; full XAdES semantic validation is not
 implemented.
 
-### Optional local XSD validation
+### TS 119 612 XSD selection
 
-Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint`. The tool does not download schemas, and invokes `xmllint` with `--nonet` to prohibit schema-driven network access. If no schema is supplied, the schema check is `not_checked`; if `xmllint` is unavailable, it is also `not_checked` with an actionable message. An `xmllint` validation failure is reported as a schema finding in both JSON and Markdown output.
+The tool never downloads schemas during assessment and always invokes
+`xmllint` with `--nonet`.
+
+| Artifact evidence | Schema behavior |
+| --- | --- |
+| Canonical `http://uri.etsi.org/02231/v2#` plus `TSLVersionIdentifier=6` | Automatically verifies and uses the pinned V2.4.1 base schema and offline catalog |
+| Canonical namespace with another/missing format version | `inconclusive`; the V2.4.1 schema is not applied |
+| Observed `http://uri.etsi.org/19612/v2.4.1#` compatibility namespace | `inconclusive`; no authoritative profile schema is assumed |
+| CLI `--xsd <path>` | Explicit override; takes precedence and must match the artifact namespace |
+
+Schema findings identify the selected source, immutable schema/catalog hashes,
+bundle-integrity result and line/column diagnostics. Diagnostic sources are
+reported as `artifact.xml` or the applicable bundled schema path without
+leaking temporary paths. If `xmllint` is unavailable, automatic validation is
+`unsupported` with an actionable message.
 
 ### Pinned ETSI TS 119 612 schemas
 
@@ -364,9 +379,9 @@ normalization.
 `src/standards/ts119612Schemas.ts` verifies every bundled file and resolves
 only allowlisted local schema references. The offline catalog maps the exact
 published ETSI imports plus their required W3C schema/DTD dependencies. Unknown
-remote, absolute and traversal references are rejected. Automatic namespace
-routing and default validation are intentionally deferred to TS612-03; for now
-the existing `--xsd` behavior remains unchanged.
+remote, absolute and traversal references are rejected. Canonical TLv6
+artifacts use this verified bundle automatically; `--xsd` remains an
+explicit CLI-only override.
 
 ### Pinned ETSI TS 119 602 schemas
 
@@ -452,7 +467,10 @@ from semantic, profile, signature, certificate, and trust results.
 
 ## Known limitations
 
-- XSD validation depends on `xmllint`. TS 119 602 scheme-explicit XML uses the pinned schema bundle automatically; TS 119 612 uses the optional local CLI `--xsd` path, which API requests do not accept.
+- XSD validation depends on `xmllint`. TS 119 602 scheme-explicit XML and
+  canonical TS 119 612 TLv6 XML use their pinned bundles automatically. API
+  requests receive the same automatic validation but do not accept the local
+  filesystem `--xsd` override.
 - XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
 - Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
 - The XML signature assessor evaluates the first `ds:Signature`; XML XSD validation and contextual signer-chain trust remain separate from the implemented XAdES Baseline B and Annex H.4 findings.

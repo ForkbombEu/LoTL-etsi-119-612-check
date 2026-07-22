@@ -7,12 +7,14 @@ import {
 } from "../standards/ts119612Requirements.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
-import { validateXsd } from "./xsd.js";
+import { validateTs119612XmlSchema } from "./ts119612Xsd.js";
+import type { XsdValidationDependencies } from "./xsd.js";
 import { D, L, has, nodes, text, texts } from "./xpath.js";
 
 export interface XmlAssessmentOptions {
   strict: boolean;
   xsdPath?: string;
+  xsdDependencies?: XsdValidationDependencies;
   assessmentDate?: Date;
 }
 
@@ -95,6 +97,7 @@ export async function assessTs119612Xml(
     };
   }
   const artifactKind = isLotlTslType(text(document, D("TSLType"))) ? "ts119612_xml_lotl" : "ts119612_xml_tsl";
+  const extracted = extractMetadata(document);
 
   push(checks, "parse.schema_location", "parse", hasSchemaLocation(root) ? "pass" : "warn", "warning", "xsi:schemaLocation is present.", schemaLocation(root));
 
@@ -103,12 +106,15 @@ export async function assessTs119612Xml(
   });
   checks.push(...signature.checks);
   certificates.push(...signature.certificates);
-  checks.push(await validateXsd(xml, options.xsdPath, {}, { expectedNamespace: rootNs }));
+  checks.push(await validateTs119612XmlSchema(xml, {
+    namespace: rootNs,
+    tslVersionIdentifier: extracted.tslVersionIdentifier,
+    xsdOverridePath: options.xsdPath,
+  }, options.xsdDependencies));
 
   const scheme = text(document, `/*[local-name()='TrustServiceStatusList']/${L("SchemeInformation")}`);
   push(checks, "structure.scheme_information", "structure", scheme ? "pass" : "fail", "critical", "SchemeInformation element exists.");
 
-  const extracted = extractMetadata(document);
   checks.push(bindingSelectionCheck(rootNs, extracted.tslVersionIdentifier));
   checkExists(checks, document, "structure.tsl_version_identifier", D("TSLVersionIdentifier"), "TSLVersionIdentifier exists.", "error");
   if (extracted.tslVersionIdentifier) {

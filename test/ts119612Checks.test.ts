@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { assessTs119612Xml } from "../src/xml/ts119612Checks.js";
+import type { XsdCommandRunner } from "../src/xml/xsd.js";
 
 describe("assessTs119612Xml", () => {
   it("reports granular checks for valid-ish XML", async () => {
@@ -22,7 +23,7 @@ describe("assessTs119612Xml", () => {
         expect.objectContaining({
           id: "ts119612.coverage.complete",
           status: "not_checked",
-          evidence: expect.objectContaining({ total: 69, implemented: 1, complete: false }),
+          evidence: expect.objectContaining({ total: 69, implemented: 2, complete: false }),
         }),
       ]),
     );
@@ -75,12 +76,27 @@ describe("assessTs119612Xml", () => {
         compatibilityInput: expect.objectContaining({ normativeStatus: "not_established" }),
       }),
     }));
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "schema.xsd",
+      status: "inconclusive",
+      evidence: expect.objectContaining({
+        selection: expect.objectContaining({ mode: "automatic_pinned" }),
+      }),
+    }));
   });
 
   it("accepts the canonical namespace without a namespace warning", async () => {
+    const runner: XsdCommandRunner = vi.fn(async (_command, args) => (
+      args[0] === "--version"
+        ? { code: 0, stdout: "xmllint", stderr: "" }
+        : { code: 0, stdout: "", stderr: "" }
+    ));
     const xml = (await readFile("test/fixtures/tsl-valid-ish.xml", "utf8"))
       .replace("http://uri.etsi.org/19612/v2.4.1#", "http://uri.etsi.org/02231/v2#");
-    const result = await assessTs119612Xml(xml, { strict: false });
+    const result = await assessTs119612Xml(xml, {
+      strict: false,
+      xsdDependencies: { commandRunner: runner },
+    });
     expect(result.detected.artifactKind).toBe("ts119612_xml_tsl");
     expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
       id: "parse.root_namespace",
@@ -95,6 +111,14 @@ describe("assessTs119612Xml", () => {
         standard: expect.objectContaining({ version: "V2.4.1" }),
       }),
     }));
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "schema.xsd",
+      status: "pass",
+      evidence: expect.objectContaining({
+        selection: expect.objectContaining({ mode: "automatic_pinned" }),
+        bundleIntegrity: expect.objectContaining({ ok: true }),
+      }),
+    }));
     expect(result.ts119612.conformanceLevel).not.toBe("conformant");
   });
 
@@ -107,6 +131,13 @@ describe("assessTs119612Xml", () => {
       id: "ts119612.binding.supported",
       status: "fail",
       severity: "error",
+    }));
+    expect(result.ts119612.checks).toContainEqual(expect.objectContaining({
+      id: "schema.xsd",
+      status: "inconclusive",
+      evidence: expect.objectContaining({
+        selection: expect.objectContaining({ observedTslVersionIdentifier: "5" }),
+      }),
     }));
     expect(result.ts119612.conformanceLevel).not.toBe("conformant");
   });

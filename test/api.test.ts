@@ -111,11 +111,23 @@ describe("API server", () => {
       },
     });
     expect(response.statusCode).toBe(200);
-    expect(response.json().result).toMatchObject({
+    const body = response.json();
+    expect(body.result).toMatchObject({
       index: 1,
       location: "https://example.test/tl.xml",
       detected: { format: "xml" },
     });
+    expect(body.result.ts119612.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: "schema.xsd",
+        status: "inconclusive",
+        evidence: expect.objectContaining({
+          selection: expect.objectContaining({
+            observedNamespace: "http://uri.etsi.org/19612/v2.4.1#",
+          }),
+        }),
+      }),
+    ]));
     await app.close();
   });
 
