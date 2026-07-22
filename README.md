@@ -308,6 +308,21 @@ Interactive docs:
 http://127.0.0.1:3000/docs
 ```
 
+## Browser audit interface
+
+Run `npm run build && npm run api`, then open:
+
+```text
+http://127.0.0.1:3000/
+```
+
+The local interface accepts a LoTL JSON URL or file, or one XML/JSON/JWS
+artifact by URL, file, or pasted content. Advanced controls (timeout, strict
+mode, LoTE checks, pointer fetching and concurrency) are collapsed by default.
+Local files are read by the browser only when the user starts an audit; the UI
+does not persist them. Results expose summarized findings, report JSON and,
+for LoTL audits, the matching Markdown report.
+
 The docs page serves local OpenAPI from `/openapi.yaml` and loads Stoplight Elements from the public unpkg CDN. `/openapi.yaml` and `/openapi.json` set `servers[0].url` from `PUBLIC_BASE_URL` when present, otherwise from the incoming request host, so `HOST=0.0.0.0 PORT=8088 npm run api` and `http://127.0.0.1:8088/docs` produce Try-It requests against port 8088. CORS is enabled on the API server so the Stoplight Try-It console can call local endpoints where browser/network policy allows it. For fully offline docs, vendor Stoplight Elements assets and update `src/api/docs.ts`.
 
 ## Checks

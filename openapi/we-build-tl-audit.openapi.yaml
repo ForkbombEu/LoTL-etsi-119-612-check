@@ -6,6 +6,16 @@ info:
 servers:
   - url: http://127.0.0.1:3000
 paths:
+  /:
+    get:
+      summary: Browser audit interface
+      description: Dependency-free browser interface for LoTL and single-artifact assessment. It calls the documented assessment endpoints and does not persist uploaded files.
+      responses:
+        '200':
+          description: HTML audit interface.
+          content:
+            text/html:
+              schema: { type: string }
   /healthz:
     get:
       summary: Health check

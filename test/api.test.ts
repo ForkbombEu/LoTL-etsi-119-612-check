@@ -444,6 +444,7 @@ describe("API server", () => {
     const parsedYaml = YAML.parse(yamlResponse.body);
     const parsedJson = jsonResponse.json();
     for (const path of [
+      "/",
       "/healthz",
       "/api/v1/audit/url",
       "/api/v1/audit/json",
@@ -531,6 +532,26 @@ describe("API server", () => {
     expect(response.statusCode).toBe(200);
     expect(response.body).toContain("@stoplight/elements");
     expect(response.body).toContain("/openapi.yaml");
+    await app.close();
+  });
+
+  it("serves the local audit interface and its assets", async () => {
+    const app = await buildServer();
+    const [page, css, script] = await Promise.all([
+      app.inject({ method: "GET", url: "/" }),
+      app.inject({ method: "GET", url: "/assets/audit-ui.css" }),
+      app.inject({ method: "GET", url: "/assets/audit-ui.js" }),
+    ]);
+    expect(page.statusCode).toBe(200);
+    expect(page.headers["content-type"]).toContain("text/html");
+    expect(page.body).toContain("id=\"lotl-url\"");
+    expect(page.body).toContain("Advanced options");
+    expect(page.body).toContain("/assets/audit-ui.js");
+    expect(css.headers["content-type"]).toContain("text/css");
+    expect(css.body).toContain("--brand-primary");
+    expect(script.headers["content-type"]).toContain("application/javascript");
+    expect(script.body).toContain("/api/audit/lotl");
+    expect(script.body).toContain("/api/audit/artifact");
     await app.close();
   });
 });

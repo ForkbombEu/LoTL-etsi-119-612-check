@@ -9,6 +9,7 @@ import type { AuditReport, TrustedListAuditResult, Ts119602ContextOptions } from
 import type { ApiRuntimeConfig } from "./config.js";
 import { requestBaseUrl } from "./config.js";
 import { renderDocsHtml } from "./docs.js";
+import { auditUiCss, auditUiScript, renderAuditUiHtml } from "./auditUi.js";
 import { loadOpenApiJson, loadOpenApiYaml } from "./openapi.js";
 import {
   artifactAssessUrlSchema,
@@ -81,6 +82,21 @@ interface MarkdownReportBody {
 }
 
 export async function registerRoutes(app: FastifyInstance, options: RouteOptions): Promise<void> {
+  app.get("/", async (_request, reply) => {
+    reply.type("text/html; charset=utf-8");
+    return renderAuditUiHtml();
+  });
+
+  app.get("/assets/audit-ui.css", async (_request, reply) => {
+    reply.type("text/css; charset=utf-8");
+    return auditUiCss;
+  });
+
+  app.get("/assets/audit-ui.js", async (_request, reply) => {
+    reply.type("application/javascript; charset=utf-8");
+    return auditUiScript;
+  });
+
   app.get("/healthz", async () => ({
     ok: true,
     name: "we-build-tl-audit",

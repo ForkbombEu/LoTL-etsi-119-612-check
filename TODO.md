@@ -31,11 +31,11 @@ bounded, and write only under ignored artifact directories.
 | Input | Local files, URLs, JSON objects/strings, raw XML/JSON/JWS API content, certificates/chains | Network fetches are bounded and must be explicit |
 | Classification | XML/JSON/JWS/HTML/unknown detection; TS 119 612 and TS 119 602 applicability are separate | Profile declarations cannot override conflicting embedded evidence |
 | Reports | Stable JSON report schema v7 plus Markdown rendering of standard findings, both ledger audits and isolated reference-profile findings | No Markdown-only findings |
-| API | POST assessment routes, OpenAPI, Stoplight Elements UI | Core functions are reused; the API does not shell out to the CLI |
+| API | POST assessment routes, OpenAPI, Stoplight Elements UI, and a dependency-free browser audit interface at `/` | Core functions are reused; the API does not shell out to the CLI |
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity, fingerprints, public-key hashes, SKI, basic constraints, key usage and self-signature evidence; compare TS 119 612 service identities; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors; service checks do not establish revocation or chain trust |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 47 test files and 275 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 47 test files and 276 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
