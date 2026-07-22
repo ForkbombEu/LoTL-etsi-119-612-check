@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/02231/v2#" Id="schema-coverage">
+  <SchemeInformation>
+    <TSLVersionIdentifier>6</TSLVersionIdentifier>
+  </SchemeInformation>
+</TrustServiceStatusList>

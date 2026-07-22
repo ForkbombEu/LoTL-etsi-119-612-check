@@ -128,6 +128,7 @@ function renderStandardAssessment(
   lines.push("");
   renderChecks(lines, "Passed checks", assessment.checks.filter((check) => check.status === "pass"));
   renderChecks(lines, "Failures", assessment.checks.filter((check) => check.status === "fail"));
+  renderChecks(lines, "Not applicable", assessment.checks.filter((check) => check.status === "not_applicable"));
   renderChecks(
     lines,
     "Warnings and limitations",
@@ -160,7 +161,7 @@ function renderChecks(lines: string[], title: string, checks: CheckResult[]): vo
   }
   for (const check of checks) {
     const evidence = check.evidence === undefined ? "" : ` Evidence: \`${shortJson(check.evidence)}\``;
-    lines.push(`- **${check.id}** (${check.severity}): ${check.message}${evidence}`);
+    lines.push(`- **${check.id}** (${check.status}; ${check.severity}): ${check.message}${evidence}`);
   }
   lines.push("");
 }

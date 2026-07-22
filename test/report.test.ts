@@ -90,6 +90,7 @@ describe("runAudit", () => {
       eudiTrustRole: "unknown",
     });
     const reportJson = await readFile(join(outDir, "report.json"), "utf8");
+    expect(JSON.parse(reportJson)).toEqual(report);
     expect(reportJson).toContain("\"structure.scheme_information\"");
     expect(reportJson).toContain("\"schema.xsd\"");
     expect(reportJson).toContain("\"json_lote.version_identifier\"");
@@ -112,6 +113,11 @@ describe("runAudit", () => {
     expect(report.fcafTrustedAuthorities.scenarios).toHaveLength(8);
     expect(markdown).toContain("## Negative fixture descriptors");
     expect(report.negativeFixtureDescriptors).toHaveLength(8);
+    for (const result of report.results) {
+      for (const finding of [...result.ts119612.checks, ...result.ts119602.checks]) {
+        expect(markdown).toContain(`**${finding.id}** (${finding.status}; ${finding.severity})`);
+      }
+    }
   });
 
   it("adds WE BUILD list-type and pointer-consistency summary from a reduced fixture", async () => {

@@ -1,11 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { validateTs119612XmlSchema } from "../src/xml/ts119612Xsd.js";
 import type { XsdCommandRunner } from "../src/xml/xsd.js";
 
-const canonicalXml = `<?xml version="1.0"?>
-<TrustServiceStatusList xmlns="http://uri.etsi.org/02231/v2#">
-  <SchemeInformation><TSLVersionIdentifier>6</TSLVersionIdentifier></SchemeInformation>
-</TrustServiceStatusList>`;
+const canonicalXml = readFileSync("test/fixtures/ts119612-schema-minimal.xml", "utf8");
 
 describe("official ETSI TS 119 612 XML Schema routing", () => {
   it("automatically validates canonical TLv6 through the integrity-checked offline bundle", async () => {

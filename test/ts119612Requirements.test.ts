@@ -41,7 +41,7 @@ describe("ETSI TS 119 612 requirements ledger", () => {
       citations: [{ location: "5.3.1" }],
       implementation: {
         status: "implemented",
-        existingCheckIds: ["structure.tsl_version_identifier", "structure.tsl_version_identifier.value"],
+        existingCheckIds: ["structure.tsl_version_identifier", "structure.tsl_version_identifier.value", "ts119612.scheme.version"],
       },
     });
     expect(findTs119612Requirement("ts119612.tsp.trade_name")).toMatchObject({

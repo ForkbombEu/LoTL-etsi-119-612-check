@@ -228,6 +228,7 @@ paths:
   /api/v1/report/markdown:
     post:
       summary: Render Markdown from a machine-readable audit report
+      description: Renders the supplied report without adding findings, preserving each standard and reference-profile finding ID, status, and severity.
       requestBody:
         required: true
         content:

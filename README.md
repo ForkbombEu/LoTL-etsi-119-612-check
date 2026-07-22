@@ -338,6 +338,16 @@ applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
 
+Every currently implemented TS 119 612 family is linked to deterministic
+positive and focused negative evidence in
+`test/fixtures/ts119612-implemented-coverage.json`. Run
+`npm run test:ts119612-coverage` to verify that the manifest exactly matches
+the implemented ledger set and that its fixtures, tests, finding IDs and
+pass/fail assertions remain live. The normal suite also verifies CLI report
+file parity, lossless JSON-to-Markdown finding IDs/statuses/severities, exact
+API Markdown re-rendering and an executable OpenAPI report example. This gate
+does not promote partial, contextual or unsupported families to implemented.
+
 The report does not claim full legal or normative ETSI conformance.
 
 XML findings are implemented structural, date, schema, signature, certificate, and service-metadata checks. They are evidence-oriented results rather than a claim of full ETSI TS 119 612 conformance.
@@ -436,7 +446,7 @@ TS 119 602 JSON and scheme-explicit XML assessments use these pinned schemas aut
 
 ## Report schema v5
 
-Reports now include `schemaVersion: 5`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders the same profile findings stored in JSON; profile observations are not inserted into ETSI conformance scoring.
+Reports now include `schemaVersion: 5`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders every stored standard and profile finding with its status and severity, including `not_applicable` findings; profile observations are not inserted into ETSI conformance scoring.
 
 ## WE BUILD profile checks
 

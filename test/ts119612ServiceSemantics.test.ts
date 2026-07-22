@@ -65,6 +65,15 @@ describe("ETSI TS 119 612 service history, extensions and certificate semantics"
       .replace("2025-01-01T00:00:00Z</StatusStartingTime>", "2027-01-01T00:00:00Z</StatusStartingTime>");
     expect(find(assess(invalid), "ts119612.service.1.1.history.1.digital_identity")).toMatchObject({ status: "fail", severity: "critical" });
     expect(find(assess(invalid), "ts119612.service.1.1.history.1.status_start")).toMatchObject({ status: "fail" });
+
+    const missingName = original.replace(
+      "              <ServiceName><Name xml:lang=\"en\">Example qualified CA service</Name></ServiceName>\n              <ServiceDigitalIdentity>",
+      "              <ServiceDigitalIdentity>",
+    );
+    expect(find(assess(missingName), "ts119612.service.1.1.history.1.name")).toMatchObject({
+      status: "fail",
+      severity: "error",
+    });
   });
 
   it("detects identity, CA-purpose and same-type key reuse failures", async () => {

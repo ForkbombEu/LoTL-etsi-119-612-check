@@ -87,6 +87,13 @@ describe("API server", () => {
       bindingStatus: "selected",
     });
     expect(body.markdown).toContain("# WE BUILD Trusted List Audit");
+    const rendered = await app.inject({
+      method: "POST",
+      url: "/api/v1/report/markdown",
+      payload: { report: body.report },
+    });
+    expect(rendered.statusCode).toBe(200);
+    expect(rendered.json().markdown).toBe(body.markdown);
     await app.close();
   });
 
@@ -420,6 +427,10 @@ describe("API server", () => {
     expect(parsedJson.components.schemas.ReferenceProfileAssessment.required).toContain("checks");
     expect(parsedJson.info.description).toContain("pinned V1.1.1 XSD and offline catalog");
     expect(parsedJson.paths["/api/audit/artifact"].post.description).toContain("separate pinned offline XML Schema finding");
+    const documentedExample = parsedJson.paths["/api/v1/report/markdown"].post.requestBody.content["application/json"].examples.emptyReport.value;
+    const exampleResponse = await app.inject({ method: "POST", url: "/api/v1/report/markdown", payload: documentedExample });
+    expect(exampleResponse.statusCode).toBe(200);
+    expect(exampleResponse.json().markdown).toContain("Report schema: v5");
     await app.close();
   });
 

@@ -95,6 +95,28 @@ describe("ETSI TS 119 612 contextual validation", () => {
     });
   });
 
+  it("rejects a distribution point that returns different bytes", async () => {
+    const fixture = await contextFixtures();
+    const checks = await assessTs119612Context({
+      currentBytes: Buffer.from(fixture.current),
+      currentResult: fakeResult(fixture.current, CURRENT_URL),
+      timeoutMs: 1_000,
+      options: { dereference: true, maxDereferences: 4, maxBytesPerArtifact: 1_000_000 },
+    }, {
+      fetcher: fixtureFetcher(new Map([[CURRENT_URL, fixture.prior], [TARGET_URL, fixture.target]])),
+      assessor: fakeAssessor,
+    });
+
+    expect(find(checks, "ts119612.scheme.distribution_consistency")).toMatchObject({
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: expect.arrayContaining([
+          expect.objectContaining({ location: CURRENT_URL, identical: false }),
+        ]),
+      }),
+    });
+  });
+
   it("reports dereference and traversal-depth omissions without inventing authentication success", async () => {
     const fixture = await contextFixtures();
     const dereferenceBound = await assessTs119612Context({

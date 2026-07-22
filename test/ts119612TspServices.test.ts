@@ -68,6 +68,21 @@ describe("ETSI TS 119 612 TSP and current service information", () => {
     expect(find(assess(outOfOrderService).checks, "ts119612.service.1.1.structure")).toMatchObject({ status: "fail", severity: "critical" });
   });
 
+  it("rejects an empty TSPServices list and a service without ServiceName", async () => {
+    const original = await fixture();
+    const emptyServices = original.replace(/        <TSPService>[\s\S]*?        <\/TSPService>\n/, "");
+    const missingServiceName = original.replace(/            <ServiceName>[\s\S]*?            <\/ServiceName>\n/, "");
+
+    expect(find(assess(emptyServices).checks, "ts119612.tsp.1.services")).toMatchObject({
+      status: "fail",
+      severity: "critical",
+    });
+    expect(find(assess(missingServiceName).checks, "ts119612.service.1.1.name")).toMatchObject({
+      status: "fail",
+      severity: "error",
+    });
+  });
+
   it("validates TSP identifier, address, information URI, and EU extension criticality", async () => {
     const invalid = (await fixture())
       .replace("NTRIT-EXAMPLE-TRUST-PROVIDER", "Example trade name without identifier")

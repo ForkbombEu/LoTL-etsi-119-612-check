@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "standard": "ETSI TS 119 612 V2.4.1",
+  "requirements": [
+    {
+      "requirementId": "ts119612.scheme.version",
+      "positive": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.version", "status": "pass" },
+      "negative": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.version", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.sequence.local",
+      "positive": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.sequence.local", "status": "pass" },
+      "negative": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.sequence.local", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.sequence.history",
+      "positive": { "testFile": "test/ts119612Context.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.scheme.sequence.history", "status": "pass" },
+      "negative": { "testFile": "test/ts119612Context.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.scheme.sequence.history", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.pointers.structure",
+      "positive": { "testFile": "test/ts119612Pointers.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml", "test/fixtures/ts119612-service-ca.cert.pem", "test/fixtures/ts119612-service-end-entity.cert.pem"], "findingId": "ts119612.scheme.pointers.structure", "status": "pass" },
+      "negative": { "testFile": "test/ts119612Pointers.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml", "test/fixtures/ts119612-service-ca.cert.pem", "test/fixtures/ts119612-service-end-entity.cert.pem"], "findingId": "ts119612.pointer.1.structure", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.pointers.authentication",
+      "positive": { "testFile": "test/ts119612Context.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.scheme.pointers.authentication", "status": "pass" },
+      "negative": { "testFile": "test/ts119612Context.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-signature-profile.xml", "test/fixtures/ts119612-service-ca.cert.pem"], "findingId": "ts119612.scheme.pointers.authentication", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.next_update",
+      "positive": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.next_update", "status": "pass" },
+      "negative": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.next_update", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.distribution_consistency",
+      "positive": { "testFile": "test/ts119612Context.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.scheme.distribution_consistency", "status": "pass" },
+      "negative": { "testFile": "test/ts119612Context.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.scheme.distribution_consistency", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.scheme.extensions",
+      "positive": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.extensions", "status": "pass" },
+      "negative": { "testFile": "test/ts119612SchemeInformation.test.ts", "fixtures": ["test/fixtures/ts119612-scheme-information-valid.xml"], "findingId": "ts119612.scheme.extensions", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.tsp.services",
+      "positive": { "testFile": "test/ts119612TspServices.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml"], "findingId": "ts119612.tsp.1.services", "status": "pass" },
+      "negative": { "testFile": "test/ts119612TspServices.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml"], "findingId": "ts119612.tsp.1.services", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.service.name",
+      "positive": { "testFile": "test/ts119612TspServices.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml"], "findingId": "ts119612.service.1.1.name", "status": "pass" },
+      "negative": { "testFile": "test/ts119612TspServices.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml"], "findingId": "ts119612.service.1.1.name", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.history.name",
+      "positive": { "testFile": "test/ts119612ServiceSemantics.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-service-ca.cert.pem"], "findingId": "ts119612.service.1.1.history.1.name", "status": "pass" },
+      "negative": { "testFile": "test/ts119612ServiceSemantics.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-service-ca.cert.pem"], "findingId": "ts119612.service.1.1.history.1.name", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.history.status_start",
+      "positive": { "testFile": "test/ts119612ServiceSemantics.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-service-ca.cert.pem"], "findingId": "ts119612.service.1.1.history.1.status_start", "status": "pass" },
+      "negative": { "testFile": "test/ts119612ServiceSemantics.test.ts", "fixtures": ["test/fixtures/ts119612-tsp-service-valid.xml", "test/fixtures/ts119612-service-ca.cert.pem"], "findingId": "ts119612.service.1.1.history.1.status_start", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.signature.required",
+      "positive": { "testFile": "test/signature.test.ts", "fixtures": ["test/fixtures/tsl-signed-unsupported.xml"], "findingId": "signature.present", "status": "pass" },
+      "negative": { "testFile": "test/signature.test.ts", "fixtures": ["test/fixtures/tsl-valid-ish.xml"], "findingId": "signature.present", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.signature.document_coverage",
+      "positive": { "testFile": "test/ts119612Signature.test.ts", "fixtures": ["test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.signature.annex_b", "status": "pass" },
+      "negative": { "testFile": "test/ts119612Signature.test.ts", "fixtures": ["test/fixtures/ts119612-signature-profile.xml"], "findingId": "ts119612.signature.annex_b", "status": "fail" }
+    },
+    {
+      "requirementId": "ts119612.binding.xml_schema",
+      "positive": { "testFile": "test/ts119612XmlSchema.test.ts", "fixtures": ["test/fixtures/ts119612-schema-minimal.xml"], "findingId": "schema.xsd", "status": "pass" },
+      "negative": { "testFile": "test/ts119612XmlSchema.test.ts", "fixtures": ["test/fixtures/ts119612-schema-minimal.xml"], "findingId": "schema.xsd", "status": "fail" }
+    }
+  ]
+}

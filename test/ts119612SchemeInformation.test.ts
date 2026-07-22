@@ -63,6 +63,7 @@ describe("ETSI TS 119 612 SchemeInformation", () => {
   it("reports focused local semantic failures with stable requirement IDs", async () => {
     const original = await readFile(fixturePath, "utf8");
     const invalid = original
+      .replace("<TSLVersionIdentifier>6</TSLVersionIdentifier>", "<TSLVersionIdentifier>5</TSLVersionIdentifier>")
       .replace("<TSLSequenceNumber>1</TSLSequenceNumber>", "<TSLSequenceNumber>0</TSLSequenceNumber>")
       .replace("mailto:trust-list@example.test", "ftp://example.test/not-email")
       .replace("https://example.test/trusted-list-help", "mailto:not-a-website@example.test")
@@ -86,6 +87,7 @@ describe("ETSI TS 119 612 SchemeInformation", () => {
     const failedIds = checks.filter((check) => check.status === "fail").map((check) => check.id);
 
     expect(failedIds).toEqual(expect.arrayContaining([
+      "ts119612.scheme.version",
       "ts119612.scheme.sequence.local",
       "ts119612.scheme.operator_address",
       "ts119612.scheme.name",
