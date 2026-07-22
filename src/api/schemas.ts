@@ -82,6 +82,85 @@ const pointerSignerEvidence = {
   },
 } as const;
 
+const ts119602ResourceAssertions = [
+  "scheme_scope_and_context",
+  "approval_scheme",
+  "operator_approval_process",
+  "entity_approval_process",
+  "approval_criteria",
+  "assessor_selection_and_rules",
+  "separate_body_responsibilities_and_liabilities",
+  "scheme_contact_information",
+  "scheme_policy_and_rules",
+  "list_usage_and_interpretation",
+  "policy_or_legal_notice",
+] as const;
+
+const ts119602PostalAddressEvidence = {
+  type: "object",
+  required: ["streetAddress", "country"],
+  additionalProperties: false,
+  properties: {
+    streetAddress: { type: "string", minLength: 1 },
+    country: { type: "string", minLength: 2 },
+  },
+} as const;
+
+const ts119602AuthoritativeIdentityEvidence = {
+  type: "object",
+  required: ["source", "checkedAt", "names", "postalAddresses", "electronicAddresses"],
+  additionalProperties: false,
+  properties: {
+    source: { type: "string", minLength: 1 },
+    checkedAt: { type: "string", format: "date-time" },
+    names: { type: "array", minItems: 1, maxItems: 64, items: { type: "string", minLength: 1 } },
+    registrationIdentifiers: { type: "array", maxItems: 64, items: { type: "string", minLength: 1 } },
+    postalAddresses: { type: "array", maxItems: 64, items: ts119602PostalAddressEvidence },
+    electronicAddresses: { type: "array", maxItems: 64, items: { type: "string", format: "uri" } },
+    associatedBodies: { type: "array", maxItems: 64, items: { type: "string", minLength: 1 } },
+  },
+} as const;
+
+const ts119602ContextualEvidence = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    resources: {
+      type: "array",
+      maxItems: 32,
+      items: {
+        type: "object",
+        required: ["location", "sha256", "assertions", "source", "checkedAt"],
+        additionalProperties: false,
+        properties: {
+          location: { type: "string", format: "uri" },
+          sha256: { type: "string", pattern: "^[A-Fa-f0-9]{64}$" },
+          assertions: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: ts119602ResourceAssertions } },
+          source: { type: "string", minLength: 1 },
+          checkedAt: { type: "string", format: "date-time" },
+        },
+      },
+    },
+    authoritative: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        schemeOperator: ts119602AuthoritativeIdentityEvidence,
+        entities: {
+          type: "array",
+          maxItems: 256,
+          items: {
+            ...ts119602AuthoritativeIdentityEvidence,
+            required: ["entityPath", ...ts119602AuthoritativeIdentityEvidence.required],
+            properties: { entityPath: { type: "string", minLength: 1 }, ...ts119602AuthoritativeIdentityEvidence.properties },
+          },
+        },
+      },
+    },
+    expiredServiceStatusUris: { type: "array", maxItems: 64, items: { type: "string", format: "uri" } },
+  },
+} as const;
+
 const contextualEvidence = {
   type: "object",
   additionalProperties: false,
@@ -91,6 +170,7 @@ const contextualEvidence = {
     trustedSignerFingerprintsSha256: { type: "array", items: { type: "string", pattern: "^[A-Fa-f0-9]{64}$" }, maxItems: 64 },
     ts119612Signer: ts119612SignerEvidence,
     pointerSigners: { type: "array", items: pointerSignerEvidence, maxItems: 32 },
+    ts119602: ts119602ContextualEvidence,
     maxDereferences: { type: "integer", minimum: 1, maximum: 32, default: 16 },
     maxBytesPerArtifact: { type: "integer", minimum: 1, maximum: 20971520, default: 5242880 },
     concurrency: { type: "integer", minimum: 1, maximum: 32, default: 4 },

@@ -91,7 +91,7 @@ export function buildTs119602ProfileFindings(input: Ts119602ProfileAssessmentInp
     bindingFinding(input.binding, definitionEntry),
     schemeFinding(input.metadata, definitionEntry),
     entityFinding(input.entities.entities, definitionEntry),
-    serviceFinding(input.entities, definitionEntry),
+    serviceFinding(input.entities, input.metadata, definitionEntry),
     signatureFinding(input.binding, input.signatureChecks, definitionEntry),
   ];
 }
@@ -109,6 +109,7 @@ function schemeFinding(metadata: Ts119602MetadataInput, profile: ProfileDefiniti
   const issue = parseTs119602UtcDateTime(metadata.issueDateTime);
   const next = parseTs119602UtcDateTime(metadata.nextUpdate.value);
   const deadline = issue ? addUtcCalendarMonths(issue, 6) : undefined;
+  const finalClosed = metadata.nextUpdate.present && metadata.nextUpdate.value === null;
   const localResults = {
     version: { observed: metadata.version, expected: 1, valid: metadata.version === 1 },
     type: { observed: metadata.loteType, expected: TS119602_PROFILE_URIS[profile.profile], valid: metadata.loteType === TS119602_PROFILE_URIS[profile.profile] },
@@ -136,7 +137,9 @@ function schemeFinding(metadata: Ts119602MetadataInput, profile: ProfileDefiniti
       issue: issue?.toISOString(),
       observed: next?.toISOString(),
       maximum: deadline?.toISOString(),
-      valid: Boolean(issue && next && deadline && next > issue && next <= deadline),
+      finalClosed,
+      finalStatusSemantics: finalClosed ? "checked_by_ts119602.scheme.final_closed_list" : "not_applicable",
+      valid: finalClosed || Boolean(issue && next && deadline && next > issue && next <= deadline),
     },
     sequenceHistory: "not_checked_until_prior_instance_is_supplied",
   };
@@ -184,20 +187,21 @@ function entityFinding(entities: Ts119602EntityObservation[], profile: ProfileDe
     { results });
 }
 
-function serviceFinding(input: Ts119602EntitiesInput, profile: ProfileDefinition): CheckResult {
+function serviceFinding(input: Ts119602EntitiesInput, metadata: Ts119602MetadataInput, profile: ProfileDefinition): CheckResult {
   const services = input.entities.flatMap((entity) => entity.services.map((service) => ({ entity, service })));
   if (services.length === 0) {
     return profileFinding(profile, "service", "not_applicable", "info", `Annex ${profile.annex} service rules are not applicable because no service is present.`, { serviceCount: 0 });
   }
   const issue = parseTs119602UtcDateTime(input.listIssueDateTime);
-  const results = services.map(({ entity, service }) => serviceResult(entity, service, issue, profile));
+  const finalClosed = metadata.nextUpdate.present && metadata.nextUpdate.value === null;
+  const results = services.map(({ entity, service }) => serviceResult(entity, service, issue, profile, finalClosed));
   const valid = results.every((entry) => entry.valid);
   return profileFinding(profile, "service", valid ? "pass" : "fail", valid ? "info" : "error",
     valid ? `Every service satisfies the locally decidable Annex ${profile.annex} service/history rules.` : `One or more services violate the locally decidable Annex ${profile.annex} service/history rules.`,
     { results });
 }
 
-function serviceResult(entity: Ts119602EntityObservation, service: Ts119602ServiceObservation, issue: Date | undefined, profile: ProfileDefinition) {
+function serviceResult(entity: Ts119602EntityObservation, service: Ts119602ServiceObservation, issue: Date | undefined, profile: ProfileDefinition, finalClosed: boolean) {
   const typeValid = !service.typeIdentifier.present || profile.serviceTypes.includes(String(service.typeIdentifier.value));
   const certificates = service.identity.certificates.map((entry) => certificateObservation(entry.value));
   const certificateValid = profile.serviceCertificates === "required"
@@ -225,7 +229,9 @@ function serviceResult(entity: Ts119602EntityObservation, service: Ts119602Servi
   const pubEaaCertificateConstraints = profile.serviceCertificates !== "optional_pub_eaa" || certificates.length === 0
     ? { applicable: false, valid: true }
     : pubEaaCertificateResult(certificates, entity);
-  const statusValid = profile.serviceStatus === "absent"
+  const statusValid = finalClosed
+    ? service.status.present
+    : profile.serviceStatus === "absent"
     ? !service.status.present && !service.statusStartingTime.present
     : service.status.present
       && [
@@ -255,7 +261,7 @@ function serviceResult(entity: Ts119602EntityObservation, service: Ts119602Servi
       authoritativeRegistrationChecked: false,
     },
     pubEaaCertificateConstraints,
-    status: { observed: service.status.value, present: service.status.present, statusStartingTime: service.statusStartingTime.value, rule: profile.serviceStatus, valid: statusValid },
+    status: { observed: service.status.value, present: service.status.present, statusStartingTime: service.statusStartingTime.value, rule: finalClosed ? "final_closed_expired_status" : profile.serviceStatus, contextualExpiredSemantics: finalClosed, valid: statusValid },
     walletServiceIdentifier: { required: Boolean(profile.walletServiceIdentifier), valid: walletIdentifierValid },
     registerSupplyPoint: { required: Boolean(profile.registerSupplyPoint), points: service.supplyPoints, valid: supplyPointValid, authentication: profile.registerSupplyPoint ? "not_checked_until_dereferencing" : "not_applicable" },
     history: { instanceCount: service.history.length, pubEaaSkiOnlyRule: profile.profile === "pub_eaa_providers", valid: historyValid },

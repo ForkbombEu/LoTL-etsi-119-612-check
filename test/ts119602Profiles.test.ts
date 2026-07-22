@@ -92,6 +92,17 @@ describe("ETSI TS 119 602 Annex D-I profile validation", () => {
     expect(find(buildTs119602ProfileFindings(input), "ts119602.profile.wrprc_providers.scheme_information")).toMatchObject({ status: "pass" });
   });
 
+  it("defers final closed-list expired URI semantics to the contextual policy check", () => {
+    const input = profileInput("wallet_providers");
+    input.metadata.nextUpdate = { present: true, value: null };
+    input.entities.entities[0].services[0].status = { present: true, value: "urn:example:status:expired" };
+    expect(find(buildTs119602ProfileFindings(input), "ts119602.profile.wallet_providers.scheme_information")).toMatchObject({
+      status: "pass",
+      evidence: expect.objectContaining({ nextUpdate: expect.objectContaining({ finalClosed: true, valid: true }) }),
+    });
+    expect(find(buildTs119602ProfileFindings(input), "ts119602.profile.wallet_providers.service")).toMatchObject({ status: "pass" });
+  });
+
   it("reports focused trusted-entity contact, role, and Pub-EAA law-reference failures", () => {
     const input = profileInput("pid_providers");
     input.entities.entities[0].address.electronicUris = [{ path: "/email", value: "mailto:contact@example.test" }];

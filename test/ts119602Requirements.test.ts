@@ -70,7 +70,7 @@ describe("ETSI TS 119 602 requirements ledger", () => {
       ],
     });
     expect(findTs119602Requirement("ts119602.profile.wallet_providers.binding")?.implementation.status).toBe("implemented");
-    expect(findTs119602Requirement("ts119602.profile.wallet_providers.scheme_information")?.implementation.status).toBe("partial");
+    expect(findTs119602Requirement("ts119602.profile.wallet_providers.scheme_information")?.implementation.status).toBe("implemented");
     expect(findTs119602Requirement("ts119602.profile.wallet_providers.trusted_entity")?.implementation.status).toBe("partial");
     expect(findTs119602Requirement("ts119602.profile.wallet_providers.service")?.implementation.status).toBe("partial");
   });
@@ -92,8 +92,8 @@ describe("ETSI TS 119 602 requirements ledger", () => {
   it("reports coverage without implying complete normative validation", () => {
     expect(summarizeTs119602Requirements()).toMatchObject({
       total: 81,
-      implemented: 24,
-      partial: 57,
+      implemented: 39,
+      partial: 42,
       notImplemented: 0,
       complete: false,
     });
@@ -101,6 +101,20 @@ describe("ETSI TS 119 602 requirements ledger", () => {
 
   it("keeps pointer authentication partial because open OtherId semantics are profile-dependent", () => {
     expect(findTs119602Requirement("ts119602.scheme.pointers.authentication")?.implementation.status).toBe("partial");
+  });
+
+  it("marks TS602-18 contextual families implemented while preserving evidence-dependent outcomes", () => {
+    for (const id of [
+      "ts119602.scheme.sequence.history",
+      "ts119602.scheme.information_uri",
+      "ts119602.scheme.community_rules",
+      "ts119602.scheme.policy_or_legal_notice",
+      "ts119602.scheme.next_update",
+      "ts119602.entity.names",
+      "ts119602.entity.address",
+    ]) {
+      expect(findTs119602Requirement(id)?.implementation.status).toBe("implemented");
+    }
   });
 
   it("marks the completed TS602-15 local structure and URI families as implemented", () => {

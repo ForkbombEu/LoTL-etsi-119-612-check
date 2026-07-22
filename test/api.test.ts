@@ -278,10 +278,29 @@ describe("API server", () => {
         context: {
           dereference: false,
           priorArtifacts: [{ content: JSON.stringify(prior), source: "prior.json", contentType: "application/json" }],
-          maxDereferences: 4,
+          maxDereferences: 16,
           maxBytesPerArtifact: 1000000,
           concurrency: 2,
           maxTraversalDepth: 2,
+          ts119602: {
+            expiredServiceStatusUris: ["urn:example:status:expired"],
+            resources: [{
+              location: "https://operator.example.test/wallet-providers",
+              sha256: "0".repeat(64),
+              assertions: ["scheme_scope_and_context"],
+              source: "review-record",
+              checkedAt: "2026-07-21T00:00:00Z",
+            }],
+            authoritative: {
+              schemeOperator: {
+                source: "official-register",
+                checkedAt: "2026-07-21T00:00:00Z",
+                names: ["JSON-Operator"],
+                postalAddresses: [{ streetAddress: "1 Commission Street", country: "EU" }],
+                electronicAddresses: ["mailto:operator@example.test", "https://operator.example.test"],
+              },
+            },
+          },
         },
       },
     });
@@ -311,6 +330,15 @@ describe("API server", () => {
       payload: { content: current, context: { dereference: true, maxTraversalDepth: 9 } },
     });
     expect(invalidDepth.statusCode).toBe(400);
+    const invalidAssertion = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: {
+        content: current,
+        context: { ts119602: { resources: [{ location: "https://example.test/page", sha256: "0".repeat(64), assertions: ["invented_semantics"], source: "review", checkedAt: "2026-07-21T00:00:00Z" }] } },
+      },
+    });
+    expect(invalidAssertion.statusCode).toBe(400);
     await app.close();
   });
 
@@ -431,6 +459,9 @@ describe("API server", () => {
       .toContain("signerFingerprintSha256");
     expect(parsedJson.components.schemas.Ts119602ContextOptions.properties.pointerSigners.items.$ref)
       .toBe("#/components/schemas/TrustListPointerSignerEvidence");
+    expect(parsedJson.components.schemas.Ts119602ContextOptions.properties.ts119602.$ref)
+      .toBe("#/components/schemas/Ts119602ContextualEvidence");
+    expect(parsedJson.components.schemas.Ts119602ResourceEvidence.required).toContain("sha256");
     expect(parsedJson.components.schemas.TrustListPointerSignerEvidence.required).toContain("location");
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
     expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(6);

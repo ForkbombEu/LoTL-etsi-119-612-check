@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-12 and TS602-14.
+Last reconciled: 2026-07-22, through TS612-12 and TS602-18.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -35,7 +35,7 @@ bounded, and write only under ignored artifact directories.
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity, fingerprints, public-key hashes, SKI, basic constraints, key usage and self-signature evidence; compare TS 119 612 service identities; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors; service checks do not establish revocation or chain trust |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 44 test files and 238 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 44 test files and 259 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -154,7 +154,7 @@ Each row is intended to be one focused implementation prompt and one commit.
 ### Implemented task sequence
 
 These tasks are complete for their bounded scopes. The requirements ledger
-currently contains 81 families: 24 implemented, 57 partial and 0 not
+currently contains 81 families: 39 implemented, 42 partial and 0 not
 implemented. Therefore TS 119 602 as a whole is not complete.
 
 | Task | Implemented scope | Status |
@@ -173,9 +173,10 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | TS602-12 | Add supplied prior-list evidence and bounded distribution, pointer, archive and supply-point contextual checks across product surfaces | Complete task scope; some identity/register/archive semantics remain partial |
 | TS602-13 | Validate scheme-explicit XML with the integrity-checked pinned XSD/catalog and source-identified diagnostics | Complete |
 | TS602-14 | Map all 34 Annex A.2.2/Table A.1 components from typed, schema-gated TS 119 612 facts and apply base/Annex H checks without reparsing the XML | Complete; published tag/version conflicts remain explicit |
-| TS602-15 | Enforce exact direct XML/JSON entity/service nesting and cardinality; retain multilingual `TEInformationURI` evidence; validate local names, addresses, every URI, service names and Annex B native-term transliteration | Complete; dereferenced pointer content, parser capability and authoritative name/address semantics remain explicit |
-| TS602-16 | Validate locally asserted ETSI registration-identifier syntax, associated-body payloads, registration/certificate identity consistency, Annex role/law URIs, and certificate purpose through BasicConstraints/KeyUsage | Complete; official records, associated-body responsibility and certificate policy/chain authority remain explicit |
+| TS602-15 | Enforce exact direct XML/JSON entity/service nesting and cardinality; retain multilingual `TEInformationURI` evidence; validate local names, addresses, every URI, service names and Annex B native-term transliteration | Complete; TS602-18 adds authoritative name/address evidence, while pointed-content/parser capability remains explicit |
+| TS602-16 | Validate locally asserted ETSI registration-identifier syntax, associated-body payloads, registration/certificate identity consistency, Annex role/law URIs, and certificate purpose through BasicConstraints/KeyUsage | Complete; TS602-18 adds authoritative identity/relationship evidence, while certificate policy/chain authority remains explicit |
 | TS602-17 | Compare certificate/JWK/XML-RSA-key/SKI representations and authenticate pointer signers through every supported PKI identity form with optional per-location path/revocation evidence | Complete; non-PKI `OtherId` and automatic revocation retrieval remain explicit |
+| TS602-18 | Bind reviewed scheme-page assertions to fetched hashes, compare operator/entity claims with authoritative records, traverse bounded same-origin archive indexes, authenticate compact-JWS register data, verify complete retained history, and apply explicit expired-status policy to final lists | Complete; unsupported archive/register protocols and absent external evidence remain inconclusive |
 
 ### Remaining TS 119 602 gaps
 
@@ -192,18 +193,13 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 
 #### Core data model and profiles
 
-- Dereference multilingual pointers to validate pointed-content encoding and
-  character rules, and accept explicit parser-capability evidence for the
-  remaining Annex B requirements.
-- Validate `TEName`, `TETradeName`, address and `ServiceName` claims against
-  authoritative registration/contact evidence when supplied; their local
-  multilingual shape and URI syntax are implemented.
-- Validate locally well-formed registration identifiers against authoritative
-  legal/natural-person records when such evidence is supplied; local ETSI
-  identifier syntax and certificate-subject consistency are implemented.
-- Validate the asserted responsibility of Annex D/E associated bodies when
-  external role evidence is supplied; local extension structure is
-  implemented.
+- Dereference multilingual trusted-entity/service pointers to validate
+  pointed-content encoding and character rules, and accept explicit
+  parser-capability evidence for the remaining Annex B requirements.
+- Scheme-operator and trusted-entity names, registration identifiers,
+  postal/electronic contacts and associated-body names are compared with
+  source-identified authoritative evidence when supplied. Evidence absence is
+  never converted into success.
 - Validate certificate-policy, chain and revocation authority beyond the
   implemented profile-specific BasicConstraints and KeyUsage purpose checks.
 - Non-PKI `OtherId` pointer authentication remains inconclusive because the
@@ -211,11 +207,18 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 
 #### Context and trust
 
-- Validate archive indexes/protocols beyond a directly returned prior list.
-- Validate scheme-information pages and authoritative legal/registration
-  records only when explicit evidence and policy are supplied.
-- Validate register record semantics beyond JSON/XML reachability.
-- Establish history retention completeness and final closed-LoTE semantics.
+- Archive traversal follows bounded same-origin links from HTML and configured
+  JSON-style indexes. Other index/protocol forms remain `inconclusive`.
+- Scheme-information/rules/policy pages require caller-supplied semantic
+  assertions bound to the exact fetched SHA-256; the tool does not interpret
+  legal prose autonomously.
+- Annex I register authentication supports compact JWS with embedded `x5c`
+  matched to the declaring service identity. Other signature/seal formats and
+  register-specific record schemas remain `inconclusive`.
+- Never-remove history can be proven only from a complete supplied/fetched
+  sequence. Finite scheme-specific retention periods remain policy-dependent.
+- A final closed LoTE requires explicit service statuses and caller-supplied
+  profile/scheme URIs whose semantics are exactly `expired`.
 - Automatic chain discovery and CRL/OCSP retrieval remain out of scope;
   separately supplied per-pointer path/revocation evidence is implemented and
   embedded certificates remain untrusted by default.
@@ -225,11 +228,11 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
 | TS602-14 | Implement Annex A.2.2/Table A.1 component mapping for the TS 119 612 alternative XML binding, consuming validated TS 119 612 facts rather than reparsing with ad hoc XPath | TS602-13, TS612-06 | Complete |
-| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | Complete; contextual pointer/name/address claims remain for TS602-18 |
-| TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Complete; authoritative records, role evidence and certificate-policy authority remain for TS602-18 |
+| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | Complete; external identity/contact claims are handled by TS602-18 evidence |
+| TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Complete; authoritative identity/role evidence is handled by TS602-18, while certificate-policy authority remains partial |
 | TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Complete; non-PKI `OtherId` and automatic certificate discovery remain explicit |
-| TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | **Next cross-standard task** |
-| TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | Planned |
+| TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Complete |
+| TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | **Next cross-standard task** |
 | TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | Planned |
 
 ### Published TS 119 602 conflicts that must remain explicit
@@ -269,10 +272,10 @@ The recommended implementation sequence is:
    Complete.
 3. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete
    signature, trust, semantic and contextual families in their respective
-   standards. TS612-10 is complete.
+   standards. Complete.
 4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
    and perform ledger-driven completion audits. TS612-12 is complete;
-   **TS602-18 is next.**
+   **TS602-19 is next.**
 
 Tasks that do not share files may be developed independently, but the stated
 dependencies must still be satisfied before a conformance claim is enabled.

@@ -125,6 +125,61 @@ export interface TrustListPointerSignerEvidence extends Ts119612SignerEvidence {
   location: string;
 }
 
+export type Ts119602ResourceAssertion =
+  | "scheme_scope_and_context"
+  | "approval_scheme"
+  | "operator_approval_process"
+  | "entity_approval_process"
+  | "approval_criteria"
+  | "assessor_selection_and_rules"
+  | "separate_body_responsibilities_and_liabilities"
+  | "scheme_contact_information"
+  | "scheme_policy_and_rules"
+  | "list_usage_and_interpretation"
+  | "policy_or_legal_notice";
+
+/** Human-reviewed semantics bound to the exact bytes fetched from a declared URI. */
+export interface Ts119602ResourceEvidence {
+  location: string;
+  sha256: string;
+  assertions: Ts119602ResourceAssertion[];
+  source: string;
+  checkedAt: string;
+}
+
+export interface Ts119602PostalAddressEvidence {
+  streetAddress: string;
+  country: string;
+}
+
+export interface Ts119602AuthoritativeIdentityEvidence {
+  source: string;
+  checkedAt: string;
+  names: string[];
+  registrationIdentifiers?: string[];
+  postalAddresses: Ts119602PostalAddressEvidence[];
+  electronicAddresses: string[];
+  /** Names of associated bodies whose asserted relationship/responsibility was confirmed by the source. */
+  associatedBodies?: string[];
+}
+
+export interface Ts119602AuthoritativeEntityEvidence extends Ts119602AuthoritativeIdentityEvidence {
+  /** Exact parser evidence path of the TrustedEntity to which this record applies. */
+  entityPath: string;
+}
+
+export interface Ts119602AuthoritativeEvidence {
+  schemeOperator?: Ts119602AuthoritativeIdentityEvidence;
+  entities?: Ts119602AuthoritativeEntityEvidence[];
+}
+
+export interface Ts119602ContextualEvidence {
+  resources?: Ts119602ResourceEvidence[];
+  authoritative?: Ts119602AuthoritativeEvidence;
+  /** Profile- or scheme-defined ServiceStatus URI values whose semantics are exactly "expired". */
+  expiredServiceStatusUris?: string[];
+}
+
 /** Optional evidence and limits shared by TS 119 612 and TS 119 602 contextual checks. */
 export interface TrustListContextOptions {
   dereference?: boolean;
@@ -133,10 +188,12 @@ export interface TrustListContextOptions {
   ts119612Signer?: Ts119612SignerEvidence;
   /** Separately supplied path/revocation evidence keyed by exact pointer location. */
   pointerSigners?: TrustListPointerSignerEvidence[];
+  /** TS 119 602-only reviewed resource, authoritative-record, and status-policy evidence. */
+  ts119602?: Ts119602ContextualEvidence;
   maxDereferences?: number;
   maxBytesPerArtifact?: number;
   concurrency?: number;
-  /** Maximum number of pointer edges followed from the assessed TS 119 612 artifact. */
+  /** Maximum number of TS 119 612 pointer or TS 119 602 archive-index edges followed. */
   maxTraversalDepth?: number;
 }
 
