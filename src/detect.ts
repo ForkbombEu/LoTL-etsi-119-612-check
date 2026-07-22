@@ -105,16 +105,16 @@ function getJsonLoteType(value: object): string {
 }
 
 function isXmlLotl(root: unknown): boolean {
-  if (!root || typeof root !== "object" || !("getElementsByTagNameNS" in root)) return false;
-  const getElementsByTagNameNS = (root as {
-    getElementsByTagNameNS: (namespace: string, localName: string) => {
-      length: number;
-      item: (index: number) => { textContent?: string | null } | null;
-    };
-  }).getElementsByTagNameNS;
-  const tslTypes = getElementsByTagNameNS.call(root, "*", "TSLType");
-  for (let index = 0; index < tslTypes.length; index += 1) {
-    if (/(?:listofthelists|listoflists|lotl)/i.test(tslTypes.item(index)?.textContent ?? "")) return true;
-  }
-  return false;
+  if (!root || typeof root !== "object" || !("childNodes" in root)) return false;
+  const directElements = (node: { childNodes: ArrayLike<unknown> }) => Array.from(node.childNodes).filter((child): child is Element => (
+    typeof child === "object" && child !== null && "nodeType" in child && child.nodeType === 1
+  ));
+  const element = root as Element;
+  const scheme = directElements(element).find((child) => (
+    (child.localName || child.nodeName) === "SchemeInformation" && child.namespaceURI === element.namespaceURI
+  ));
+  const tslType = scheme && directElements(scheme).find((child) => (
+    (child.localName || child.nodeName) === "TSLType" && child.namespaceURI === element.namespaceURI
+  ));
+  return /(?:listofthelists|listoflists|lotl)/i.test(tslType?.textContent ?? "");
 }

@@ -27,6 +27,13 @@ describe("detectArtifact", () => {
     });
   });
 
+  it("classifies from the scheme TSLType rather than a pointer qualifier", () => {
+    const xml = `<TrustServiceStatusList xmlns="http://uri.etsi.org/02231/v2#"><SchemeInformation><TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType><PointersToOtherTSL><OtherTSLPointer><AdditionalInformation><OtherInformation><TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUlistofthelists</TSLType></OtherInformation></AdditionalInformation></OtherTSLPointer></PointersToOtherTSL></SchemeInformation></TrustServiceStatusList>`;
+    expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({
+      artifactKind: "ts119612_xml_tsl",
+    });
+  });
+
   it("does not assume a similarly named XML document is TS 119 612", () => {
     const xml = "<TrustServiceStatusList xmlns=\"https://example.test/not-etsi\" />";
     expect(detectArtifact(Buffer.from(xml), "application/xml")).toMatchObject({

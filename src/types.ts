@@ -117,8 +117,8 @@ export interface Ts119612SignerEvidence {
   revocation?: Ts119612RevocationEvidence;
 }
 
-/** Optional evidence and limits for checks that require other artifacts or dereferencing. */
-export interface Ts119602ContextOptions {
+/** Optional evidence and limits shared by TS 119 612 and TS 119 602 contextual checks. */
+export interface TrustListContextOptions {
   dereference?: boolean;
   priorArtifacts?: ContextArtifactInput[];
   trustedSignerFingerprintsSha256?: string[];
@@ -126,7 +126,12 @@ export interface Ts119602ContextOptions {
   maxDereferences?: number;
   maxBytesPerArtifact?: number;
   concurrency?: number;
+  /** Maximum number of pointer edges followed from the assessed TS 119 612 artifact. */
+  maxTraversalDepth?: number;
 }
+
+/** @deprecated Historical name retained for source compatibility. */
+export type Ts119602ContextOptions = TrustListContextOptions;
 
 export interface StandardAssessment {
   applicable: boolean;

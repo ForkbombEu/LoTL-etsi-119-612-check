@@ -14,9 +14,10 @@ import { buildStandardAssessment } from "./standards/assessment.js";
 import { assessTs119602AlternativeXml } from "./standards/ts119602AlternativeXml.js";
 import { classifyTs119602Artifact, createUnknownTs119602Classification } from "./standards/ts119602Classification.js";
 import { assessTs119602Context } from "./standards/ts119602Context.js";
+import { assessTs119612Context } from "./standards/ts119612Context.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
-import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult, Ts119602ContextOptions } from "./types.js";
+import type { ArtifactKind, AuditReport, CheckResult, CliOptions, PointerInfo, StandardApplicability, TrustedListAuditResult, TrustListContextOptions } from "./types.js";
 import { assessTs119612Xml } from "./xml/ts119612Checks.js";
 import { assessXmlLoteMetadata } from "./xml/loteMetadata.js";
 
@@ -28,7 +29,7 @@ export interface AuditCoreOptions {
   includeJsonLoteChecks: boolean;
   fetch: boolean;
   rpacChain?: string | string[];
-  context?: Ts119602ContextOptions;
+  context?: TrustListContextOptions;
 }
 
 export interface InMemoryAuditOptions extends AuditCoreOptions {
@@ -50,7 +51,7 @@ export interface AssessArtifactUrlOptions {
   strict: boolean;
   includeJsonLoteChecks: boolean;
   xsd?: string;
-  context?: Ts119602ContextOptions;
+  context?: TrustListContextOptions;
 }
 
 export interface AssessArtifactContentOptions {
@@ -61,7 +62,7 @@ export interface AssessArtifactContentOptions {
   strict: boolean;
   includeJsonLoteChecks: boolean;
   xsd?: string;
-  context?: Ts119602ContextOptions;
+  context?: TrustListContextOptions;
   timeoutMs?: number;
 }
 
@@ -355,7 +356,7 @@ async function assessArtifactBytes(
         },
       };
     }
-    return result;
+    return applyTs119612Context(result, bytes, contentType, options);
   }
 
   if (detected.artifactKind === "xml_lote") {
@@ -412,6 +413,28 @@ async function applyContext(
   const replacementIds = new Set(contextual.map((entry) => entry.id));
   result.ts119602 = buildStandardAssessment([
     ...result.ts119602.checks.filter((entry) => !replacementIds.has(entry.id)),
+    ...contextual,
+  ], { coverageComplete: false });
+  return result;
+}
+
+async function applyTs119612Context(
+  result: TrustedListAuditResult,
+  bytes: Buffer,
+  contentType: string | undefined,
+  options: Pick<AuditCoreOptions, "context"> & { timeoutMs?: number },
+): Promise<TrustedListAuditResult> {
+  if (!options.context || !result.ts119612.applicable) return result;
+  const contextual = await assessTs119612Context({
+    currentBytes: bytes,
+    currentContentType: contentType,
+    currentResult: result,
+    timeoutMs: options.timeoutMs ?? 15_000,
+    options: options.context,
+  });
+  const replacementIds = new Set(contextual.map((entry) => entry.id));
+  result.ts119612 = buildStandardAssessment([
+    ...result.ts119612.checks.filter((entry) => !replacementIds.has(entry.id)),
     ...contextual,
   ], { coverageComplete: false });
   return result;

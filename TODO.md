@@ -59,8 +59,8 @@ bounded, and write only under ignored artifact directories.
 ### Implemented baseline
 
 The existing TS 119 612 assessor provides useful evidence and is inventoried
-by a 69-family requirements ledger. Only 12 families are implemented completely;
-45 are partial and 12 are not implemented, so it must not be treated as a
+by a 69-family requirements ledger. Only 15 families are implemented completely;
+45 are partial and 9 are not implemented, so it must not be treated as a
 complete conformance validator.
 
 | Baseline task | Implemented scope | Status |
@@ -75,6 +75,7 @@ complete conformance validator.
 | TS612-B08 | Service-history structure/order, registered statuses and modern transitions, predefined service-extension families, qualifier vocabulary, certificate/SKI/RSA-key identity equivalence, duplicate-key detection and deterministic certificate role evidence | Complete task scope; retention completeness, custom registries, legacy migration, takeover authority, certificate chain and revocation remain explicit |
 | TS612-B09 | XAdES-B-B and exact Annex B root-reference/transform/canonicalization rules, TLSO certificate restrictions, supplied path/revocation evidence and explicit signer-trust separation | Complete task scope; TS 119 312 policy selection and issuer-list/community authentication remain explicit |
 | TS612-B10 | Exact `OtherTSLPointer` tuples, required qualifiers and MIME value, certificate/subject/SKI/RSA-key equivalence, signing-certificate metadata, Annex A rollover evidence and canonical target-profile dispatch | Complete task scope; target dereferencing/authentication and cross-list traversal remain contextual |
+| TS612-B11 | Supplied prior-list sequence and retained-state comparison, distribution byte equality, pointer signer-certificate authentication, duplicate-fetch caching, cycle detection and bounded cross-list traversal | Complete task scope; dereferencing remains opt-in and public-key/SKI-only authentication remains unsupported |
 
 #### What TS 119 612 does not yet prove
 
@@ -89,7 +90,8 @@ complete conformance validator.
   status is not established.
 - Date-time lexical rules, exact calendar update periods, local sequence shape,
   and closed-list status evidence are checked. Sequence progression and
-  historical retention consequences require contextual/history evidence.
+  historical retention use explicitly supplied prior-list evidence and remain
+  `not_checked` when it is absent.
 - Current and historical service information has local structure, registered
   vocabulary, identity-equivalence, status-transition, predefined-extension and
   certificate-purpose checks. Complete history retention, custom registrations,
@@ -100,9 +102,9 @@ complete conformance validator.
   119 312 usable-key policy and non-self-signed issuer listing/community
   authorization remain `not_checked` or `inconclusive`.
 - Local `OtherTSLPointer` structure, qualifiers, signing-certificate evidence,
-  rollover evidence and canonical target dispatch are checked. Pointer target
-  authentication, distribution consistency and cross-list trust still require
-  supplied or bounded dereferenced context.
+  rollover evidence and canonical target dispatch are checked. Opt-in bounded
+  context authenticates X.509-declared pointer targets and distribution bytes;
+  public-key/SKI-only authentication and external legal authority remain open.
 - Coverage gating prevents an incomplete requirements ledger from producing a
   complete conformance verdict.
 
@@ -120,8 +122,8 @@ Each row is intended to be one focused implementation prompt and one commit.
 | TS612-06 | Implement service history, qualifiers and certificate semantics: history ordering/retention, status transitions, qualifier vocabularies, identity equivalence, certificate roles/purpose and deterministic certificate evidence | TS612-05 | Complete |
 | TS612-07 | Implement the exact applicable XML signature/XAdES profile: reference/transform/property rules, signer metadata, certificate path/revocation inputs and explicit signer-trust separation | TS612-03, TS612-06 | Complete; TS 119 312 policy selection and issuer-community authentication remain partial |
 | TS612-08 | Implement LoTL `OtherTSLPointer` semantics: pointer structure, MIME/type/community qualifiers, service identities, signing-certificate rules, rollover and supported namespace/profile dispatch | TS612-04, TS612-07 | Complete |
-| TS612-09 | Add contextual validation for sequence progression, distribution equality, archive/history evidence, pointer dereferencing/authentication and bounded cross-list traversal | TS612-08 | **Next cross-standard task** |
-| TS612-10 | Add explicit EUDI RI and WE BUILD TS 119 612 profile checks without treating reference-service behavior as normative ETSI behavior | TS612-05 through TS612-09 | Planned |
+| TS612-09 | Add contextual validation for sequence progression, distribution equality, archive/history evidence, pointer dereferencing/authentication and bounded cross-list traversal | TS612-08 | Complete |
+| TS612-10 | Add explicit EUDI RI and WE BUILD TS 119 612 profile checks without treating reference-service behavior as normative ETSI behavior | TS612-05 through TS612-09 | **Next cross-standard task** |
 | TS612-11 | Add deterministic positive and focused negative fixtures for every implemented requirement family; synchronize CLI, API, OpenAPI, JSON/Markdown and report compatibility tests | TS612-10 | Planned |
 | TS612-12 | Perform a coverage audit against the ledger, leave unsupported/contextual rules explicit, document manual live smoke procedures, and enable a complete verdict only if every applicable implemented requirement is conclusive | TS612-11 | Planned |
 
@@ -249,7 +251,7 @@ The recommended implementation sequence is:
    Complete.
 3. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete
    signature, trust, semantic and contextual families in their respective
-   standards. TS612-08 is complete; **TS612-09 is next.**
+   standards. TS612-09 is complete; **TS612-10 is next.**
 4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
    and perform ledger-driven completion audits.
 

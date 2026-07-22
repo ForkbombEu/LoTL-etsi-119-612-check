@@ -246,6 +246,7 @@ describe("API server", () => {
           maxDereferences: 4,
           maxBytesPerArtifact: 1000000,
           concurrency: 2,
+          maxTraversalDepth: 2,
         },
       },
     });
@@ -268,6 +269,13 @@ describe("API server", () => {
     });
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json()).toMatchObject({ error: { code: "invalid_request" } });
+
+    const invalidDepth = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: { content: current, context: { dereference: true, maxTraversalDepth: 9 } },
+    });
+    expect(invalidDepth.statusCode).toBe(400);
     await app.close();
   });
 

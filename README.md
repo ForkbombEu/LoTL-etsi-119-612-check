@@ -111,17 +111,24 @@ node dist/cli.js \
   --no-fetch
 ```
 
-Opt in to bounded contextual dereferencing and supply a prior LoTE for sequence evidence:
+Opt in to bounded contextual dereferencing and supply a prior TL or LoTE for
+sequence/history evidence:
 
 ```bash
 node dist/cli.js \
   --input ./list_of_trusted_lists.json \
   --out-dir ./audit-output \
   --contextual \
-  --prior-lote ./previous-lote.json
+  --prior-lote ./previous-list.xml
 ```
 
-Contextual mode is off by default. It caches duplicate URLs per assessed artifact and caps contextual work at 16 references, 4 concurrent requests, 5 MiB per response, and the existing per-request timeout. Library and API callers may lower these limits, up to hard maxima of 32 references and 20 MiB. A CLI prior artifact is compared only with fetched LoTEs having the same registered type.
+Contextual mode is off by default. It caches duplicate URLs per assessed
+artifact and caps contextual work at 16 references, 4 concurrent requests,
+5 MiB per response, three TS 119 612 pointer edges, and the existing
+per-request timeout. Library and API callers may configure these limits up to
+hard maxima of 32 references, 20 MiB and eight pointer edges. A prior artifact
+is compared only with a current artifact of the same standard, list type and
+scheme territory.
 
 CLI outputs:
 
@@ -325,8 +332,8 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 12
-families as implemented, 45 as partial, and 12 as not implemented. Every
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 15
+families as implemented, 45 as partial, and 9 as not implemented. Every
 applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
@@ -340,16 +347,19 @@ cardinality/order and locally decidable V2.4.1 rules for version, sequence,
 type, multilingual operator/name/address/pointers, territory, policy choice,
 history period, strict UTC issuance, exact six-calendar-month next update,
 distribution URIs and extension criticality. Registry recognition, referenced
-URI content, sequence progression, distribution equality, legal authority and
-historical retention remain explicit contextual limitations.
+URI content and legal authority remain explicit contextual limitations.
+Sequence progression, distribution equality and retained service states are
+checked when explicit prior/dereferencing context is supplied.
 
 `OtherTSLPointer` assessment validates the exact identity/location/qualifier
 tuple, the five type/operator/community-rules/territory/MIME qualifiers, the
 registered ETSI XML media type, X.509/subject/SKI/RSA-key identity
 equivalence, certificate metadata matching, Annex A rollover evidence, and
-canonical dispatch for EU generic TL and EU LoTL targets. Actual target
-dereferencing and signer-certificate digest matching remain a separate
-`not_checked` contextual finding until target evidence is supplied.
+canonical dispatch for EU generic TL and EU LoTL targets. Opt-in contextual
+assessment fetches each target within explicit bounds, requires its XMLDSig
+verification and current-validity checks to pass, matches the actual signer
+certificate digest against the declaring pointer, validates the target kind,
+and follows authenticated pointers while detecting cycles without re-fetching.
 
 TSP and current-service assessment validates direct provider/service nesting,
 the 52 registered V2.4.1 service-type URIs, multilingual names and information
@@ -507,7 +517,7 @@ from semantic, profile, signature, certificate, and trust results.
 - XMLDSig verification depends on the installed `xmlsec1` build and crypto backend. Unsupported algorithms/transforms, a missing executable, timeouts, and prohibited external references are reported explicitly; success is never faked.
 - Only empty and same-document XMLDSig Reference URIs are accepted. Detached or external-reference signatures are deliberately not fetched or verified.
 - The XML signature assessor evaluates the first `ds:Signature`; XML XSD validation and contextual signer-chain trust remain separate from the implemented XAdES Baseline B and Annex H.4 findings.
-- Contextual pointer authentication currently supports X.509 certificate identities. Public-key/SKI equivalence and full chain/revocation path construction remain unimplemented.
+- Contextual pointer authentication currently supports X.509 certificate identities. Public-key/SKI-only pointer authentication remains unimplemented.
 - Archive checks recognize a previous LoTE returned directly by the configured archive URI; HTML indexes and multi-step archive protocols remain `inconclusive`.
 - Supply-point checks establish bounded reachability and machine-processable JSON/XML syntax, not the authoritative semantics of register records.
 - Full legal ETSI conformance requires normative interpretation beyond structural checks, schema checks, and cryptographic checks.

@@ -84,6 +84,7 @@ const contextualEvidence = {
     maxDereferences: { type: "integer", minimum: 1, maximum: 32, default: 16 },
     maxBytesPerArtifact: { type: "integer", minimum: 1, maximum: 20971520, default: 5242880 },
     concurrency: { type: "integer", minimum: 1, maximum: 32, default: 4 },
+    maxTraversalDepth: { type: "integer", minimum: 1, maximum: 8, default: 3 },
   },
 } as const;
 

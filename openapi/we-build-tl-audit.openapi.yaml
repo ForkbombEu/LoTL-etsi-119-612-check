@@ -486,7 +486,7 @@ components:
     Ts119602ContextOptions:
       type: object
       additionalProperties: false
-      description: Explicit prior evidence and opt-in bounded network checks. Dereferencing is disabled unless dereference is true.
+      description: Explicit prior TL/LoTE evidence and opt-in bounded network checks shared by TS 119 612 and TS 119 602 assessment. Dereferencing is disabled unless dereference is true.
       properties:
         dereference: { type: boolean, default: false }
         priorArtifacts:
@@ -502,6 +502,7 @@ components:
         maxDereferences: { type: integer, minimum: 1, maximum: 32, default: 16 }
         maxBytesPerArtifact: { type: integer, minimum: 1, maximum: 20971520, default: 5242880 }
         concurrency: { type: integer, minimum: 1, maximum: 32, default: 4 }
+        maxTraversalDepth: { type: integer, minimum: 1, maximum: 8, default: 3 }
     Ts119612SignerEvidence:
       type: object
       additionalProperties: false
