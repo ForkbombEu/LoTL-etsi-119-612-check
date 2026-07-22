@@ -552,6 +552,12 @@ describe("API server", () => {
     expect(script.headers["content-type"]).toContain("application/javascript");
     expect(script.body).toContain("/api/audit/lotl");
     expect(script.body).toContain("/api/audit/artifact");
+    expect(script.body).toContain("Fixture readiness");
+    expect(script.body).toContain("FCAF trusted authorities");
+    expect(script.body).toContain("Negative fixture descriptors");
+    expect(script.body).toContain("Fetched artifact:");
+    expect(css.body).toContain(".result-group");
+    expect(() => new Function(script.body)).not.toThrow();
     await app.close();
   });
 });
