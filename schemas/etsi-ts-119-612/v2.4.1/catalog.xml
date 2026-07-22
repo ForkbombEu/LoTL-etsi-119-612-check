@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog" prefer="system">
+  <system systemId="https://forge.etsi.org/rep/esi/x19_612_trusted_lists/-/raw/v2.4.1/19612_xsd.xsd" uri="19612_xsd.xsd"/>
+  <uri name="https://forge.etsi.org/rep/esi/x19_612_trusted_lists/-/raw/v2.4.1/19612_xsd.xsd" uri="19612_xsd.xsd"/>
+
+  <system systemId="https://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd" uri="dependencies/etsi/XAdES01903v132-201601.xsd"/>
+  <system systemId="http://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd" uri="dependencies/etsi/XAdES01903v132-201601.xsd"/>
+  <uri name="https://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd" uri="dependencies/etsi/XAdES01903v132-201601.xsd"/>
+  <uri name="http://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd" uri="dependencies/etsi/XAdES01903v132-201601.xsd"/>
+
+  <system systemId="http://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+  <system systemId="https://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+  <uri name="http://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+  <uri name="https://www.w3.org/2001/xml.xsd" uri="dependencies/w3c/xml.xsd"/>
+
+  <system systemId="http://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+  <system systemId="https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+  <uri name="http://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+  <uri name="https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd" uri="dependencies/w3c/xmldsig-core-schema.xsd"/>
+
+  <public publicId="-//W3C//DTD XMLSchema 200102//EN" uri="dependencies/w3c/XMLSchema.dtd"/>
+  <system systemId="http://www.w3.org/2001/XMLSchema.dtd" uri="dependencies/w3c/XMLSchema.dtd"/>
+  <system systemId="https://www.w3.org/2001/XMLSchema.dtd" uri="dependencies/w3c/XMLSchema.dtd"/>
+  <system systemId="datatypes.dtd" uri="dependencies/w3c/datatypes.dtd"/>
+</catalog>

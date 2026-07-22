@@ -1,6 +1,6 @@
 # ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Last reconciled: 2026-07-22, through TS612-01.
+Last reconciled: 2026-07-22, through TS612-02.
 
 This roadmap reflects the executable implementation in `src/`, the
 deterministic fixtures and tests in `test/`, and the current report/API
@@ -35,7 +35,7 @@ bounded, and write only under ignored artifact directories.
 | XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
 | Certificates | Parse subject, issuer, serial, validity and SHA-256 fingerprints; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors |
 | Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
-| Test baseline | 32 test files and 175 tests passing at this reconciliation | Counts will change as tasks are added |
+| Test baseline | 33 test files and 181 tests passing at this reconciliation | Counts will change as tasks are added |
 
 ## Boundary between the standards
 
@@ -59,15 +59,15 @@ bounded, and write only under ignored artifact directories.
 ### Implemented baseline
 
 The existing TS 119 612 assessor provides useful evidence and is inventoried
-by a 68-family requirements ledger. Only 1 family is implemented completely;
-30 are partial and 37 are not implemented, so it must not be treated as a
+by a 69-family requirements ledger. Only 1 family is implemented completely;
+30 are partial and 38 are not implemented, so it must not be treated as a
 complete conformance validator.
 
 | Baseline task | Implemented scope | Status |
 | --- | --- | --- |
 | TS612-B01 | Detect `TrustServiceStatusList`, distinguish TL from LoTL using `TSLType`, mark foreign roots/namespaces not applicable, and retain the observed EUDI RI namespace variant as warning evidence | Complete |
 | TS612-B02 | Parse core scheme metadata, dates, distribution points, TSP/service counts, and mandatory-field presence | Complete task scope; semantic coverage partial |
-| TS612-B03 | Optional local XSD validation through `xmllint --nonet`, namespace matching, and actionable diagnostics | Complete task scope; official schema bundle not pinned |
+| TS612-B03 | Optional local XSD validation through `xmllint --nonet`, namespace matching, and actionable diagnostics | Complete task scope; automatic pinned-schema routing is not enabled |
 | TS612-B04 | XMLDSig/XAdES evidence, local-reference policy, `xmlsec1` cryptographic verification, embedded certificate parsing, validity evidence, and first-list/signing-certificate equality for LoTL/LoTE types | Complete task scope; trust/profile coverage partial |
 | TS612-B05 | Separate `ts119612` result/report summary, CLI/API/OpenAPI exposure, Markdown rendering, and focused malformed/namespace/date/XSD/signature fixtures | Complete |
 
@@ -75,9 +75,9 @@ complete conformance validator.
 
 - The implemented field-presence checks are not a complete clause/cardinality,
   vocabulary, or semantic assessment.
-- No pinned, integrity-checked official TS 119 612 XSD/catalog bundle is used
-  automatically. `schema.xsd` remains `not_checked` unless CLI `--xsd` is
-  supplied.
+- The official V2.4.1 XSD/catalog bundle is pinned and integrity checked, but
+  is not yet selected automatically. `schema.xsd` remains `not_checked`
+  unless CLI `--xsd` is supplied.
 - V2.4.1 is the only selected normative version. The observed EUDI RI
   namespace variant remains a warning-only compatibility input whose normative
   status is not established.
@@ -91,9 +91,8 @@ complete conformance validator.
 - LoTL `OtherTSLPointer` structure, type/community qualifiers, pointer
   authentication, distribution consistency, and cross-list trust are not
   comprehensively validated.
-- The current score/conformance calculation is not tied to a normative
-  coverage ledger and can therefore be more optimistic than the implemented
-  coverage justifies.
+- Coverage gating prevents an incomplete requirements ledger from producing a
+  complete conformance verdict.
 
 ### TS 119 612 sequential task plan
 
@@ -102,8 +101,8 @@ Each row is intended to be one focused implementation prompt and one commit.
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
 | TS612-01 | Establish the exact supported TS 119 612 version/profile source set; create a clause/table requirements ledger with stable `ts119612.*` IDs, applicability, severity, citations and implementation status; gate verdicts on coverage so incomplete assessment cannot report full conformance | Baseline | Complete |
-| TS612-02 | Pin the applicable official base/extension XSDs, XMLDSig dependencies, licenses, immutable provenance, hashes and an offline catalog; add bundle integrity verification | TS612-01 | **Next** |
-| TS612-03 | Route every supported TS 119 612 namespace/version to the correct pinned schema automatically; retain `--xsd` only as an explicit override; report source-identified line diagnostics and document namespace/profile ambiguity | TS612-02 | Planned |
+| TS612-02 | Pin the applicable official base/extension XSDs, XMLDSig dependencies, licenses, immutable provenance, hashes and an offline catalog; add bundle integrity verification | TS612-01 | Complete |
+| TS612-03 | Route every supported TS 119 612 namespace/version to the correct pinned schema automatically; retain `--xsd` only as an explicit override; report source-identified line diagnostics and document namespace/profile ambiguity | TS612-02 | **Next** |
 | TS612-04 | Implement scheme-information structure and semantics: exact order/cardinality, version, sequence, type, operator name/address, scheme name/information URI, status approach, community rules, territory, policy/legal notice, issue/next-update, distribution points and extensions | TS612-01, TS612-03 | Planned |
 | TS612-05 | Implement TSP and service-information structure: exact nesting/cardinality, multilingual names/addresses/URIs, service types/names, digital identities, status/start time, supply points, definitions and extensions | TS612-04 | Planned |
 | TS612-06 | Implement service history, qualifiers and certificate semantics: history ordering/retention, status transitions, qualifier vocabularies, identity equivalence, certificate roles/purpose and deterministic certificate evidence | TS612-05 | Planned |

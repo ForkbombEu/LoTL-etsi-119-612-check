@@ -8,7 +8,7 @@ export const TS119612_SOURCE = Object.freeze({
   url: "https://www.etsi.org/deliver/etsi_TS/119600_119699/119612/02.04.01_60/ts_119612v020401p.pdf",
   canonicalNamespace: "http://uri.etsi.org/02231/v2#",
   tslVersionIdentifier: 6,
-  normativeSections: ["4", "5", "6", "Annex B", "Annex C", "Annex D", "Annex E", "Annex J"],
+  normativeSections: ["4", "5", "6", "Annex B", "Annex C", "Annex D", "Annex E", "Annex G", "Annex J"],
   schemaPrecedence: "document_text_prevails",
   schemaPrecedenceCitation: "Annex C",
 } as const);
@@ -131,6 +131,7 @@ export const TS119612_REQUIREMENTS: readonly Ts119612Requirement[] = Object.free
   requirement("ts119612.binding.xml_schema", "Official XML schema", "Validate the integrity-checked V2.4.1 Annex C schema set offline while retaining document-over-schema precedence.", "schema", "shall", "critical", "local", [cite("Annex B.0"), cite("Annex C")], "partial", ["schema.xsd"]),
   requirement("ts119612.registry.uris", "Registered URI vocabulary", "Validate applicable registered values and relationships from normative Annex D.", "semantic", "shall", "error", "local", [cite("Annex D")], "partial", ["structure.status_determination_approach.value"]),
   requirement("ts119612.multilingual.annex_e", "Annex E multilingual implementation", "Validate language/country tables, required transliteration and character restrictions.", "syntax", "shall", "error", "local", [cite("Annex E")], "not_implemented"),
+  requirement("ts119612.management.annex_g", "Management and policy considerations", "Assess administrative changes, service identification and status/identity changes, amendment timing, ongoing authenticity, user references and TL size using supplied local and operational evidence.", "operations", "mixed", "error", "mixed", [cite("Annex G")], "not_implemented"),
   requirement("ts119612.migration.annex_j", "EU trusted-list migration", "Apply Annex J migration rules only when the assessed historical/current EU context makes them applicable.", "semantic", "conditional", "error", "mixed", [cite("Annex J")], "not_implemented"),
 ]);
 

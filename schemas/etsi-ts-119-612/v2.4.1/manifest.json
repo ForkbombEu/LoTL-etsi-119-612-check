@@ -1,0 +1,192 @@
+{
+  "manifestVersion": 1,
+  "standard": "ETSI TS 119 612",
+  "standardVersion": "2.4.1",
+  "retrievedAt": "2026-07-22",
+  "normativeSource": {
+    "document": "https://www.etsi.org/deliver/etsi_TS/119600_119699/119612/02.04.01_60/ts_119612v020401p.pdf",
+    "electronicAttachment": "https://www.etsi.org/deliver/etsi_TS/119600_119699/119612/02.04.01_60/ts_119612v020401p0.zip",
+    "electronicAttachmentSha256": "d2eb0bf4cda3b6a4d123f5ea2c0f4bd0ec8157a03111404603ba678908ea9413",
+    "electronicAttachmentBytes": 6874,
+    "attachmentFiles": [
+      {
+        "path": "19612_xsd.xsd",
+        "sha256": "10b6e5b9295aa55baf428e7435bb1c5b7bb2cdaec554c4dd4cc98d3003ba94d3",
+        "bytes": 27101,
+        "pinnedPath": "19612_xsd.xsd",
+        "pinnedNormalization": "CRLF_to_LF",
+        "contentEqualAfterNormalization": true
+      },
+      {
+        "path": "19612_sie_xsd.xsd",
+        "sha256": "feda01756b245812f575118fc53b4fae5876f31265594d11ccee8e12ca705271",
+        "bytes": 5078,
+        "pinnedPath": "19612_sie_xsd.xsd",
+        "pinnedNormalization": "CRLF_to_LF",
+        "contentEqualAfterNormalization": true
+      },
+      {
+        "path": "19612_additionaltypes_xsd.xsd",
+        "sha256": "762ebd6376548937eecc5f35d166a64f44beff0a7eaab7655844fd832840f3bb",
+        "bytes": 3351,
+        "pinnedPath": "19612_additionaltypes_xsd.xsd",
+        "pinnedNormalization": "CRLF_to_LF",
+        "contentEqualAfterNormalization": true
+      }
+    ]
+  },
+  "sources": {
+    "etsiForge": {
+      "repository": "https://forge.etsi.org/rep/esi/x19_612_trusted_lists",
+      "tag": "v2.4.1",
+      "commit": "812fe781d37ead5b0ad562f2874ef5f67fc3a4dd",
+      "license": "BSD-3-Clause",
+      "licenseUrl": "https://forge.etsi.org/legal-matters",
+      "licensePath": "LICENSE"
+    },
+    "etsiUri": {
+      "repository": "https://uri.etsi.org/01903/v1.3.2/",
+      "license": "ETSI-Software-Clause-9.2",
+      "licenseUrl": "https://www.etsi.org/resources/intellectual-property-rights/",
+      "licensePath": "LICENSE-ETSI-SOFTWARE.md"
+    },
+    "w3c": {
+      "repository": "https://www.w3.org/",
+      "license": "W3C-19980720",
+      "licenseUrl": "https://www.w3.org/Consortium/Legal/copyright-software-19980720",
+      "licensePath": "dependencies/w3c/LICENSE-W3C-19980720.html"
+    }
+  },
+  "entrypoints": {
+    "base": "19612_xsd.xsd",
+    "serviceInformationExtension": "19612_sie_xsd.xsd",
+    "additionalTypes": "19612_additionaltypes_xsd.xsd",
+    "catalog": "catalog.xml"
+  },
+  "resolvers": {
+    "https://forge.etsi.org/rep/esi/x19_612_trusted_lists/-/raw/v2.4.1/19612_xsd.xsd": "19612_xsd.xsd",
+    "https://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd": "dependencies/etsi/XAdES01903v132-201601.xsd",
+    "http://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd": "dependencies/etsi/XAdES01903v132-201601.xsd",
+    "http://www.w3.org/2001/xml.xsd": "dependencies/w3c/xml.xsd",
+    "https://www.w3.org/2001/xml.xsd": "dependencies/w3c/xml.xsd",
+    "http://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd": "dependencies/w3c/xmldsig-core-schema.xsd",
+    "https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd": "dependencies/w3c/xmldsig-core-schema.xsd",
+    "http://www.w3.org/2001/XMLSchema.dtd": "dependencies/w3c/XMLSchema.dtd",
+    "https://www.w3.org/2001/XMLSchema.dtd": "dependencies/w3c/XMLSchema.dtd",
+    "datatypes.dtd": "dependencies/w3c/datatypes.dtd"
+  },
+  "notes": [
+    "The three ETSI schemas are pinned from immutable Forge tag v2.4.1 using LF line endings. Their content is byte-equivalent to the official electronic attachment after CRLF-to-LF normalization; both archive and attachment-member hashes are recorded.",
+    "The XAdES dependency is pinned from the exact ETSI URI imported by the V2.4.1 extension schemas. Its published CRLF source hash is 5d491d4031fc98cdc2b515810c70578e9c52dfdc132f1ffa4a267a51084fcb68 (24094 bytes); the pinned file uses LF normalization.",
+    "The XML catalog and resolver map every imported schema and XMLSchema DTD dependency to pinned local files. Unknown remote, absolute and traversal references are rejected.",
+    "Schema validity is evidence only. Annex C states that the normative specification prevails if an electronic schema conflicts with its text."
+  ],
+  "files": [
+    {
+      "path": "LICENSE",
+      "source": "etsiForge",
+      "sourcePath": "LICENSE",
+      "sha256": "d74b5c11a994434905178d2bb2accf881ef9955795dcd676432fbceefb8e36a6",
+      "bytes": 1476,
+      "role": "license",
+      "mediaType": "text/plain"
+    },
+    {
+      "path": "LICENSE-ETSI-SOFTWARE.md",
+      "source": "local",
+      "sha256": "1a4fcd3c734af00bc7499b2cc0401882507eeeed128fb48e31491a75544f3583",
+      "bytes": 774,
+      "role": "etsi-license-provenance-notice",
+      "mediaType": "text/markdown"
+    },
+    {
+      "path": "19612_xsd.xsd",
+      "source": "etsiForge",
+      "sourcePath": "19612_xsd.xsd",
+      "sha256": "0cb6ac0e96f9600934d216513f21e4cc5b41f8c8c28a8e42102a8135b24df3e1",
+      "bytes": 26644,
+      "role": "xml-base-schema",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "19612_sie_xsd.xsd",
+      "source": "etsiForge",
+      "sourcePath": "19612_sie_xsd.xsd",
+      "sha256": "382fcf497770a5842ac9975db0f14020c33c936b1903e057548ad6724cf42d69",
+      "bytes": 4986,
+      "role": "xml-service-information-extension-schema",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "19612_additionaltypes_xsd.xsd",
+      "source": "etsiForge",
+      "sourcePath": "19612_additionaltypes_xsd.xsd",
+      "sha256": "25f9292d8c246cbacab9f345451d64cdb63154a12042ffc675cdf2c88896948b",
+      "bytes": 3308,
+      "role": "xml-additional-types-schema",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/etsi/XAdES01903v132-201601.xsd",
+      "source": "etsiUri",
+      "sourceUrl": "https://uri.etsi.org/01903/v1.3.2/XAdES01903v132-201601.xsd",
+      "sha256": "457745286eaa292ae1aaa6e976e0f30eeceb0a37cc2301151576175e0ae1986c",
+      "bytes": 23562,
+      "role": "xades-schema-dependency",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/w3c/xml.xsd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/2001/xml.xsd",
+      "sha256": "61960fb3131e38022caad5360e2f33a3382578ab3c80cd58bd74320ede61b20c",
+      "bytes": 8836,
+      "role": "xml-namespace-schema-dependency",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/w3c/xmldsig-core-schema.xsd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/TR/2008/REC-xmldsig-core-20080610/xmldsig-core-schema.xsd",
+      "sha256": "35cf8197da812c85e40d57891b35c94187569ed474a2dac813ce5090dafcd35c",
+      "bytes": 10293,
+      "role": "xmldsig-schema-dependency",
+      "mediaType": "application/xml"
+    },
+    {
+      "path": "dependencies/w3c/XMLSchema.dtd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/2001/XMLSchema.dtd",
+      "sha256": "2032ead9fd47a61b22fe56aa02be1840bd9bb9015b0c0d3f1e8aac75dd91c3b9",
+      "bytes": 16075,
+      "role": "xml-schema-dtd-dependency",
+      "mediaType": "application/xml-dtd"
+    },
+    {
+      "path": "dependencies/w3c/datatypes.dtd",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/2001/datatypes.dtd",
+      "sha256": "6946432ca7af2e9584f91b48564111fd2c73c8debbbcd9a0e3f5ddd382eeb51c",
+      "bytes": 6357,
+      "role": "xml-schema-datatypes-dtd-dependency",
+      "mediaType": "application/xml-dtd"
+    },
+    {
+      "path": "dependencies/w3c/LICENSE-W3C-19980720.html",
+      "source": "w3c",
+      "sourceUrl": "https://www.w3.org/Consortium/Legal/copyright-software-19980720",
+      "sha256": "d4eedcb04dc16687b6d56b49ed06e1b55f599b8bd8e518af9773d1b7d2cf5c76",
+      "bytes": 4261,
+      "role": "license",
+      "mediaType": "text/html"
+    },
+    {
+      "path": "catalog.xml",
+      "source": "local",
+      "sha256": "b6922d4f0e89597bf995b460540fdf3489e4c3c81de8383bf73836c0a80f727b",
+      "bytes": 2149,
+      "role": "offline-xml-catalog",
+      "mediaType": "application/xml"
+    }
+  ]
+}

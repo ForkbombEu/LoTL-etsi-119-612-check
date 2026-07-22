@@ -321,9 +321,9 @@ explicit warning-only compatibility input; its normative status is not
 assumed.
 
 The TS 119 612 requirements ledger in
-`src/standards/ts119612Requirements.ts` inventories 68 coherent families
-across clauses 4-6 and normative Annexes B-E/J. It currently records 1 family
-as implemented, 30 as partial, and 37 as not implemented. Every applicable
+`src/standards/ts119612Requirements.ts` inventories 69 coherent families
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 1 family
+as implemented, 30 as partial, and 38 as not implemented. Every applicable
 assessment includes `ts119612.coverage.complete`; incomplete coverage prevents
 the result from ever becoming `conformant`, while concrete failures remain
 visible as partial/non-conformance evidence.
@@ -349,6 +349,24 @@ implemented.
 ### Optional local XSD validation
 
 Pass `--xsd <path>` to validate fetched XML with a local schema through `xmllint`. The tool does not download schemas, and invokes `xmllint` with `--nonet` to prohibit schema-driven network access. If no schema is supplied, the schema check is `not_checked`; if `xmllint` is unavailable, it is also `not_checked` with an actionable message. An `xmllint` validation failure is reported as a schema finding in both JSON and Markdown output.
+
+### Pinned ETSI TS 119 612 schemas
+
+The official ETSI TS 119 612 V2.4.1 base, service-information extension and
+additional-types schemas are pinned under
+`schemas/etsi-ts-119-612/v2.4.1/`. The manifest records the official ETSI
+electronic-attachment hash and member hashes, the immutable Forge tag/commit,
+the exact XAdES and W3C dependencies, byte lengths, SHA-256 hashes and source
+licences. The Forge files use LF line endings and are recorded as
+content-equivalent to the official CRLF attachment members after newline
+normalization.
+
+`src/standards/ts119612Schemas.ts` verifies every bundled file and resolves
+only allowlisted local schema references. The offline catalog maps the exact
+published ETSI imports plus their required W3C schema/DTD dependencies. Unknown
+remote, absolute and traversal references are rejected. Automatic namespace
+routing and default validation are intentionally deferred to TS612-03; for now
+the existing `--xsd` behavior remains unchanged.
 
 ### Pinned ETSI TS 119 602 schemas
 

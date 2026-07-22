@@ -18,7 +18,7 @@ describe("ETSI TS 119 612 requirements ledger", () => {
       url: "https://www.etsi.org/deliver/etsi_TS/119600_119699/119612/02.04.01_60/ts_119612v020401p.pdf",
       canonicalNamespace: "http://uri.etsi.org/02231/v2#",
       tslVersionIdentifier: 6,
-      normativeSections: ["4", "5", "6", "Annex B", "Annex C", "Annex D", "Annex E", "Annex J"],
+      normativeSections: ["4", "5", "6", "Annex B", "Annex C", "Annex D", "Annex E", "Annex G", "Annex J"],
       schemaPrecedence: "document_text_prevails",
       schemaPrecedenceCitation: "Annex C",
     });
@@ -54,10 +54,10 @@ describe("ETSI TS 119 612 requirements ledger", () => {
 
   it("reports incomplete coverage without implying conformance", () => {
     expect(summarizeTs119612Requirements()).toMatchObject({
-      total: 68,
+      total: 69,
       implemented: 1,
       partial: 30,
-      notImplemented: 37,
+      notImplemented: 38,
       complete: false,
     });
   });
