@@ -44,6 +44,13 @@ describe("ETSI TS 119 612 requirements ledger", () => {
         existingCheckIds: ["structure.tsl_version_identifier", "structure.tsl_version_identifier.value"],
       },
     });
+    expect(findTs119612Requirement("ts119612.tsp.trade_name")).toMatchObject({
+      requirementLevel: "shall",
+      implementation: { status: "partial", existingCheckIds: ["ts119612.tsp.1.trade_name"] },
+    });
+    expect(findTs119612Requirement("ts119612.tsp.services")).toMatchObject({
+      implementation: { status: "implemented" },
+    });
     expect(filterTs119612Requirements({ artifactKind: "ts119612_xml_lotl" }))
       .toEqual(expect.arrayContaining([expect.objectContaining({ checkId: "ts119612.scheme.pointers.structure" })]));
     expect(filterTs119612Requirements({ artifactKind: "ts119612_xml_tsl" }))
@@ -55,9 +62,9 @@ describe("ETSI TS 119 612 requirements ledger", () => {
   it("reports incomplete coverage without implying conformance", () => {
     expect(summarizeTs119612Requirements()).toMatchObject({
       total: 69,
-      implemented: 5,
-      partial: 32,
-      notImplemented: 32,
+      implemented: 7,
+      partial: 37,
+      notImplemented: 25,
       complete: false,
     });
   });

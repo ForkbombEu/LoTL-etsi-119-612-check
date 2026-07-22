@@ -23,7 +23,7 @@ describe("assessTs119612Xml", () => {
         expect.objectContaining({
           id: "ts119612.coverage.complete",
           status: "not_checked",
-          evidence: expect.objectContaining({ total: 69, implemented: 5, complete: false }),
+          evidence: expect.objectContaining({ total: 69, implemented: 7, complete: false }),
         }),
       ]),
     );

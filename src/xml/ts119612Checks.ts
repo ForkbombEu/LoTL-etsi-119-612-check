@@ -1,5 +1,4 @@
 import type { CertificateSummary, CheckResult, ConformanceLevel, TrustedListAuditResult } from "../types.js";
-import { tryCertificateFromBase64 } from "../certs.js";
 import {
   summarizeTs119612Requirements,
   TS119612_COMPATIBILITY_INPUTS,
@@ -9,6 +8,7 @@ import { validateTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
 import { assessTs119612SchemeInformation } from "./ts119612SchemeInformation.js";
+import { assessTs119612TspServices } from "./ts119612TspServices.js";
 import { validateTs119612XmlSchema } from "./ts119612Xsd.js";
 import type { XsdValidationDependencies } from "./xsd.js";
 import { D, L, has, nodes, text, texts } from "./xpath.js";
@@ -138,19 +138,13 @@ export async function assessTs119612Xml(
   checkExists(checks, document, "structure.list_issue_date_time", D("ListIssueDateTime"), "ListIssueDateTime exists.", "error");
   checkExists(checks, document, "structure.next_update", D("NextUpdate"), "NextUpdate exists.", "error");
   checkExists(checks, document, "structure.distribution_points", D("DistributionPoints"), "DistributionPoints exists.", "warning");
-  if (artifactKind === "ts119612_xml_tsl") {
-    checkExists(checks, document, "structure.trust_service_provider_list", D("TrustServiceProviderList"), "TrustServiceProviderList exists for a Trusted List artifact.", "error");
-  } else {
-    push(checks, "structure.trust_service_provider_list", "structure", "not_applicable", "info", "TrustServiceProviderList is not required by this implemented check for an XML LoTL artifact.");
-  }
-
   checks.push(...dateChecks(
     extracted.listIssueDateTime,
     extracted.nextUpdate,
     assessmentDate,
     has(document, D("NextUpdate")),
   ));
-  const serviceAssessment = assessServices(document, assessmentDate, artifactKind === "ts119612_xml_tsl");
+  const serviceAssessment = assessTs119612TspServices(document, artifactKind, assessmentDate);
   checks.push(...serviceAssessment.checks);
   certificates.push(...serviceAssessment.certificates);
   extracted.certificates = certificates;
@@ -244,75 +238,6 @@ function extractMetadata(document: Document): ExtractedMetadata {
     nextUpdate: text(document, `${D("NextUpdate")}//*[local-name()='dateTime'] | ${D("NextUpdate")}`),
     distributionPoints: texts(document, `${D("DistributionPoints")}//*[local-name()='URI']`),
   };
-}
-
-function assessServices(document: Document, assessmentDate: Date, expectTspContent: boolean): {
-  checks: CheckResult[];
-  certificates: CertificateSummary[];
-  tspCount: number;
-  serviceCount: number;
-} {
-  const checks: CheckResult[] = [];
-  const certificates: CertificateSummary[] = [];
-  const tsps = nodes(document, D("TrustServiceProvider"));
-  const services = nodes(document, D("ServiceInformation"));
-  if (!expectTspContent) {
-    return { checks, certificates, tspCount: tsps.length, serviceCount: services.length };
-  }
-  push(checks, "services.tsp_count", "services", tsps.length > 0 ? "pass" : "warn", "warning", "TrustServiceProvider entries counted.", tsps.length);
-
-  tsps.forEach((tsp, tspIndex) => {
-    const prefix = `services.tsp.${tspIndex + 1}`;
-    checkExists(checks, tsp, `${prefix}.information`, `.//*[local-name()='TSPInformation']`, "TSPInformation exists.", "error");
-    checkExists(checks, tsp, `${prefix}.name`, `.//*[local-name()='TSPName']`, "TSPName exists.", "error");
-    checkExists(checks, tsp, `${prefix}.address`, `.//*[local-name()='TSPAddress']`, "TSPAddress exists.", "error");
-    const tspServices = nodes(tsp, `.//*[local-name()='TSPServices']/*[local-name()='TSPService']`);
-    push(checks, `${prefix}.service_count`, "services", tspServices.length > 0 ? "pass" : "warn", "warning", "TSPServices/ServiceInformation entries counted.", tspServices.length);
-    tspServices.forEach((service, serviceIndex) => {
-      const servicePrefix = `${prefix}.service.${serviceIndex + 1}`;
-      checkExists(checks, service, `${servicePrefix}.type_identifier`, `.//*[local-name()='ServiceTypeIdentifier']`, "ServiceTypeIdentifier exists.", "error");
-      checkExists(checks, service, `${servicePrefix}.service_name`, `.//*[local-name()='ServiceName']`, "ServiceName exists.", "error");
-      checkExists(checks, service, `${servicePrefix}.digital_identity`, `.//*[local-name()='ServiceDigitalIdentity']`, "ServiceDigitalIdentity exists.", "error");
-      checkExists(checks, service, `${servicePrefix}.status`, `.//*[local-name()='ServiceStatus']`, "ServiceStatus exists.", "error");
-      checkExists(checks, service, `${servicePrefix}.status_starting_time`, `.//*[local-name()='StatusStartingTime']`, "StatusStartingTime exists.", "error");
-    });
-  });
-
-  const certTexts = texts(document, `${D("ServiceDigitalIdentity")}//*[local-name()='X509Certificate']`);
-  certTexts.forEach((certText, index) => {
-    const cert = tryCertificateFromBase64(certText, "service_digital_identity", assessmentDate);
-    if (!cert) {
-      checks.push({
-        id: `certificates.service.${index + 1}.parse`,
-        category: "certificates",
-        status: "fail",
-        severity: "error",
-        message: "Service digital identity X.509 certificate could not be parsed.",
-      });
-      return;
-    }
-    certificates.push(cert);
-    checks.push({
-      id: `certificates.service.${index + 1}.parse`,
-      category: "certificates",
-      status: "pass",
-      severity: "info",
-      message: "Service digital identity X.509 certificate parsed.",
-      evidence: { subject: cert.subject, fingerprintSha256: cert.fingerprintSha256 },
-    });
-    if (cert.validAtAssessmentTime === false) {
-      checks.push({
-        id: `certificates.service.${index + 1}.validity`,
-        category: "certificates",
-        status: "warn",
-        severity: "warning",
-        message: "Service digital identity certificate is expired or not yet valid at assessment time.",
-        evidence: { notBefore: cert.notBefore, notAfter: cert.notAfter },
-      });
-    }
-  });
-
-  return { checks, certificates, tspCount: tsps.length, serviceCount: services.length };
 }
 
 function dateChecks(

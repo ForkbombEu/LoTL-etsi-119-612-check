@@ -323,8 +323,8 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 5
-families as implemented, 32 as partial, and 32 as not implemented. Every
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 7
+families as implemented, 37 as partial, and 25 as not implemented. Every
 applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
@@ -340,6 +340,16 @@ history period, strict UTC issuance, exact six-calendar-month next update,
 distribution URIs and extension criticality. Registry recognition, referenced
 URI content, sequence progression, distribution equality, legal authority and
 historical retention remain explicit contextual limitations.
+
+TSP and current-service assessment validates direct provider/service nesting,
+the 52 registered V2.4.1 service-type URIs, multilingual names and information
+pointers, mandatory TSP official-identifier syntax, postal/electronic contact
+structure, PKI versus non-PKI identity representation, EU status families,
+strict status-start ordering, conditional service definitions, supply-point
+URIs and base extension criticality. It retains the prior indexed finding IDs
+while adding requirement-oriented findings. Registry/legal facts, certificate
+and representation equivalence, target content, transition history and detailed
+extension semantics remain explicit limitations.
 
 For XML signatures, the report records signature presence, embedded signing-certificate presence and parsing, Reference URIs, expected-root coverage, whether cryptographic verification was attempted, its result or limitation, and XAdES-property detection. Parsed embedded certificates include subject, issuer, serial number, validity period, assessment-time validity, and SHA-256 fingerprint in JSON and Markdown evidence.
 
