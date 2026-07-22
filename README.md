@@ -26,10 +26,10 @@ npm run build
 
 Node.js 20 or newer is required.
 
-Cryptographic XMLDSig verification also requires the `xmlsec1` executable on
-`PATH`. On Debian/Ubuntu, the repository's `.mise.toml` declares it as a Mise
-bootstrap package, so the complete development environment can be installed
-with:
+Cryptographic XMLDSig verification requires `xmlsec1`, and XML Schema
+validation requires `xmllint`, on `PATH`. On Debian/Ubuntu, the repository's
+`.mise.toml` declares both as Mise bootstrap packages, so the complete
+development environment can be installed with:
 
 ```bash
 mise bootstrap
@@ -38,12 +38,13 @@ mise bootstrap
 Without Mise, install it directly:
 
 ```bash
-sudo apt-get install xmlsec1
+sudo apt-get install xmlsec1 libxml2-utils
 ```
 
-If `xmlsec1` is unavailable, the audit still runs and reports cryptographic
-verification as `not_checked`; signature structure and certificate evidence
-checks remain available.
+If either executable is unavailable, the audit still runs: cryptographic
+verification is reported as `not_checked`, while applicable XSD validation is
+reported as `not_checked` or `unsupported`. Signature structure, certificate
+evidence, and semantic checks remain available.
 
 ## CLI examples
 

@@ -4,3 +4,4 @@ npm = "11.6.2"
 
 [bootstrap.packages]
 "apt:xmlsec1" = "latest"
+"apt:libxml2-utils" = "latest"
