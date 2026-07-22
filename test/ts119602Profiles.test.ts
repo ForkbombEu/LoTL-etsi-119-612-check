@@ -14,11 +14,17 @@ import {
 type SelectedProfile = Exclude<Ts119602Profile, "unknown">;
 
 let certificate = "";
+let endEntityCertificate = "";
+let caCertificate = "";
 
 beforeAll(async () => {
   const compact = (await readFile("test/fixtures/ts119602-jades-compact.jws", "utf8")).trim();
   const header = parseCompactJades(compact).protectedHeader;
   certificate = (header?.x5c as string[])[0];
+  endEntityCertificate = (await readFile("test/fixtures/ts119612-service-end-entity.cert.pem", "utf8"))
+    .replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s+/g, "");
+  caCertificate = (await readFile("test/fixtures/ts119612-service-ca.cert.pem", "utf8"))
+    .replace(/-----BEGIN CERTIFICATE-----|-----END CERTIFICATE-----|\s+/g, "");
 });
 
 describe("ETSI TS 119 602 Annex D-I profile validation", () => {
@@ -95,6 +101,61 @@ describe("ETSI TS 119 602 Annex D-I profile validation", () => {
     const pubEaa = profileInput("pub_eaa_providers");
     pubEaa.entities.entities[0].tradeName = [{ language: "en", value: "missing law reference" }];
     expect(find(buildTs119602ProfileFindings(pubEaa), "ts119602.profile.pub_eaa_providers.trusted_entity")).toMatchObject({ status: "fail" });
+
+    const greek = profileInput("pid_providers");
+    greek.entities.entities[0].informationUris[1].value = "http://uri.etsi.org/19602/ListOfTrustedEntities/PIDProvider/EL";
+    expect(find(buildTs119602ProfileFindings(greek), "ts119602.profile.pid_providers.trusted_entity")).toMatchObject({ status: "pass" });
+    greek.entities.entities[0].informationUris[1].value = "http://uri.etsi.org/19602/ListOfTrustedEntities/PIDProvider/GR";
+    expect(find(buildTs119602ProfileFindings(greek), "ts119602.profile.pid_providers.trusted_entity")).toMatchObject({ status: "fail" });
+  });
+
+  it("validates asserted registration identifiers without claiming an official-record match", () => {
+    const malformed = profileInput("pid_providers");
+    malformed.entities.entities[0].tradeNamePresent = true;
+    malformed.entities.entities[0].tradeName = [{ language: "en", value: "VATde-malformed" }];
+    expect(find(buildTs119602ProfileFindings(malformed), "ts119602.profile.pid_providers.trusted_entity")).toMatchObject({
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: [expect.objectContaining({
+          registrationIdentifiers: expect.objectContaining({ malformedIdentifiers: ["VATde-malformed"], valid: false }),
+        })],
+      }),
+    });
+
+    const asserted = profileInput("pid_providers");
+    asserted.entities.entities[0].tradeNamePresent = true;
+    asserted.entities.entities[0].tradeName = [{ language: "en", value: "VATDE-123456789" }];
+    expect(find(buildTs119602ProfileFindings(asserted), "ts119602.profile.pid_providers.trusted_entity")).toMatchObject({
+      status: "pass",
+      evidence: expect.objectContaining({
+        results: [expect.objectContaining({ officialRegistrationMatch: "not_checked_without_authoritative_records" })],
+      }),
+    });
+    expect(find(buildTs119602ProfileFindings(asserted), "ts119602.profile.pid_providers.service")).toMatchObject({
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: [expect.objectContaining({ certificateRegistrationMatch: expect.objectContaining({ required: true, valid: false }) })],
+      }),
+    });
+  });
+
+  it("includes locally validated associated-body extension evidence in the profile result", () => {
+    const input = profileInput("wallet_providers");
+    input.entities.entities[0].extensionsPresent = true;
+    input.entities.entities[0].extensions = [{
+      path: "/entity/0/extension/0",
+      critical: false,
+      identifier: "OtherAssociatedBodies",
+      recognized: true,
+      payloadValid: false,
+      payloadEvidence: [{ AssociatedBodyName: [] }],
+    }];
+    expect(find(buildTs119602ProfileFindings(input), "ts119602.profile.wallet_providers.trusted_entity")).toMatchObject({
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: [expect.objectContaining({ associatedBodies: expect.objectContaining({ extensionCount: 1, valid: false }) })],
+      }),
+    });
   });
 
   it("enforces profile-specific service types, extensions, status/history, certificates, and supply points", () => {
@@ -114,6 +175,38 @@ describe("ETSI TS 119 602 Annex D-I profile validation", () => {
     const registrar = profileInput("registrars_and_registers");
     registrar.entities.entities[0].services[0].supplyPoints = [];
     expect(find(buildTs119602ProfileFindings(registrar), "ts119602.profile.registrars_and_registers.service")).toMatchObject({ status: "fail" });
+  });
+
+  it("requires WRPAC and WRPRC service certificates to be CA-capable certificate issuers", () => {
+    for (const profile of ["wrpac_providers", "wrprc_providers"] as const) {
+      const input = profileInput(profile);
+      input.entities.entities[0].services[0].identity.certificates[0].value = endEntityCertificate;
+      expect(find(buildTs119602ProfileFindings(input), `ts119602.profile.${profile}.service`)).toMatchObject({
+        status: "fail",
+        evidence: expect.objectContaining({
+          results: [expect.objectContaining({
+            certificatePurpose: expect.objectContaining({
+              purpose: "certificate_issuer_signature_verification",
+              valid: false,
+              observations: [expect.objectContaining({ ca: false, basicConstraintsValid: false })],
+            }),
+          })],
+        }),
+      });
+
+      input.entities.entities[0].services[0].identity.certificates[0].value = caCertificate;
+      expect(find(buildTs119602ProfileFindings(input), `ts119602.profile.${profile}.service`)).toMatchObject({
+        status: "pass",
+        evidence: expect.objectContaining({
+          results: [expect.objectContaining({
+            certificatePurpose: expect.objectContaining({
+              valid: true,
+              observations: [expect.objectContaining({ ca: true, keyUsage: expect.arrayContaining(["keyCertSign"]) })],
+            }),
+          })],
+        }),
+      });
+    }
   });
 
   it("keeps profile signature failure separate from otherwise passing profile families", () => {

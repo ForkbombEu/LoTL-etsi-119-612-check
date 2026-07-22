@@ -8,12 +8,14 @@ import type {
   Ts119602ServiceObservation,
 } from "./ts119602Entities.js";
 import type { Ts119602MetadataInput } from "./ts119602Metadata.js";
-import { parseTs119602UtcDateTime, validateTs119602Uri } from "./ts119602Syntax.js";
+import { parseTs119602UtcDateTime, validateTs119602CountryCode, validateTs119602Uri } from "./ts119602Syntax.js";
 
 const EU_MEMBER_STATES = new Set([
-  "AT", "BE", "BG", "HR", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "GR", "HU",
-  "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK",
+  "AT", "BE", "BG", "HR", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FR", "HU",
+  "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK", "EL",
 ]);
+
+const REGISTRATION_IDENTIFIER_PREFIXES = ["VAT", "NTR", "PAS", "IDC", "PNO", "TIN"] as const;
 
 interface ProfileDefinition {
   annex: "D" | "E" | "F" | "G" | "H" | "I";
@@ -34,7 +36,7 @@ interface ProfileDefinition {
   registerSupplyPoint?: true;
 }
 
-export const TS119602_PROFILE_REGISTRY_VERSION = "2026-07-21" as const;
+export const TS119602_PROFILE_REGISTRY_VERSION = "2026-07-22" as const;
 
 export const TS119602_PROFILE_REGISTRY = Object.freeze({
   pid_providers: definition("D", "pid_providers", "PID providers", "PIDProvidersList", "PIDProviders", "PIDProvider", ["PID/Issuance", "PID/Revocation"]),
@@ -153,6 +155,8 @@ function entityFinding(entities: Ts119602EntityObservation[], profile: ProfileDe
     const informationUris = entity.informationUris.map((entry) => entry.value);
     const roleUris = profile.roleUriLocation === "address" ? electronicUris : informationUris;
     const tradeNames = stringValues(entity.tradeName.map((entry) => entry.value));
+    const registrationIdentifiers = registrationIdentifierResult(tradeNames);
+    const associatedBodies = associatedBodyResult(entity);
     const result = {
       path: entity.path,
       namePresent: entity.name.some((entry) => nonEmptyString(entry.value)),
@@ -162,11 +166,16 @@ function entityFinding(entities: Ts119602EntityObservation[], profile: ProfileDe
       informationPagePresent: informationUris.some((value) => ["http", "https"].includes(uriScheme(value) ?? "")),
       countryRoleUriPresent: roleUris.some((value) => validCountryRoleUri(value, profile.roleUriName)),
       pubEaaLawReferencePresent: profile.profile !== "pub_eaa_providers" || tradeNames.some(validOjLawReference),
-      officialRegistrationMatch: "not_checked_without_authoritative_records",
+      registrationIdentifiers,
+      associatedBodies,
+      officialRegistrationMatch: registrationIdentifiers.validIdentifiers.length > 0
+        ? "not_checked_without_authoritative_records"
+        : "not_applicable_no_locally_asserted_identifier",
       valid: false,
     };
     result.valid = result.namePresent && result.postalAddressPresent && result.emailPresent && result.telephonePresent
-      && result.informationPagePresent && result.countryRoleUriPresent && result.pubEaaLawReferencePresent;
+      && result.informationPagePresent && result.countryRoleUriPresent && result.pubEaaLawReferencePresent
+      && registrationIdentifiers.valid && associatedBodies.valid;
     return result;
   });
   const valid = results.every((entry) => entry.valid);
@@ -200,6 +209,19 @@ function serviceResult(entity: Ts119602EntityObservation, service: Ts119602Servi
     const subjectNames = [...distinguishedNameValues(entry.subject, "O"), ...distinguishedNameValues(entry.subject, "CN")];
     return subjectNames.some((value) => entityNames.includes(value));
   });
+  const registrationIdentifiers = registrationIdentifierResult(stringValues(entity.tradeName.map((entry) => entry.value)));
+  const certificateRegistrationMatchRequired = ["pid_providers", "wallet_providers", "registrars_and_registers"].includes(profile.profile)
+    && registrationIdentifiers.validIdentifiers.length > 0;
+  const certificateRegistrationMatch = !certificateRegistrationMatchRequired || certificates.every((entry) => {
+    const certifiedIdentifiers = [
+      ...distinguishedNameValues(entry.subject, "organizationIdentifier"),
+      ...distinguishedNameValues(entry.subject, "serialNumber"),
+      ...distinguishedNameValues(entry.subject, "2.5.4.97"),
+      ...distinguishedNameValues(entry.subject, "2.5.4.5"),
+    ];
+    return registrationIdentifiers.validIdentifiers.some((value) => certifiedIdentifiers.includes(value));
+  });
+  const certificatePurpose = certificatePurposeResult(certificates, profile);
   const pubEaaCertificateConstraints = profile.serviceCertificates !== "optional_pub_eaa" || certificates.length === 0
     ? { applicable: false, valid: true }
     : pubEaaCertificateResult(certificates, entity);
@@ -226,13 +248,21 @@ function serviceResult(entity: Ts119602EntityObservation, service: Ts119602Servi
     certificateRequirement: profile.serviceCertificates,
     certificateValid,
     certificateNameMatch: { required: certificateNameMatchRequired, expectedNames: entityNames, valid: certificateNameMatch },
+    certificateRegistrationMatch: {
+      required: certificateRegistrationMatchRequired,
+      expectedIdentifiers: registrationIdentifiers.validIdentifiers,
+      valid: certificateRegistrationMatch,
+      authoritativeRegistrationChecked: false,
+    },
     pubEaaCertificateConstraints,
     status: { observed: service.status.value, present: service.status.present, statusStartingTime: service.statusStartingTime.value, rule: profile.serviceStatus, valid: statusValid },
     walletServiceIdentifier: { required: Boolean(profile.walletServiceIdentifier), valid: walletIdentifierValid },
     registerSupplyPoint: { required: Boolean(profile.registerSupplyPoint), points: service.supplyPoints, valid: supplyPointValid, authentication: profile.registerSupplyPoint ? "not_checked_until_dereferencing" : "not_applicable" },
     history: { instanceCount: service.history.length, pubEaaSkiOnlyRule: profile.profile === "pub_eaa_providers", valid: historyValid },
-    certificatePurpose: ["wrpac_providers", "wrprc_providers"].includes(profile.profile) ? "not_checked_without_certificate_policy_profile" : "not_applicable",
-    valid: typeValid && certificateValid && certificateNameMatch && pubEaaCertificateConstraints.valid && statusValid && walletIdentifierValid && supplyPointValid && historyValid,
+    certificatePurpose,
+    valid: typeValid && certificateValid && certificateNameMatch && certificateRegistrationMatch
+      && certificatePurpose.valid && pubEaaCertificateConstraints.valid && statusValid
+      && walletIdentifierValid && supplyPointValid && historyValid,
   };
 }
 
@@ -284,14 +314,28 @@ function pubEaaCertificateResult(certificates: ReturnType<typeof certificateObse
   };
 }
 
-function certificateObservation(value: unknown): { parsed: boolean; subject?: string; publicKeySha256?: string; error?: string } {
+function certificateObservation(value: unknown): {
+  parsed: boolean;
+  subject?: string;
+  publicKeySha256?: string;
+  ca?: boolean;
+  keyUsage?: string[];
+  error?: string;
+} {
   if (typeof value !== "string") return { parsed: false, error: "Certificate value is not a string." };
   try {
     const clean = normalizeBase64Certificate(value);
     if (!/^[A-Za-z0-9+/]+={0,2}$/.test(clean) || clean.length % 4 !== 0) return { parsed: false, error: "Certificate is not strict Base64." };
-    const certificate = new X509Certificate(Buffer.from(clean, "base64"));
+    const raw = Buffer.from(clean, "base64");
+    const certificate = new X509Certificate(raw);
     const publicKey = certificate.publicKey.export({ format: "der", type: "spki" });
-    return { parsed: true, subject: certificate.subject, publicKeySha256: createHash("sha256").update(publicKey).digest("hex") };
+    return {
+      parsed: true,
+      subject: certificate.subject,
+      publicKeySha256: createHash("sha256").update(publicKey).digest("hex"),
+      ca: certificate.ca,
+      keyUsage: certificateKeyUsage(raw),
+    };
   } catch (error) {
     return { parsed: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -341,7 +385,128 @@ function validCountryRoleUri(value: unknown, role: ProfileDefinition["roleUriNam
 }
 
 function validOjLawReference(value: string): boolean {
-  return /^OJ:(?:EU|[A-Z]{2}):?[^\s]+$/.test(value);
+  const match = /^OJ:(EU|[A-Z]{2}):?([^\s]+)$/.exec(value);
+  return Boolean(match && (match[1] === "EU" || EU_MEMBER_STATES.has(match[1])) && match[2].length > 0);
+}
+
+function registrationIdentifierResult(values: string[]) {
+  const attemptedIdentifiers = values.filter((value) => REGISTRATION_IDENTIFIER_PREFIXES.some((prefix) => value.startsWith(prefix)));
+  const validIdentifiers = attemptedIdentifiers.filter(validRegistrationIdentifier);
+  return {
+    values,
+    attemptedIdentifiers,
+    validIdentifiers,
+    malformedIdentifiers: attemptedIdentifiers.filter((value) => !validIdentifiers.includes(value)),
+    conditionalPresence: "official_identifier_required_only_where_registered",
+    valid: attemptedIdentifiers.length === validIdentifiers.length,
+  };
+}
+
+function validRegistrationIdentifier(value: string): boolean {
+  const match = /^(?:VAT|NTR|PAS|IDC|PNO|TIN)([A-Z]{2})-(\S+)$/.exec(value);
+  return Boolean(match && validateTs119602CountryCode(match[1]).outcome === "valid" && match[2].length > 0);
+}
+
+function associatedBodyResult(entity: Ts119602EntityObservation) {
+  const extensions = entity.extensions.filter((entry) => entry.identifier?.endsWith("OtherAssociatedBodies"));
+  return {
+    applicableProfiles: ["pid_providers", "wallet_providers"],
+    extensionCount: extensions.length,
+    extensions: extensions.map((entry) => ({
+      path: entry.path,
+      identifier: entry.identifier,
+      recognized: entry.recognized,
+      payloadValid: entry.payloadValid,
+      payloadEvidence: entry.payloadEvidence,
+    })),
+    responsibilityMatch: extensions.length > 0 ? "not_checked_without_external_role_evidence" : "not_applicable_no_associated_body_asserted",
+    valid: extensions.every((entry) => entry.recognized && entry.payloadValid),
+  };
+}
+
+function certificatePurposeResult(
+  certificates: ReturnType<typeof certificateObservation>[],
+  profile: ProfileDefinition,
+) {
+  const purpose = ["wrpac_providers", "wrprc_providers"].includes(profile.profile)
+    ? "certificate_issuer_signature_verification"
+    : profile.profile === "pub_eaa_providers"
+      ? "attestation_signature_or_issuing_ca_verification"
+      : "service_output_signature_or_seal_verification";
+  const observations = certificates.map((certificate) => {
+    const keyUsage = certificate.keyUsage ?? [];
+    const issuerCertificate = purpose === "certificate_issuer_signature_verification"
+      || (purpose === "attestation_signature_or_issuing_ca_verification" && certificate.ca === true);
+    const requiredUsages = issuerCertificate ? ["keyCertSign"] : ["digitalSignature", "nonRepudiation"];
+    const basicConstraintsValid = purpose !== "certificate_issuer_signature_verification" || certificate.ca === true;
+    const keyUsageValid = keyUsage.length === 0 || requiredUsages.some((usage) => keyUsage.includes(usage));
+    return {
+      parsed: certificate.parsed,
+      subject: certificate.subject,
+      ca: certificate.ca,
+      keyUsage,
+      requiredUsages,
+      basicConstraintsValid,
+      keyUsageValid,
+      valid: certificate.parsed && basicConstraintsValid && keyUsageValid,
+    };
+  });
+  return {
+    purpose,
+    observations,
+    certificatePolicies: "not_checked_no_profile_specific_policy_oid_is_defined_by_annex",
+    valid: observations.every((entry) => entry.valid),
+  };
+}
+
+function certificateKeyUsage(raw: Buffer): string[] {
+  const certificate = derTlv(raw, 0);
+  const tbs = derTlv(raw, certificate.contentStart);
+  let offset = tbs.contentStart;
+  while (offset < tbs.end) {
+    const item = derTlv(raw, offset);
+    if (item.tag === 0xa3) {
+      const sequence = derTlv(raw, item.contentStart);
+      let extensionOffset = sequence.contentStart;
+      while (extensionOffset < sequence.end) {
+        const extension = derTlv(raw, extensionOffset);
+        const oid = derTlv(raw, extension.contentStart);
+        let valueOffset = oid.end;
+        const maybeCritical = derTlv(raw, valueOffset);
+        if (maybeCritical.tag === 0x01) valueOffset = maybeCritical.end;
+        const octets = derTlv(raw, valueOffset);
+        if (raw.subarray(oid.contentStart, oid.end).toString("hex") === "551d0f") {
+          const bits = derTlv(raw, octets.contentStart);
+          return decodeKeyUsage(raw.subarray(bits.contentStart + 1, bits.end));
+        }
+        extensionOffset = extension.end;
+      }
+    }
+    offset = item.end;
+  }
+  return [];
+}
+
+function decodeKeyUsage(bits: Buffer): string[] {
+  const names = ["digitalSignature", "nonRepudiation", "keyEncipherment", "dataEncipherment", "keyAgreement", "keyCertSign", "crlSign", "encipherOnly", "decipherOnly"];
+  return names.filter((_name, index) => Boolean(bits[Math.floor(index / 8)] & (0x80 >> (index % 8))));
+}
+
+function derTlv(data: Buffer, offset: number): { tag: number; contentStart: number; end: number } {
+  if (offset + 2 > data.length) throw new Error("Invalid DER.");
+  const tag = data[offset];
+  const firstLength = data[offset + 1];
+  let length = firstLength;
+  let contentStart = offset + 2;
+  if (firstLength & 0x80) {
+    const octets = firstLength & 0x7f;
+    if (octets === 0 || octets > 4 || contentStart + octets > data.length) throw new Error("Invalid DER length.");
+    length = 0;
+    for (let index = 0; index < octets; index += 1) length = (length * 256) + data[contentStart + index];
+    contentStart += octets;
+  }
+  if (contentStart + length > data.length) throw new Error("Invalid DER bounds.");
+  return { tag, contentStart, end: contentStart + length };
 }
 
 function validUri(value: unknown): boolean {
@@ -361,10 +526,11 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function distinguishedNameValues(subject: string | undefined, attribute: "O" | "CN"): string[] {
+function distinguishedNameValues(subject: string | undefined, attribute: string): string[] {
   if (!subject) return [];
   const values: string[] = [];
-  const pattern = new RegExp(`(?:^|\\n|,\\s*)${attribute}=((?:\\\\.|[^\\n,])*)`, "g");
+  const escapedAttribute = attribute.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(?:^|\\n|,\\s*)${escapedAttribute}=((?:\\\\.|[^\\n,])*)`, "g");
   for (const match of subject.matchAll(pattern)) values.push(match[1].trim().replace(/\\\\([,=+<>#;"\\\\])/g, "$1"));
   return values;
 }

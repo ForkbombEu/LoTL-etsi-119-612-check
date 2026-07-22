@@ -57,9 +57,6 @@
           "TEName": [
             { "lang": "en", "value": "JSON-Operator" }
           ],
-          "TETradeName": [
-            { "lang": "en", "value": "VATDE-123456789" }
-          ],
           "TEAddress": {
             "TEPostalAddress": [
               { "lang": "en", "StreetAddress": "2 Wallet Street", "Country": "DE" }

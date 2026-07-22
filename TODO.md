@@ -174,6 +174,7 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | TS602-13 | Validate scheme-explicit XML with the integrity-checked pinned XSD/catalog and source-identified diagnostics | Complete |
 | TS602-14 | Map all 34 Annex A.2.2/Table A.1 components from typed, schema-gated TS 119 612 facts and apply base/Annex H checks without reparsing the XML | Complete; published tag/version conflicts remain explicit |
 | TS602-15 | Enforce exact direct XML/JSON entity/service nesting and cardinality; retain multilingual `TEInformationURI` evidence; validate local names, addresses, every URI, service names and Annex B native-term transliteration | Complete; dereferenced pointer content, parser capability and authoritative name/address semantics remain explicit |
+| TS602-16 | Validate locally asserted ETSI registration-identifier syntax, associated-body payloads, registration/certificate identity consistency, Annex role/law URIs, and certificate purpose through BasicConstraints/KeyUsage | Complete; official records, associated-body responsibility and certificate policy/chain authority remain explicit |
 
 ### Remaining TS 119 602 gaps
 
@@ -196,10 +197,14 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 - Validate `TEName`, `TETradeName`, address and `ServiceName` claims against
   authoritative registration/contact evidence when supplied; their local
   multilingual shape and URI syntax are implemented.
-- Validate legal/natural-person registration identifiers and associated-body
-  requirements where Annex D-H requires them.
-- Complete profile-specific cross-field consistency and certificate-purpose
-  policies.
+- Validate locally well-formed registration identifiers against authoritative
+  legal/natural-person records when such evidence is supplied; local ETSI
+  identifier syntax and certificate-subject consistency are implemented.
+- Validate the asserted responsibility of Annex D/E associated bodies when
+  external role evidence is supplied; local extension structure is
+  implemented.
+- Validate certificate-policy, chain and revocation authority beyond the
+  implemented profile-specific BasicConstraints and KeyUsage purpose checks.
 - Compare `PublicKeyValue` and `X509SKI` with accompanying certificates and
   support those identities for pointer authentication.
 
@@ -219,8 +224,8 @@ implemented. Therefore TS 119 602 as a whole is not complete.
 | --- | --- | --- | --- |
 | TS602-14 | Implement Annex A.2.2/Table A.1 component mapping for the TS 119 612 alternative XML binding, consuming validated TS 119 612 facts rather than reparsing with ad hoc XPath | TS602-13, TS612-06 | Complete |
 | TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | Complete; contextual pointer/name/address claims remain for TS602-18 |
-| TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | **Next cross-standard task** |
-| TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Planned |
+| TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Complete; authoritative records, role evidence and certificate-policy authority remain for TS602-18 |
+| TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | **Next cross-standard task** |
 | TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Planned |
 | TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | Planned |
 | TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | Planned |
@@ -265,7 +270,7 @@ The recommended implementation sequence is:
    standards. TS612-10 is complete.
 4. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
    and perform ledger-driven completion audits. TS612-12 is complete;
-   **TS602-16 is next.**
+   **TS602-17 is next.**
 
 Tasks that do not share files may be developed independently, but the stated
 dependencies must still be satisfied before a conformance claim is enabled.
