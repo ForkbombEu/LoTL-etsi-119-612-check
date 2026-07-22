@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/02231/v2#" Id="eudi-ri-fixture">
+  <SchemeInformation>
+    <TSLVersionIdentifier>6</TSLVersionIdentifier>
+    <TSLSequenceNumber>1</TSLSequenceNumber>
+    <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType>
+    <SchemeOperatorName><Name xml:lang="en">EUDI Wallet Reference Implementation</Name></SchemeOperatorName>
+    <SchemeOperatorAddress><ElectronicAddress><URI xml:lang="en">https://trustedlist.serviceproviders.eudiw.dev/</URI></ElectronicAddress></SchemeOperatorAddress>
+    <SchemeName><Name xml:lang="en">EUDI RI reduced test TL</Name></SchemeName>
+    <SchemeInformationURI><URI xml:lang="en">https://trustedlist.serviceproviders.eudiw.dev/</URI></SchemeInformationURI>
+    <StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate</StatusDeterminationApproach>
+    <SchemeTypeCommunityRules><URI xml:lang="en">http://uri.etsi.org/TrstSvc/TrustedList/schemerules/EUcommon</URI></SchemeTypeCommunityRules>
+    <SchemeTerritory>EU</SchemeTerritory>
+    <ListIssueDateTime>2026-07-01T00:00:00Z</ListIssueDateTime>
+    <NextUpdate><dateTime>2026-12-01T00:00:00Z</dateTime></NextUpdate>
+  </SchemeInformation>
+  <TrustServiceProviderList>
+    <TrustServiceProvider>
+      <TSPInformation>
+        <TSPName><Name xml:lang="en">EUDI RI test provider</Name></TSPName>
+      </TSPInformation>
+      <TSPServices>
+        <TSPService>
+          <ServiceInformation>
+            <ServiceTypeIdentifier>http://uri.etsi.org/Svc/Svctype/CA/RPaccess</ServiceTypeIdentifier>
+            <ServiceName><Name xml:lang="en">Test Access CA</Name></ServiceName>
+            <ServiceDigitalIdentity><DigitalId><X509Certificate>QUJD</X509Certificate></DigitalId></ServiceDigitalIdentity>
+            <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted</ServiceStatus>
+            <StatusStartingTime>2026-07-01T00:00:00Z</StatusStartingTime>
+          </ServiceInformation>
+        </TSPService>
+        <TSPService>
+          <ServiceInformation>
+            <ServiceTypeIdentifier>http://uri.etsi.org/Svc/Svctype/Provider/Wallet</ServiceTypeIdentifier>
+            <ServiceName><Name xml:lang="en">Test Wallet Provider</Name></ServiceName>
+            <ServiceDigitalIdentity><DigitalId><X509Certificate>REVG</X509Certificate></DigitalId></ServiceDigitalIdentity>
+            <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/recognisedatnationallevel</ServiceStatus>
+            <StatusStartingTime>2026-07-01T00:00:00Z</StatusStartingTime>
+          </ServiceInformation>
+        </TSPService>
+      </TSPServices>
+    </TrustServiceProvider>
+  </TrustServiceProviderList>
+</TrustServiceStatusList>

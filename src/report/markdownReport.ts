@@ -90,10 +90,28 @@ function renderResult(lines: string[], result: TrustedListAuditResult): void {
   lines.push(`- TS 119 602 classification reasons: ${result.ts119602Classification.reasons.join("; ")}`);
   lines.push(`- SHA-256: ${value(result.fetch.sha256)}`);
   lines.push(`- Standard applicability: TS 119 612=${result.standardApplicability.ts119612}; TS 119 602=${result.standardApplicability.ts119602}; WE BUILD=${result.standardApplicability.weBuildProfile}; EUDI trust role=${result.standardApplicability.eudiTrustRole}`);
+  renderReferenceProfile(lines, "EUDI RI TS 119 612 reference profile", result.referenceProfiles.eudiRiTs119612);
+  renderReferenceProfile(lines, "WE BUILD TS 119 612 reference profile", result.referenceProfiles.weBuildTs119612);
   renderStandardAssessment(lines, "ETSI TS 119 612", result.ts119612);
   renderStandardAssessment(lines, "ETSI TS 119 602", result.ts119602);
   renderMetadata(lines, result);
   renderCertificateEvidence(lines, result);
+}
+
+function renderReferenceProfile(
+  lines: string[],
+  title: string,
+  assessment: TrustedListAuditResult["referenceProfiles"]["eudiRiTs119612"],
+): void {
+  lines.push("");
+  lines.push(`### ${title}`);
+  lines.push("");
+  lines.push(`- Applicability: ${assessment.applicability}`);
+  lines.push(`- Recognized: ${assessment.recognized ? "yes" : "no"}`);
+  lines.push(`- Recognition: ${assessment.recognitionReasons.join("; ") || "none"}`);
+  lines.push(`- Observed EUDI roles: ${assessment.observedRoles.join(", ") || "none"}`);
+  lines.push("");
+  renderChecks(lines, "Profile findings", assessment.checks);
 }
 
 function renderStandardAssessment(

@@ -434,13 +434,17 @@ The official ETSI TS 119 602 V1.1.1 JSON and XML binding schemas are pinned unde
 
 TS 119 602 JSON and scheme-explicit XML assessments use these pinned schemas automatically. XML validation verifies every bundled file against the manifest before invoking `xmllint` with `--nonet` and the pinned catalog through `XML_CATALOG_FILES`. Its separate `ts119602.binding.xml_schema` finding records source commit/hash, bundle integrity, and structured line/column diagnostics. If `xmllint` is unavailable, the finding is `unsupported`; it never pretends validation passed. Schema success alone does not imply normative conformance because the ETSI specification prevails over conflicting electronic schemas.
 
-## Report schema v2
+## Report schema v5
 
-Reports now include `schemaVersion: 2`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, and `standardApplicability` for TS 119 612, TS 119 602, the WE BUILD profile, and EUDI trust roles. Markdown renders the same compact classification in its summary table.
+Reports now include `schemaVersion: 5`. Each assessed artifact has a stable report-local `id`, `source` (with the legacy `location` retained), detected format/kind, `standardApplicability`, and isolated `referenceProfiles` assessments for EUDI RI and WE BUILD TS 119 612 inputs. Markdown renders the same profile findings stored in JSON; profile observations are not inserted into ETSI conformance scoring.
 
 ## WE BUILD profile checks
 
-When the input identifies itself through the canonical WE BUILD WP4 LoTL type URI or WE BUILD WP4 scheme metadata, the report adds a `weBuildProfile` summary. It classifies implemented pointer list types, reports pointer MIME/format consistency, duplicate locations, missing identities/qualifiers, and parses available pointer certificates as evidence. These are profile checks, not a declaration of WE BUILD trust or certificate-chain validation.
+When a JSON LoTL identifies itself through the canonical WE BUILD WP4 LoTL type URI or WE BUILD WP4 scheme metadata, the report adds a `weBuildProfile` summary. It classifies implemented pointer list types, reports pointer MIME/format consistency, duplicate locations, missing identities/qualifiers, and parses available pointer certificates as evidence.
+
+TS 119 612 XML artifacts additionally receive `results[].referenceProfiles.weBuildTs119612`. Exact WE BUILD publication paths or embedded WP4 evidence select the profile. Checks record the canonical versus observed compatibility namespace, distribution-index/member-TL shape, unique HTTP(S) distribution references, EUDI role mappings, and X.509 trust-anchor evidence. The observed `19612/v2.4.1` namespace remains warning-only compatibility evidence.
+
+`results[].referenceProfiles.eudiRiTs119612` similarly recognizes the exact EUDI RI Trusted List Provider host or embedded RI evidence, compares `/LOTL/` and `/TL/` endpoints with the detected artifact role, classifies implemented wallet, PID, QEAA, Pub-EAA, Access CA, registration and registrar service types, and records whether role-bearing services contain X.509 identities. Every recognized EUDI RI artifact carries an explicit warning that it is a testing/reference input, not an implicit production trust source.
 
 ## EUDI RPAC/WRPAC chain assessment library
 
@@ -452,7 +456,7 @@ Every audit report includes `fixtureReadiness`, answering whether the audited bu
 
 Pass a local certificate chain with `--rpac-chain <path>`. The file may be a PEM bundle, one base64/DER value, a JSON string array, or a JSON object with `x5c`. The CLI assesses it against parseable pointer certificate material without promoting the RPAC leaf to an anchor.
 
-The live EUDI RI readiness smoke is manual only:
+The live EUDI RI readiness smoke is manual only. Normal profile tests use reduced deterministic fixtures:
 
 ```bash
 npm run eudi-ri-tlp-fixture-readiness
@@ -478,7 +482,7 @@ When a fetched artifact is JSON and contains a `LoTE` root, the tool classifies 
 Artifact is JSON LoTE/LoTL-style. ETSI TS 119 612 is XML Trusted List format; this artifact should be assessed under ETSI TS 119 602 / WE BUILD profile rules instead.
 ```
 
-Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v4 also has a separate `summary.ts119602` and `results[].ts119602Classification`.
+Deterministic local TS 119 602 JSON LoTE evidence checks run whenever a JSON LoTE is detected. The former `--include-json-lote-checks`, `includeJsonLoteChecks`, and `AUDIT_INCLUDE_JSON_LOTE_CHECKS` controls are retained as deprecated compatibility inputs but no longer disable those checks. The report keeps TS 119 602 findings in `results[].ts119602`, separately from `results[].ts119612`; report schema v5 also has a separate `summary.ts119602`, `results[].ts119602Classification`, and isolated TS 119 612 reference-profile results.
 
 JSON LoTE assessment now validates the official object/array model against the pinned V1.1.1 Draft-07 schema entirely offline. URI and date-time formats are enforced, and schema failures report JSON Pointer, schema path/keyword, expected value, observed value/type, and the exact schema source commit and SHA-256. The official `TrustedEntitiesList[]` and nested service arrays are parsed directly. The legacy WE BUILD/TSL-like `TrustedEntitiesList.TrustServiceProvider[]` shape is handled only by an isolated compatibility adapter and receives explicit schema and compatibility failures while retaining extractable evidence.
 
@@ -490,7 +494,7 @@ Optional contextual assessment compares supplied prior instances, requires certi
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
-Report schema v4 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
+Report schema v5 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
 
 For scheme-explicit TS 119 602 XML, the normative entity path implemented by
 the tool is

@@ -243,7 +243,7 @@ paths:
               emptyReport:
                 value:
                   report:
-                    schemaVersion: 4
+                    schemaVersion: 5
                     tool: { name: we-build-tl-audit, version: 0.1.0 }
                     generatedAt: '2026-07-16T00:00:00.000Z'
                     input: { source: request-body, kind: json }
@@ -575,7 +575,7 @@ components:
       type: object
       required: [schemaVersion, tool, generatedAt, input, lotl, weBuildProfile, fixtureReadiness, fcafTrustedAuthorities, negativeFixtureDescriptors, summary, results]
       properties:
-        schemaVersion: { type: integer, const: 4 }
+        schemaVersion: { type: integer, const: 5 }
         tool:
           type: object
           required: [name, version]
@@ -764,7 +764,7 @@ components:
           items: { type: string }
     TrustedListAuditResult:
       type: object
-      required: [id, index, source, location, declared, fetch, detected, ts119602Classification, standardApplicability, ts119612, ts119602]
+      required: [id, index, source, location, declared, fetch, detected, ts119602Classification, standardApplicability, referenceProfiles, ts119612, ts119602]
       properties:
         id: { type: string }
         index: { type: integer, minimum: 1 }
@@ -802,6 +802,15 @@ components:
             ts119602: { $ref: '#/components/schemas/ApplicabilityStatus' }
             weBuildProfile: { $ref: '#/components/schemas/ApplicabilityStatus' }
             eudiTrustRole: { $ref: '#/components/schemas/ApplicabilityStatus' }
+        referenceProfiles:
+          type: object
+          required: [eudiRiTs119612, weBuildTs119612]
+          additionalProperties: false
+          properties:
+            eudiRiTs119612:
+              $ref: '#/components/schemas/ReferenceProfileAssessment'
+            weBuildTs119612:
+              $ref: '#/components/schemas/ReferenceProfileAssessment'
         ts119612:
           $ref: '#/components/schemas/StandardAssessment'
         ts119602:
@@ -899,6 +908,27 @@ components:
     ApplicabilityStatus:
       type: string
       enum: [applicable, not_applicable, unknown]
+    ReferenceProfileAssessment:
+      type: object
+      required: [applicability, recognized, recognitionReasons, observedRoles, checks]
+      additionalProperties: false
+      properties:
+        applicability:
+          $ref: '#/components/schemas/ApplicabilityStatus'
+        recognized: { type: boolean }
+        recognitionReasons:
+          type: array
+          items: { type: string }
+        observedRoles:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [wallet_provider, pid_provider, qeaa_provider, pub_eaa_provider, access_ca_or_wrpac_provider, registration_ca_or_wrprc_provider, registrar_or_register]
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/CheckResult'
     CheckResult:
       type: object
       required: [id, category, status, severity, message]

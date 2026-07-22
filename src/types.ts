@@ -1,3 +1,5 @@
+import type { EudiTrustRole } from "./eudi/roles.js";
+
 export type ConformanceLevel =
   | "conformant"
   | "partially_conformant"
@@ -153,8 +155,21 @@ export interface CertificateSummary {
   validAtAssessmentTime?: boolean;
 }
 
+export interface ReferenceProfileAssessment {
+  applicability: ApplicabilityStatus;
+  recognized: boolean;
+  recognitionReasons: string[];
+  observedRoles: EudiTrustRole[];
+  checks: CheckResult[];
+}
+
+export interface ArtifactReferenceProfiles {
+  eudiRiTs119612: ReferenceProfileAssessment;
+  weBuildTs119612: ReferenceProfileAssessment;
+}
+
 export interface AuditReport {
-  schemaVersion: 4;
+  schemaVersion: 5;
   tool: {
     name: "we-build-tl-audit";
     version: string;
@@ -255,6 +270,7 @@ export interface TrustedListAuditResult {
   };
   ts119602Classification: Ts119602Classification;
   standardApplicability: StandardApplicability;
+  referenceProfiles: ArtifactReferenceProfiles;
   ts119612: StandardAssessment;
   ts119602: StandardAssessment;
   extracted?: {

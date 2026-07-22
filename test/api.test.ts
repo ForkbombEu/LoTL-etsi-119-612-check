@@ -155,6 +155,28 @@ describe("API server", () => {
     expect(artifactResponse.statusCode).toBe(200);
     expect(artifactResponse.json().result).toMatchObject({ source: "fixture.xml", fetch: { attempted: false }, detected: { format: "xml" } });
 
+    const eudiRiXml = await readFile("test/fixtures/eudi-ri-ts119612-tl.xml", "utf8");
+    const profileResponse = await app.inject({
+      method: "POST",
+      url: "/api/audit/artifact",
+      payload: {
+        content: eudiRiXml,
+        source: "https://trustedlist.serviceproviders.eudiw.dev/TL/EU/01.xml",
+        contentType: "application/xml",
+      },
+    });
+    expect(profileResponse.statusCode).toBe(200);
+    expect(profileResponse.json().result).toMatchObject({
+      standardApplicability: { eudiTrustRole: "applicable" },
+      referenceProfiles: {
+        eudiRiTs119612: {
+          applicability: "applicable",
+          recognized: true,
+          observedRoles: ["access_ca_or_wrpac_provider", "wallet_provider"],
+        },
+      },
+    });
+
     const signingCertificate = signedXml.match(/<ds:X509Certificate>([^<]+)<\/ds:X509Certificate>/)?.[1];
     expect(signingCertificate).toBeDefined();
     const signedArtifactResponse = await app.inject({
@@ -282,7 +304,7 @@ describe("API server", () => {
   it("renders Markdown from supplied report", async () => {
     const app = await buildServer();
     const report = {
-      schemaVersion: 4,
+      schemaVersion: 5,
       tool: { name: "we-build-tl-audit", version: "0.1.0" },
       generatedAt: "2026-07-16T00:00:00.000Z",
       input: { source: "request-body", kind: "json" },
@@ -393,6 +415,9 @@ describe("API server", () => {
     expect(parsedJson.components.schemas.Ts119612SignerEvidence.properties.revocation.required)
       .toContain("signerFingerprintSha256");
     expect(parsedJson.components.schemas.CertificateSummary.properties.source.enum).toContain("json_signature");
+    expect(parsedJson.components.schemas.AuditReport.properties.schemaVersion.const).toBe(5);
+    expect(parsedJson.components.schemas.TrustedListAuditResult.required).toContain("referenceProfiles");
+    expect(parsedJson.components.schemas.ReferenceProfileAssessment.required).toContain("checks");
     expect(parsedJson.info.description).toContain("pinned V1.1.1 XSD and offline catalog");
     expect(parsedJson.paths["/api/audit/artifact"].post.description).toContain("separate pinned offline XML Schema finding");
     await app.close();

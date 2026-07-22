@@ -54,7 +54,7 @@ describe("runAudit", () => {
     expect(report.summary.fetched).toBe(2);
     expect(report.summary.fetchFailed).toBe(1);
     expect(report.summary.jsonArtifacts).toBe(1);
-    expect(report.schemaVersion).toBe(4);
+    expect(report.schemaVersion).toBe(5);
     expect(report.results[0]).toMatchObject({
       id: expect.stringMatching(/^artifact-001-[a-f0-9]{12}$/),
       source: "https://example.test/tl.xml",
@@ -62,8 +62,12 @@ describe("runAudit", () => {
       standardApplicability: {
         ts119612: "applicable",
         ts119602: "not_applicable",
-        weBuildProfile: "unknown",
-        eudiTrustRole: "unknown",
+        weBuildProfile: "not_applicable",
+        eudiTrustRole: "not_applicable",
+      },
+      referenceProfiles: {
+        eudiRiTs119612: { applicability: "not_applicable", recognized: false },
+        weBuildTs119612: { applicability: "not_applicable", recognized: false },
       },
     });
     expect(report.results[1].ts119612.conformanceLevel).toBe("not_applicable");
@@ -100,6 +104,8 @@ describe("runAudit", () => {
     expect(markdown).toContain("Source: xml_signature");
     expect(markdown).toContain("**json_lote.pointers.service_digital_identities**");
     expect(markdown).toContain("### ETSI TS 119 602 assessment");
+    expect(markdown).toContain("### EUDI RI TS 119 612 reference profile");
+    expect(markdown).toContain("### WE BUILD TS 119 612 reference profile");
     expect(markdown).toContain("TS 119 602 classification: data model=ts119602; binding=scheme_explicit_json (selected)");
     expect(markdown).toContain("Can this trust-list bundle be used as a wallet trust fixture?");
     expect(markdown).toContain("## FCAF trusted_authorities fixture readiness");

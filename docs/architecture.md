@@ -46,6 +46,7 @@ CLI (--input path-or-url)                 HTTP API (JSON body or URL)
 | TS 119 612 signature profile | `src/xml/signature.ts`, `src/xml/xades.ts`, `src/xml/ts119612Signature.ts` | Separates XMLDSig verification, XAdES-B-B/Annex B structure, TLSO certificate restrictions, supplied path/revocation evidence, and signer trust. |
 | TS 119 612 pointer semantics | `src/xml/ts119612Pointers.ts` | Validates exact pointer tuples, qualifier namespaces/values, signing-certificate identities and rollover evidence, and dispatches supported target types without silently dereferencing them. |
 | TS 119 612 contextual validation | `src/standards/ts119612Context.ts` | Compares supplied prior instances, authenticates dereferenced pointer edges, checks distribution equality, caches duplicate fetches, detects cycles and enforces count/depth/concurrency/byte bounds. |
+| TS 119 612 reference profiles | `src/profiles/ts119612ReferenceProfiles.ts` | Recognizes EUDI RI and WE BUILD XML reference inputs, records non-normative shape/distribution evidence, classifies EUDI trust roles and keeps all profile findings separate from ETSI scoring. |
 | JSON LoTE checks | `src/json/loteChecks.ts` | Marks TS 119 612 as not applicable for JSON LoTE and optionally performs basic JSON LoTE metadata checks. |
 | Certificate helpers | `src/certs.ts` | Computes SHA-256 values and parses available Base64 X.509 material into reportable certificate summaries. |
 | Report rendering | `src/report/jsonReport.ts`, `src/report/markdownReport.ts`, `src/types.ts` | Defines the report contract, aggregates summary counts, and renders Markdown only from JSON report findings. |
@@ -58,7 +59,7 @@ CLI (--input path-or-url)                 HTTP API (JSON body or URL)
 - Pointer fetches are bounded by configurable timeout and concurrency. Tests mock network activity rather than depending on live services.
 - XML `TrustServiceStatusList` content is assessed with implemented TS 119 612-style structural, signature, certificate, date, and optional XSD evidence checks.
 - A JSON LoTE is not reported as a TS 119 612 failure. It is reported as `not_applicable` for that XML standard, with optional JSON metadata checks.
-- The tool currently does not model EUDI trust roles, validate an RPAC/WRPAC chain to an Access CA, assess registration material, or determine FCAF fixture readiness.
+- The tool models explicit EUDI trust roles, assesses supplied RPAC/WRPAC chains against separately supplied Access CA anchors, and reports FCAF fixture readiness. It does not assess registration entitlements or turn reference-profile recognition into a production trust decision.
 - XMLDSig/XAdES and XSD results remain best-effort evidence checks; they are not a general PKI trust decision or legal conformance claim.
 
 ## Target staged EUDI trust-infrastructure architecture

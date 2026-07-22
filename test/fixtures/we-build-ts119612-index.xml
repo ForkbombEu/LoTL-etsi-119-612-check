@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrustServiceStatusList xmlns="http://uri.etsi.org/19612/v2.4.1#" Id="we-build-fixture">
+  <SchemeInformation>
+    <TSLVersionIdentifier>6</TSLVersionIdentifier>
+    <TSLSequenceNumber>1</TSLSequenceNumber>
+    <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType>
+    <SchemeOperatorName><Name xml:lang="en">WE BUILD WP4 Trust Group</Name></SchemeOperatorName>
+    <SchemeOperatorAddress><ElectronicAddress><URI>https://webuild-consortium.github.io/wp4-trust-group/</URI></ElectronicAddress></SchemeOperatorAddress>
+    <SchemeName><Name xml:lang="en">WP4 List of Trusted Lists</Name></SchemeName>
+    <SchemeInformationURI>https://webuild-consortium.github.io/wp4-trust-group/</SchemeInformationURI>
+    <StatusDeterminationApproach>http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate</StatusDeterminationApproach>
+    <SchemeTypeCommunityRules>http://uri.etsi.org/TrstSvc/TrustedList/SchemeTypeCommunityRules/EU</SchemeTypeCommunityRules>
+    <SchemeTerritory>EU</SchemeTerritory>
+    <ListIssueDateTime>2026-07-01T00:00:00Z</ListIssueDateTime>
+    <NextUpdate>2026-12-01T00:00:00Z</NextUpdate>
+    <DistributionPoints>
+      <DistributionPoint><URI>https://example.test/qeaa.xml</URI></DistributionPoint>
+      <DistributionPoint><URI>https://example.test/wrpac.json</URI></DistributionPoint>
+    </DistributionPoints>
+  </SchemeInformation>
+</TrustServiceStatusList>

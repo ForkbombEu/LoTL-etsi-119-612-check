@@ -7,6 +7,7 @@ import { isUrl, loadInput } from "./input.js";
 import { assessJsonLote } from "./json/loteChecks.js";
 import { parseLotlJson } from "./lotl.js";
 import { assessWeBuildProfile } from "./profiles/weBuild.js";
+import { assessTs119612ReferenceProfiles, emptyReferenceProfiles } from "./profiles/ts119612ReferenceProfiles.js";
 import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
 import { assessFcafTrustedAuthorities } from "./fcaf/trustedAuthorities.js";
 import { generateNegativeFixtureDescriptors, writeNegativeFixtureDescriptors } from "./fixtures/negativeDescriptors.js";
@@ -246,6 +247,7 @@ export async function assessArtifactContent(options: AssessArtifactContentOption
     detected: { format: "unknown", artifactKind: "unknown" },
     ts119602Classification: createUnknownTs119602Classification(options.declared?.loteType),
     standardApplicability: unknownApplicability(),
+    referenceProfiles: emptyReferenceProfiles(),
     ts119612: { applicable: false, conformanceLevel: "not_checked", score: null, checks: [check("input.raw_artifact", "parse", "pass", "info", "Raw artifact content was supplied directly; no network request was made.")], mandatoryFailures: [], warnings: [] },
     ts119602: unassessedStandard(),
   };
@@ -269,6 +271,7 @@ async function auditPointer(pointer: PointerInfo, options: AuditCoreOptions): Pr
     },
     ts119602Classification: createUnknownTs119602Classification(pointer.declared.loteType),
     standardApplicability: unknownApplicability(),
+    referenceProfiles: emptyReferenceProfiles(),
     ts119612: {
       applicable: false,
       conformanceLevel: "not_checked",
@@ -332,6 +335,7 @@ async function assessArtifactBytes(
       signerEvidence: options.context?.ts119612Signer,
     });
     const result = mergeResult(base, assessed);
+    applyTs119612ReferenceProfiles(result, bytes.toString("utf8"));
     if (base.ts119602Classification.applicability === "applicable") {
       const alternative = assessTs119602AlternativeXml(
         assessed.ts119612Facts,
@@ -438,6 +442,23 @@ async function applyTs119612Context(
     ...contextual,
   ], { coverageComplete: false });
   return result;
+}
+
+function applyTs119612ReferenceProfiles(result: TrustedListAuditResult, xml: string): void {
+  if (result.detected.artifactKind !== "ts119612_xml_tsl" && result.detected.artifactKind !== "ts119612_xml_lotl") return;
+  result.referenceProfiles = assessTs119612ReferenceProfiles({
+    xml,
+    source: result.source,
+    artifactKind: result.detected.artifactKind,
+  });
+  result.standardApplicability.weBuildProfile = result.referenceProfiles.weBuildTs119612.applicability;
+  const observedRoles = new Set([
+    ...result.referenceProfiles.eudiRiTs119612.observedRoles,
+    ...result.referenceProfiles.weBuildTs119612.observedRoles,
+  ]);
+  result.standardApplicability.eudiTrustRole = observedRoles.size > 0
+    ? "applicable"
+    : "not_applicable";
 }
 
 function routeStandardChecks(result: TrustedListAuditResult): void {
