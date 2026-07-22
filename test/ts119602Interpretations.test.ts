@@ -7,8 +7,8 @@ import {
 
 describe("ETSI TS 119 602 standards interpretation registry", () => {
   it("is versioned, uniquely identified, and evidence-backed", () => {
-    expect(TS119602_INTERPRETATION_REGISTRY_VERSION).toBe("2026-07-21");
-    expect(TS119602_INTERPRETATIONS).toHaveLength(9);
+    expect(TS119602_INTERPRETATION_REGISTRY_VERSION).toBe("2026-07-22");
+    expect(TS119602_INTERPRETATIONS).toHaveLength(11);
     expect(new Set(TS119602_INTERPRETATIONS.map((entry) => entry.id)).size).toBe(TS119602_INTERPRETATIONS.length);
     for (const entry of TS119602_INTERPRETATIONS) {
       expect(entry.sources.length).toBeGreaterThan(0);
@@ -28,6 +28,14 @@ describe("ETSI TS 119 602 standards interpretation registry", () => {
     expect(findTs119602Interpretation("ts119602-v1.1.1-implicit-container-binding")).toMatchObject({
       status: "document_text_prevails",
       policy: expect.stringContaining("direct core fields"),
+    });
+    expect(findTs119602Interpretation("ts119602-v1.1.1-alternative-binding-version")).toMatchObject({
+      status: "unresolved",
+      policy: expect.stringContaining("do not normalize 6 to 1"),
+    });
+    expect(findTs119602Interpretation("ts119602-v1.1.1-alternative-binding-tag")).toMatchObject({
+      status: "unresolved",
+      policy: expect.stringContaining("do not silently treat"),
     });
   });
 });

@@ -9,7 +9,7 @@ export interface Ts119602Interpretation {
   policy: string;
 }
 
-export const TS119602_INTERPRETATION_REGISTRY_VERSION = "2026-07-21" as const;
+export const TS119602_INTERPRETATION_REGISTRY_VERSION = "2026-07-22" as const;
 
 export const TS119602_INTERPRETATIONS = Object.freeze([
   interpretation(
@@ -83,6 +83,22 @@ export const TS119602_INTERPRETATIONS = Object.freeze([
     ["1960201_json_schema.json#/definitions/ServiceDigitalIdentity/properties/additionalProperties"],
     "unresolved",
     "Do not claim that schema validation closes ServiceDigitalIdentity; enforce only explicitly implemented semantic identity rules.",
+  ),
+  interpretation(
+    "ts119602-v1.1.1-alternative-binding-version",
+    "Alternative XML binding version identifier",
+    "Table A.1 maps LoTEVersionIdentifier to TSLVersionIdentifier; Annex H requires the mapped LoTE value 1 while ETSI TS 119 612 V2.4.1 requires TSLVersionIdentifier 6.",
+    ["ETSI TS 119 602 V1.1.1 Table A.1", "ETSI TS 119 602 V1.1.1 Table H.1", "ETSI TS 119 612 V2.4.1 clause 5.3.1"],
+    "unresolved",
+    "Preserve the observed mapped value, report both fixed-value requirements, and do not normalize 6 to 1 or bypass either standard's independent semantic finding.",
+  ),
+  interpretation(
+    "ts119602-v1.1.1-alternative-binding-tag",
+    "Alternative XML binding LoTE tag",
+    "Clause 6.2 requires LOTETag, while Table A.1 does not map that component and the ETSI TS 119 612 source binding instead defines TSLTag.",
+    ["ETSI TS 119 602 V1.1.1 clause 6.2", "ETSI TS 119 602 V1.1.1 Table A.1", "ETSI TS 119 612 V2.4.1 Annex C TSLTag"],
+    "unresolved",
+    "Retain TSLTag as source evidence but report the missing LOTETag mapping as inconclusive; do not silently treat the differently named attribute as equivalent.",
   ),
 ] as const satisfies readonly Ts119602Interpretation[]);
 

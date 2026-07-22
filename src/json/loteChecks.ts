@@ -110,7 +110,7 @@ export function assessJsonLote(
       "ts119602.coverage.complete",
       "not_checked",
       "warning",
-      "Complete ETSI TS 119 602 V1.1.1 contextual trust, prior-instance, dereferencing, and alternative XML binding coverage is not implemented.",
+      "Complete ETSI TS 119 602 V1.1.1 contextual trust, prior-instance, dereferencing, multilingual and profile coverage is not implemented.",
       summarizeTs119602Requirements(),
     ),
   );

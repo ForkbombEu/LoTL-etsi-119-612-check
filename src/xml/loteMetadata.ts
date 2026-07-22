@@ -114,7 +114,7 @@ export async function assessXmlLoteMetadata(
     "profile",
     "not_checked",
     "warning",
-    "Complete ETSI TS 119 602 V1.1.1 alternative-binding mapping and contextual trust/dereferencing coverage is not implemented.",
+    "Complete ETSI TS 119 602 V1.1.1 contextual trust, multilingual and profile coverage is not implemented.",
     summarizeTs119602Requirements(),
   ));
 

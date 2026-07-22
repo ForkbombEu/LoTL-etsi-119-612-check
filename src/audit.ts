@@ -11,8 +11,8 @@ import { assessFixtureReadiness } from "./eudi/fixtureReadiness.js";
 import { assessFcafTrustedAuthorities } from "./fcaf/trustedAuthorities.js";
 import { generateNegativeFixtureDescriptors, writeNegativeFixtureDescriptors } from "./fixtures/negativeDescriptors.js";
 import { buildStandardAssessment } from "./standards/assessment.js";
+import { assessTs119602AlternativeXml } from "./standards/ts119602AlternativeXml.js";
 import { classifyTs119602Artifact, createUnknownTs119602Classification } from "./standards/ts119602Classification.js";
-import { summarizeTs119602Requirements } from "./standards/ts119602Requirements.js";
 import { assessTs119602Context } from "./standards/ts119602Context.js";
 import { buildAuditReport } from "./report/jsonReport.js";
 import { renderMarkdownReport } from "./report/markdownReport.js";
@@ -328,7 +328,32 @@ async function assessArtifactBytes(
       strict: options.strict,
       xsdPath: options.xsd,
     });
-    return mergeResult(base, assessed);
+    const result = mergeResult(base, assessed);
+    if (base.ts119602Classification.applicability === "applicable") {
+      const alternative = assessTs119602AlternativeXml(
+        assessed.ts119612Facts,
+        result.ts119612.checks,
+        base.ts119602Classification.profileStatus,
+      );
+      result.ts119602 = buildStandardAssessment([
+        ...result.ts119602.checks,
+        ...alternative.checks,
+      ], { coverageComplete: false });
+      result.extracted = {
+        ...result.extracted,
+        jsonLote: {
+          assessmentProfile: "ETSI TS 119 602 Annex A.2.2 alternative XML binding",
+          XmlBinding: "ts119612_alternative_xml",
+          LoTEVersionIdentifier: assessed.ts119612Facts?.metadata.version,
+          LoTESequenceNumber: assessed.ts119612Facts?.metadata.sequence,
+          LoTEType: assessed.ts119612Facts?.metadata.loteType,
+          TrustedEntityCount: alternative.entityCount,
+          ServiceCount: alternative.serviceCount,
+          TableA1Mapped: alternative.mapped,
+        },
+      };
+    }
+    return result;
   }
 
   if (detected.artifactKind === "xml_lote") {
@@ -412,21 +437,6 @@ function routeStandardChecks(result: TrustedListAuditResult): void {
     if (result.ts119602Classification.applicability === "applicable") {
       result.ts119602 = buildStandardAssessment([
         ...ts119602ClassificationChecks(result),
-        check(
-          "ts119602.binding.ts119612_mapping",
-          "schema",
-          "not_checked",
-          "warning",
-          "Table A.1 component mapping is not implemented for the selected TS 119 612 alternative XML binding.",
-        ),
-        check(
-          "ts119602.coverage.complete",
-          "profile",
-          "not_checked",
-          "warning",
-          "Complete ETSI TS 119 602 V1.1.1 coverage is not implemented for the alternative XML binding.",
-          summarizeTs119602Requirements(),
-        ),
       ], { coverageComplete: false });
       return;
     }

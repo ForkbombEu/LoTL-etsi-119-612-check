@@ -323,8 +323,8 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 7
-families as implemented, 37 as partial, and 25 as not implemented. Every
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 9
+families as implemented, 46 as partial, and 14 as not implemented. Every
 applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
@@ -465,7 +465,7 @@ Optional contextual assessment compares supplied prior instances, requires certi
 
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
-Report schema v4 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. Selected alternative bindings remain `not_checked` until Table A.1 component mapping is implemented.
+Report schema v4 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.
 
 For scheme-explicit TS 119 602 XML, the normative entity path implemented by
 the tool is

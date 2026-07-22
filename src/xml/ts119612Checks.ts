@@ -8,6 +8,7 @@ import { validateTs119602UtcDateTime } from "../standards/ts119602Syntax.js";
 import { parseXml } from "./parse.js";
 import { assessSignature } from "./signature.js";
 import { assessTs119612SchemeInformation } from "./ts119612SchemeInformation.js";
+import { extractTs119612ValidatedFacts, type Ts119612ValidatedFacts } from "./ts119612Facts.js";
 import { assessTs119612ServiceSemantics } from "./ts119612ServiceSemantics.js";
 import { assessTs119612TspServices } from "./ts119612TspServices.js";
 import { validateTs119612XmlSchema } from "./ts119612Xsd.js";
@@ -26,11 +27,16 @@ type ExtractedMetadata = NonNullable<TrustedListAuditResult["extracted"]>;
 const CANONICAL_ETSI_NS = "http://uri.etsi.org/02231/v2#";
 const EUDI_RI_ETSI_NS_VARIANT = "http://uri.etsi.org/19612/v2.4.1#";
 const EU_APPROPRIATE = "http://uri.etsi.org/TrstSvc/TrustedList/StatusDetn/EUappropriate";
+const PUB_EAA_LOTE_TYPE = "http://uri.etsi.org/19602/LoTEType/EUPubEAAProvidersList";
+
+export interface Ts119612XmlAssessment extends Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected"> {
+  ts119612Facts?: Ts119612ValidatedFacts;
+}
 
 export async function assessTs119612Xml(
   xml: string,
   options: XmlAssessmentOptions,
-): Promise<Pick<TrustedListAuditResult, "ts119612" | "extracted" | "detected">> {
+): Promise<Ts119612XmlAssessment> {
   const assessmentDate = options.assessmentDate ?? new Date();
   const checks: CheckResult[] = [];
   const certificates: CertificateSummary[] = [];
@@ -104,8 +110,13 @@ export async function assessTs119612Xml(
 
   push(checks, "parse.schema_location", "parse", hasSchemaLocation(root) ? "pass" : "warn", "warning", "xsi:schemaLocation is present.", schemaLocation(root));
 
+  const pubEaaAlternativeBinding = text(document, D("TSLType")) === PUB_EAA_LOTE_TYPE;
   const signature = await assessSignature(xml, document, assessmentDate, {}, {
     requireFirstListCertificateMatch: isLotlOrLoteType(text(document, D("TSLType"))),
+    requireBaselineB: pubEaaAlternativeBinding,
+    requireAnnexH4: pubEaaAlternativeBinding,
+    schemeTerritory: text(document, D("SchemeTerritory")),
+    schemeOperatorNames: texts(document, `${D("SchemeOperatorName")}/${L("Name")}`),
   });
   checks.push(...signature.checks);
   certificates.push(...signature.certificates);
@@ -169,6 +180,7 @@ export async function assessTs119612Xml(
     .map((check) => `${check.id}: ${check.message}`);
   const score = scoreChecks(checks, options.strict);
   const conformanceLevel = determineLevel(checks, mandatoryFailures, options.strict, false);
+  const ts119612Facts = extractTs119612ValidatedFacts(document, checks, assessmentDate);
 
   return {
     detected: { format: "xml", artifactKind },
@@ -181,6 +193,7 @@ export async function assessTs119612Xml(
       warnings,
     },
     extracted,
+    ts119612Facts,
   };
 }
 

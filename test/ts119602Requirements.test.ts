@@ -92,9 +92,9 @@ describe("ETSI TS 119 602 requirements ledger", () => {
   it("reports coverage without implying complete normative validation", () => {
     expect(summarizeTs119602Requirements()).toMatchObject({
       total: 81,
-      implemented: 19,
+      implemented: 20,
       partial: 61,
-      notImplemented: 1,
+      notImplemented: 0,
       complete: false,
     });
   });
