@@ -1,599 +1,264 @@
-# ETSI TS 119 602 V1.1.1 conformance gap report
+# ETSI TS 119 612 and TS 119 602 implementation roadmap
 
-Assessment date: 2026-07-21
+Last reconciled: 2026-07-22, after commit `0aa5192`.
 
-Code baseline: commit `2c1b365`
+This roadmap reflects the executable implementation in `src/`, the
+deterministic fixtures and tests in `test/`, and the current report/API
+contracts. It covers both ETSI TS 119 612 XML Trusted Lists/LoTLs and ETSI TS
+119 602 Lists of Trusted Entities.
 
-Target: ETSI TS 119 602 V1.1.1 (2025-11)
+The tool remains an evidence-oriented assessment utility. A completed task
+means that the stated implementation slice is merged and tested; it does not
+mean that the applicable ETSI standard, EUDI profile, legal policy, or trust
+framework is completely validated.
 
-## Executive conclusion
+## Status vocabulary
 
-The current implementation is an evidence-oriented LoTE inspector. It is not
-yet a complete ETSI TS 119 602 conformance checker and must not produce a
-"conformant" TS 119 602 verdict.
+- **Complete** — the bounded task scope is implemented and tested.
+- **Partial** — useful checks exist, but normative coverage is incomplete.
+- **Next** — the next recommended task in that standard's dependency chain.
+- **Planned** — sequenced behind explicit dependencies.
+- **Contextual** — conclusive evaluation requires supplied or fetched evidence
+  outside the assessed artifact.
 
-The implementation currently covers artifact recognition, independent
-binding/profile classification, official offline JSON Schema validation,
-local clauses 6.1-6.8 evidence, JAdES/XAdES signatures, the locally
-decidable Annex D-I tables, and optional bounded contextual evidence. The missing work is
-concentrated in the layers that determine normative conformance:
+Normal tests must remain offline. Optional live checks must be explicit,
+bounded, and write only under ignored artifact directories.
 
-1. official XML Schema validation and TS 119 612 alternative-binding mapping;
-2. remaining authoritative-record, policy, history-retention, and trust-path evidence;
-3. contextual public-key/SKI identity, archive-index, and register semantics.
+## Current product baseline
 
-An exact percentage would be misleading until every normative requirement is
-entered in a requirements ledger. As a non-normative engineering estimate:
-
-| Area | Current maturity | Approximate distance |
+| Area | Current state | Important limit |
 | --- | --- | --- |
-| Scheme-explicit TS 119 602 XML evidence | Local semantic/profile plus optional context | Core components, Pub-EAA local tables, XAdES, explicit trust, and applicable bounded context are checked; the official XML schema and authoritative evidence remain. |
-| Official TS 119 602 JSON binding | Local validation plus optional context | The official model, compact JAdES, Annex D-I local tables, explicit trust, and supplied/bounded contextual evidence are checked; authoritative claims remain incomplete. |
-| TS 119 612 alternative XML binding | Classified, mapping missing | Annex A.2.2 applicability is guarded, but Table A.1 component mapping is not implemented. |
-| Annex D-I profile conformance | Local tables plus optional context | Exact dispatch and local rules are checked; supplied prior artifacts and bounded certificate-pointer/distribution/archive/supply evidence are supported, while authoritative claims remain contextual. |
-| Complete TS 119 602 verdict | Not implemented | No artifact can currently receive an evidence-backed complete TS 119 602 conformance verdict. |
-
-The JSON structural, local semantic, compact-signature, local profile, and
-bounded contextual evidence layers are now implemented, but authoritative trust and policy layers remain. This
-is a planning observation, not a conformance score.
-
-## Normative source set
-
-The implementation should pin and cite these sources:
-
-- [ETSI TS 119 602 V1.1.1
-  (2025-11)](https://www.etsi.org/deliver/etsi_ts/119600_119699/119602/01.01.01_60/ts_119602v010101p.pdf)
-  — authoritative data model, bindings, URI registry, and profiles.
-- [ETSI TS 119 602 binding repository, tag
-  v1.1.1](https://forge.etsi.org/rep/esi/x19_60201_lists_of_trusted_entities/-/tree/v1.1.1)
-  — `1960201_json_schema.json`, `1960201_xsd_schema.xsd`, and the
-  service/entity extension schemas.
-- [ETSI TS 119 612 V2.4.1
-  (2025-08)](https://www.etsi.org/deliver/etsi_ts/119600_119699/119612/02.04.01_60/ts_119612v020401p.pdf)
-  — alternative XML binding referenced by TS 119 602 Annex A.2.2.
-- [ETSI TS 119 182-1 V1.2.1
-  (2024-07)](https://www.etsi.org/deliver/etsi_ts/119100_119199/11918201/01.02.01_60/ts_11918201v010201p.pdf)
-  — JAdES Baseline B requirements used by the JSON profiles.
-- [ETSI EN 319 132-1 V1.3.1
-  (2024-07)](https://www.etsi.org/deliver/etsi_en/319100_319199/31913201/01.03.01_60/en_31913201v010301p.pdf)
-  — XAdES Baseline B requirements used by the XML profile.
-- The normative RFCs and ISO references cited by TS 119 602, including
-  RFC 3986, RFC 4514, RFC 5646, ISO 8601, ISO 3166-1, and X.509.
-
-The PDF states that it prevails over conflicting electronic schemas. The
-validator therefore needs separate schema and semantic results instead of
-assuming that schema success proves complete conformance.
-
-## What is implemented today
-
-### Input and artifact evidence
-
-- Bounded URL fetching with HTTP status, content type, byte length, and hash.
-- XML/JSON/compact-JWS/HTML/unknown format detection.
-- Recognition of the official scheme-explicit XML root:
-  `/ListOfTrustedEntities`.
-- Namespace-aware entity selection at:
-  `/ListOfTrustedEntities/TrustedEntitiesList/TrustedEntity`.
-- Continued extraction of the non-standard WE BUILD compatibility path:
-  `/TrustedEntitiesList/TrustedEntitiesList/TrustedEntity`, with a warning.
-- Recognition of JSON documents containing a `LoTE` property.
-
-### Current XML LoTE evidence
-
-- XML parsing and parser diagnostics.
-- Presence checks for `ListAndSchemeInformation` and selected scheme fields.
-- Basic parsing and ordering of `ListIssueDateTime` and `NextUpdate`.
-- Trusted entity and service counts.
-- Presence checks for `TrustedEntityInformation`, `TEName`, `TEAddress`,
-  `ServiceTypeIdentifier`, `ServiceName`, and `ServiceDigitalIdentity`.
-- X.509 certificate parsing and metadata extraction.
-- Generic XMLDSig cryptographic verification through `xmlsec1`.
-- Detection, but not validation, of XAdES-related elements.
-
-### Current JSON LoTE evidence
-
-- Offline validation against the pinned official V1.1.1 Draft-07 schema with
-  URI and date-time format checks.
-- Error evidence containing JSON Pointer, schema path/keyword, expected value,
-  observed value/type, and pinned schema identity.
-- Parsing and counting of the official `TrustedEntitiesList[]`,
-  `TrustedEntityInformation`, and `TrustedEntityServices[]` structure.
-- Explicit non-conformance plus evidence extraction for the isolated legacy
-  `TrustedEntitiesList.TrustServiceProvider[]` compatibility adapter.
-- Presence checks for a subset of list and scheme fields.
-- Basic date parsing and ordering.
-- Pointer and pointer-identity counting.
-- WE BUILD pointer qualifier, MIME, duplicate URL, certificate, and list-role
-  evidence.
-
-These are useful facts, but they cover only a subset of the normative
-requirements and do not yet compose into a TS 119 602 verdict.
-
-## P0 correctness problems
-
-These issues can currently produce a misleading assessment and should be
-fixed before adding lower-priority checks.
-
-### P0.1 Separate TS 119 602 results from TS 119 612 results
-
-Current TS 119 602 checks are stored inside `result.ts119612`, while that
-object says `applicable: false` and `conformanceLevel: not_applicable`.
-`standardApplicability.ts119602` may simultaneously say `applicable`.
-
-Required change:
-
-- add a first-class `ts119602` assessment object;
-- retain `ts119612` independently for the alternative binding;
-- support `pass`, `fail`, `warn`, `not_applicable`, `not_checked`,
-  `unsupported`, and `inconclusive`;
-- calculate a TS 119 602 verdict only from TS 119 602 checks;
-- never label an artifact conformant when a mandatory applicable check is
-  missing, unsupported, or inconclusive.
-
-### P0.2 Recognize every normative binding
-
-TS 119 602 Annex A defines:
-
-1. scheme-explicit JSON;
-2. scheme-explicit XML;
-3. an alternative XML binding using ETSI TS 119 612.
-
-The current classifier marks all `TrustServiceStatusList` artifacts as
-TS 119 602 `not_applicable`. That conflicts with Annex A.2.2. The tool must
-classify the binding separately from the data model and profile:
-
-```text
-TS 119 602 data model
-  -> scheme-explicit JSON binding
-  -> scheme-explicit XML binding
-  -> TS 119 612 alternative XML binding
-```
-
-The alternative binding must apply Table A.1 component mappings and then the
-relevant TS 119 602 profile rules. A normal TS 119 612 trusted list must not be
-silently reclassified as a TS 119 602 profile without matching profile
-evidence.
-
-### P0.3 Replace the current JSON model with the official binding — complete
-
-The official JSON Schema defines:
-
-```text
-LoTE
-  ListAndSchemeInformation
-  TrustedEntitiesList[]                 optional, minItems 1 when present
-    TrustedEntityInformation
-    TrustedEntityServices[]
-      ServiceInformation
-      ServiceHistory[]                  optional
-```
-
-The normative parser now reads this official object/array structure. The old
-shape:
-
-```text
-LoTE.TrustedEntitiesList.TrustServiceProvider[]
-```
-
-is isolated in `legacyLoteAdapter.ts`, fails schema/binding conformance, and is
-retained only for compatibility evidence. `json-lote.json` is now a
-schema-valid official positive fixture; `json-lote-legacy.json` is the named
-negative compatibility fixture.
-
-Implemented in TS602-05:
-
-- parse the official array/object structure;
-- validate exact types, cardinalities, required properties, and
-  `additionalProperties`;
-- keep legacy or WE BUILD compatibility parsing in a separate adapter that
-  emits an explicit non-conformance warning;
-- replace positive fixtures with schema-valid TS 119 602 fixtures.
-
-### P0.4 Remove the JSON `signature` object shortcut
-
-Annexes D, E, F, G, and I require a compact JAdES Baseline B signature.
-Annex H requires compact JAdES Baseline B when JSON is used. A compact JAdES
-object encapsulates or references the JSON payload; it is not established by
-finding a `signature`, `LoTE.signature`, or `LoTE.Signature` object.
-
-The current `json_lote.signature_object_present` check is therefore not a
-normative signature check and can produce a false pass.
-
-Required change:
-
-- accept and classify compact JAdES serialization;
-- extract and compare the signed payload with the assessed LoTE;
-- validate JAdES Baseline B according to ETSI TS 119 182-1;
-- report cryptographic validity separately from signer trust;
-- report raw unsigned JSON as a failed signature requirement for Annex D-I
-  profiles, not as merely missing optional evidence.
-
-Implemented in TS602-10 using attached compact JWS payload recovery; detached
-payload and external certificate resolution limitations are reported
-explicitly rather than inferred.
-
-### P0.5 Do not make TS 119 602 checks opt-in
-
-`includeJsonLoteChecks` currently allows a TS 119 602 JSON artifact to be
-classified as applicable without actually running the checks. Core checks
-must run by default for an applicable artifact. Optional flags may enable
-network dereferencing or expensive validation, but must not disable the
-normative local checks.
-
-### P0.6 Correct mandatory/optional severity
-
-Most missing JSON fields currently produce `warn`. Missing mandatory schema
-or profile components must produce `fail`. Optional fields must be
-`not_applicable` or pass when absent, depending on the requirement.
-
-For XML, `ServiceTypeIdentifier` is optional in the base data model. The
-Annex D-I tables restrict its allowed values but do not uniformly say that it
-shall be present. Checks must follow the exact selected-profile wording
-rather than applying one presence rule to every LoTE.
-
-### P0.7 Correct the six-month calculation — complete
-
-The base data model only says profiles should specify a maximum; Annexes D-I
-specify six calendar months. Six months is not always 183 days. TS602-11 now
-applies a clamped UTC calendar-month deadline only after exact profile dispatch;
-the base metadata finding remains profile-neutral.
-
-Required change:
-
-- apply the rule only to profiles that define it;
-- use calendar-month arithmetic from `ListIssueDateTime`;
-- do not round fractional days;
-- support the closed-LoTE `NextUpdate = null` rule from clause 6.3.15;
-- distinguish expired-at-assessment from invalid issue/update ordering.
-
-## Normative requirement coverage matrix
-
-| Requirement | Normative expectation | Current state | Remaining work |
-| --- | --- | --- | --- |
-| 6.1.1 bindings | JSON and XML bindings; Annex A.2.2 alternative XML | Partial/incorrect | Implement all three binding routes and binding-specific applicability. |
-| 6.1.2 URI syntax | URI fields follow RFC 3986 | Missing | Validate every URI and scheme-specific `mailto`, `tel`, HTTP, and registered URI rule. |
-| 6.1.3 date-time | Exact ISO 8601 UTC form with seconds and `Z`, no decimal fraction | Partial | JavaScript `Date` accepts offsets and fractions that the standard forbids; add lexical validation. |
-| 6.1.4 and Annex B language | At least English `en`; language tags, casing, transliteration, Unicode restrictions | Missing | Validate multilingual strings/pointers and prohibited characters; dereferenced content is a separate optional network check. |
-| 6.1.5 country codes | Upper-case ISO 3166-1 plus defined exceptions/extensions | Missing | Add a pinned country-code policy and EU/UK/EL exceptions. |
-| 6.2 LoTE tag | Binding-specific LoTE tag representation | Partial | XML validates a local absolute-URI `LOTETag`; JSON reports the field as not applicable. Registered `LOTETag` values remain future Annex C work. |
-| 6.3/Table 1 | Correct implicit vs explicit scheme presence matrix | Partial | Local JSON/XML mode inference, mandatory/prohibited fields, and profile routing are implemented. Alternative-binding mapping remains. |
-| 6.3.1 version | Integer; profile/binding-specific value | Local implementation | Integer form and Annex D-I value `1` are checked. |
-| 6.3.2 sequence | Integer, starts at 1, monotonically increases, never resets | Local plus supplied context | Local positive-integer validation and progression across supplied same-type prior instances are checked; proving an unsupplied first release remains contextual. |
-| 6.3.3 LoTE type | URI and profile discriminator | Local implementation | Exact registered values select Annex D-I checks and binding mismatches fail. |
-| 6.3.4-6.3.11 scheme data | Required structure, multilingual values, addresses, URI semantics, scheme-name format, policy choice | Partial | Local address, `CC:name`, email/web, policy choice, and registered profile values are checked; dereferenced policy semantics remain. |
-| 6.3.12 history period | Integer with semantics including `65535` | Partial | Local value, retention, service-status, and history-presence consequences are implemented; contextual retention-window completeness remains. |
-| 6.3.13 pointers | Location, one-or-more identities, qualifiers, and successful target authentication | Certificate context implemented | Local shape plus bounded identical-self-target, signature, and certificate-identity matching are checked; public-key/SKI equivalence remains. |
-| 6.3.14-6.3.15 dates | Strict UTC, ordering, expiry, closed-list behavior | Local/profile implementation | Local lexical, ordering, expiry, closed-list, and six-calendar-month profile limits are checked. |
-| 6.3.16 distribution points | Non-empty URIs; all locations yield the current identical list | Implemented with opt-in context | Local cardinality/URI checks and bounded exact-byte/hash comparison across every selected location are implemented. |
-| 6.3.17 extensions | Criticality is present; unknown critical extension causes rejection | Partial | Versioned scheme, entity, and service registries reject unknown critical extensions; Wallet `ServiceUniqueIdentifier` is checked, while additional standardized registrations remain. |
-| 6.4 entity list | Absent only when no entity is/was approved; otherwise one-or-more entities | Partial | Present containers and local cardinalities are validated; absence is inconclusive without external approval evidence. |
-| 6.4.1-6.5 entity information | Information, services, name, address, and information URI are mandatory | Partial | JSON/XML mandatory structure, contacts, multilingual names, information URIs, and known extension payloads are checked; official-record claims remain contextual. |
-| 6.6 service information | Name and digital identity mandatory; conditional and profile-specific fields | Partial | Local nesting, identifiers, registered service types/statuses, supply points, definition URIs, and extensions are checked; bounded supply-point JSON/XML syntax is checked while authoritative register semantics remain. |
-| 6.6.3 digital identity | Certificate/SKI/PublicKey/subject/other identifier rules and equivalence | Partial | Non-empty alternatives, strict Base64, DN shape, profile certificate cardinality, and Pub-EAA key/subject rules are checked; general key/SKI equivalence and certificate-purpose policy remain. |
-| 6.6.4-6.6.5 status | Status and start time depend on history/profile; dates must be consistent | Local/profile implementation | Profile absence rules and Pub-EAA notified/withdrawn values and start-time ordering are checked. |
-| 6.7 service history | Mandatory fields, descending time order, identity retention semantics | Partial | Mandatory local fields, ordering, and Pub-EAA SKI/no-certificate history rules are checked; retention completeness remains contextual. |
-| 6.8 signatures | AdES Baseline B; signer subject country/organization matches scheme | Local XAdES and JAdES implemented | Both bindings separate structure/payload, cryptography, certificate validity, signer metadata, and explicit trust; contextual chain trust remains. |
-| Annex A schemas | Official base and extension schemas | JSON implemented; XML pending | The v1.1.1 bundle is pinned and the JSON binding validates offline with source-identified diagnostics; integrate XML binding validation while preserving semantic checks where the PDF prevails. |
-| Annex B multilingual | Normative language and character rules | Missing | Add reusable validators for every multilingual component. |
-| Annex C URIs | Exact registered profile URIs | Implemented locally | Exact profile comparisons preserve the published WRPRC typo under the interpretation registry. |
-| Annexes D-I | Six EU profiles | Local tables plus optional context | Binding, scheme, entity, service/history, signature, and supported contextual families are reported separately; unsupported identity/archive/register semantics remain explicit. |
-
-## Schema validation backlog
-
-### JSON
-
-- [x] Bundle or reproducibly fetch the v1.1.1 Draft-07 schemas:
-  `1960201_json_schema.json`, `_sie.json`, `_tie.json`, and RFC 7517
-  dependencies.
-- [x] Record source URL, tag, commit, SHA-256, and license.
-- [x] Use a Draft-07 validator with URI and date-time format enforcement.
-- [x] Resolve extension schemas without hidden network access.
-- [x] Report each error with JSON Pointer, schema keyword, expected value, and
-  observed value.
-- [x] Validate `additionalProperties`, `minItems`, exact primitive types, and
-  all nested required fields.
-- [ ] Add positive and negative fixtures for each object and extension type.
-
-### XML
-
-- [x] Bundle or reproducibly fetch `1960201_xsd_schema.xsd`, `_sie.xsd`, and
-  `_tie.xsd`, plus pinned XMLDSig dependencies.
-- [x] Route the schema validator through `xml_lote`; TS 119 602 XML uses its
-  pinned schema automatically while `--xsd` remains the TS 119 612 override.
-- [x] Route scheme-explicit XML validation through the pinned offline XML
-  catalog; generic `xmllint` validation now prohibits network access with
-  `--nonet`.
-- [x] Report structured line/column diagnostics and schema source identity.
-- [ ] Validate the TS 119 612 alternative binding with the correct TS 119 612
-  schema before applying Table A.1 mappings.
-- [x] Keep XML schema validity separate from semantic and profile validity.
-
-## Signature validation backlog
-
-### XML / XAdES
-
-Generic XMLDSig verification is useful but insufficient. For the Annex H XML
-profile, H.4 additionally requires:
-
-- [x] XAdES Baseline B validation under ETSI EN 319 132-1, not only detection
-  of `QualifyingProperties` or `SignedProperties`;
-- [x] an enveloped signature;
-- [x] a `ds:Reference` with `URI=""` covering the entire document;
-- [x] exactly one `ds:Transforms` on that reference;
-- [x] exactly two transforms in order: enveloped-signature, then exclusive
-  canonicalization;
-- [x] exclusive canonicalization for `ds:CanonicalizationMethod`;
-- [x] validation of all references, digests, signed properties, signing time,
-  signing certificate reference, and Baseline-B mandatory properties;
-- [x] signer certificate subject country equals `SchemeTerritory`;
-- [x] signer certificate subject organization equals one
-  `SchemeOperatorName`;
-- [x] a clear distinction between cryptographic validity, certificate
-  validity, and trust in the signer.
-
-The generic verifier continues to accept either an empty or same-document root
-reference and delegates transform handling to `xmlsec1`. XML LoTE assessment
-adds the stricter profile-specific H.4 findings without changing that reusable
-generic verification policy.
-
-### JSON / JAdES
-
-- [x] Detect compact JAdES rather than a JSON `signature` property.
-- [x] Parse protected headers and enforce the JAdES Baseline B serialization
-  and property requirements.
-- [x] Recover and validate the exact signed LoTE payload.
-- [x] Verify the signature algorithm and cryptographic signature.
-- [x] Parse the signing certificate/chain and expose certificate evidence.
-- [x] Validate signer subject country and organization against scheme data.
-- [x] Keep embedded certificate evidence separate from trust-anchor
-  validation.
-- [x] Report unsupported algorithms as `unsupported`, not `warn` or generic
-  failure.
-
-### Pointer authentication
-
-Clause 6.3.13 requires at least one `ServiceDigitalIdentity` in a pointer to
-successfully authenticate the pointed-to LoTE before use.
-
-- [x] Match the verified target signer certificate against every pointer
-  identity.
-- [x] Support certificate rollover with multiple certificate identities.
-- [ ] Compare public keys/SKIs where exact certificate equality is not the
-  applicable identity rule.
-- [x] Do not treat a target's self-embedded signing certificate as trusted
-  merely because its signature verifies.
-
-## Annex D-I profile validation
-
-Every profile is dispatched by exact embedded `LoTEType`; the generic WE BUILD
-role classifier is not used as profile evidence. The checks below implement
-locally decidable rules and expose contextual gaps rather than inferring them.
-
-Common Annex D-I requirements include:
-
-- `LoTEVersionIdentifier = 1`;
-- first sequence number is 1;
-- exact LoTE type, status-determination, scheme-rules, and territory values;
-- profile-specific history and pointer presence/absence;
-- a maximum of six calendar months to `NextUpdate`;
-- exact entity information and certificate identity semantics;
-- allowed service-type URI sets;
-- profile-specific status/history rules;
-- the required signature binding and AdES profile.
-
-| Annex/profile | Allowed binding | Important distinguishing rules | Current support |
-| --- | --- | --- | --- |
-| D — PID providers | Scheme-explicit JSON | No history period, self-pointer, PID issuance/revocation service types, no service status/start time, JAdES B | Local tables implemented |
-| E — Wallet providers | Scheme-explicit JSON | No history period, self-pointer, wallet issuance/revocation types, service name is wallet solution, mandatory `ServiceUniqueIdentifier`, JAdES B | Local tables implemented |
-| F — WRPAC providers | Scheme-explicit JSON | No history period, self-pointer, WRPAC issuance/revocation types, certificate-purpose rules, JAdES B | Local tables implemented; certificate purpose contextual |
-| G — WRPRC providers | Scheme-explicit JSON | No history period, self-pointer, WRPRC issuance/revocation types, certificate-purpose rules, JAdES B | Local tables implemented; published URI typo preserved |
-| H — Pub-EAA providers | Scheme-explicit JSON or XML | History period `65535`, no pointers, notified/withdrawn statuses, history uses SKI and forbids history certificates, JAdES B or tightly profiled XAdES B | Local JSON/XML tables implemented |
-| I — Registrars/registers | Scheme-explicit JSON | No history period, self-pointer, only Register service type, no status/start time, mandatory machine-processable service supply point, JAdES B | Local tables implemented; supply-point authentication contextual |
-
-`EUgeneric`/QEAA is not one of the TS 119 602 Annex D-I LoTE profiles. It
-belongs in the separate TS 119 612/WE BUILD assessment path and must not be
-used as evidence that a TS 119 602 profile passed.
-
-## Entity, service, and certificate semantics backlog
-
-- [ ] Require `TEInformationURI` in every `TrustedEntityInformation`.
-- [ ] Validate exact `TrustedEntityServices/TrustedEntityService` nesting
-  rather than descendant-name searches.
-- [ ] Validate `TEName`, `TETradeName`, address, and URI multilingual
-  structures.
-- [ ] Validate legal/natural-person registration identifier semantics where
-  Annex D-H refers to ETSI EN 319 412-1.
-- [ ] Validate associated-body requirements for PID and wallet profiles.
-- [x] Validate profile-specific country role URIs.
-- [x] Validate email, website, and mandatory telephone contact requirements.
-- [x] Validate service-type URIs against the selected profile only.
-- [ ] Validate `ServiceName` semantics where mechanically possible.
-- [x] Require profile-appropriate X.509 certificates and reject an empty
-  `X509Certificates` array.
-- [x] Compare certificate `organizationName` with `TEName` where required.
-- [x] For Pub-EAA, ensure multiple certificates represent the same public key
-  and have identical subject names.
-- [ ] Validate `PublicKeyValue` and `X509SKI` against any accompanying
-  certificate.
-- [x] Validate selected-profile service status sets and local start-time rules.
-- [x] Validate service history ordering and Pub-EAA retained identity rules.
-- [x] For Pub-EAA history, require at least one SKI and forbid
-  `X509Certificate`.
-- [x] Reject unknown critical scheme extensions with a versioned registry.
-- [x] Reject unknown critical TE and service extensions with versioned registries.
-
-Certificate expiry is valuable audit evidence, but the implementation must
-identify whether a validity rule is normative for the selected component and
-assessment instant before turning it into a conformance failure.
-
-## Cross-document and contextual checks
-
-Some requirements cannot be conclusively checked from one artifact. They need
-additional evidence and should otherwise return `inconclusive` or
-`not_checked`, not pass:
-
-- sequence number starts at 1 and increases across releases — supplied comparable prior instances are checked;
-- distribution points return identical current LoTE bytes — implemented under opt-in bounded dereferencing;
-- archive URIs expose previous instances where the profile requires them — direct previous-instance responses are checked; indexes remain inconclusive;
-- a self-pointer resolves to and authenticates the current profile list — implemented for certificate identities and identical current bytes;
-- pointer identities authenticate the fetched target — certificate identities are implemented; public-key/SKI forms remain;
-- scheme information pages contain the required policies and explanations;
-- service supply points expose the required machine-processable register — JSON/XML reachability is checked; record semantics remain contextual;
-- legal identity and registration claims match authoritative records;
-- status history retains all changes for the required period;
-- final closed LoTE status semantics are correct.
-
-Network checks must be bounded, optional where dereferencing is not necessary
-for local conformance, cached as evidence, and disabled in deterministic unit
-tests.
-
-## Published-source conflicts and ambiguities
-
-The validator must not silently invent corrections for these points:
-
-1. Clause 6.1.2 refers to registered URIs in "Annex H", while the URI registry
-   is Annex C in V1.1.1.
-2. Clause 6.1.4 refers to detailed multilingual rules in "Annex G", while
-   those rules are Annex B in V1.1.1.
-3. Annex C.2.2 and Table G.1 publish
-   `http://uri.etsi.org/19602/WRPRCrovidersList/StatusDetn/EU`, apparently
-   missing the `P` in `Providers`, while the surrounding URI family uses
-   `WRPRCProvidersList`.
-4. Clause 6.3.15 permits `NextUpdate` to be null for a closed LoTE, while the
-   published JSON and XML schema types appear to require a date-time value.
-5. Clause 6.3.5.1 describes `Locality` as optional and a required `Country`
-   element, while the published XML schema makes `Locality` required and uses
-   `CountryName`.
-6. Clause 6.8 requires every LoTE to be signed, while the base XML schema
-   declares `ds:Signature` with `minOccurs="0"`; the semantic rule must
-   prevail.
-7. The published JSON Schema places one `additionalProperties: false` entry
-   inside the `ServiceDigitalIdentity.properties` map rather than at the
-   object level, so schema behavior alone may not close that object.
-
-Required policy:
-
-- maintain a versioned `standards-interpretation` registry;
-- cite the exact clause/schema path in every exception;
-- use the PDF as authoritative where Annex A says it prevails;
-- report unresolved cases as `inconclusive`;
-- do not normalize a published URI typo without a documented erratum or an
-  explicit human-approved compatibility rule.
-
-The versioned implementation registry is in
-`src/standards/ts119602Interpretations.ts`; implemented exceptions link their
-finding evidence to the applicable registry identifier.
-
-## Executable task breakdown
-
-The backlog is divided into reviewable tasks below. Each task should be one
-focused implementation prompt and one commit; dependencies are intentionally
-explicit so normative profile work cannot outrun binding and core semantics.
+| Input | Local files, URLs, JSON objects/strings, raw XML/JSON/JWS API content, certificates/chains | Network fetches are bounded and must be explicit |
+| Classification | XML/JSON/JWS/HTML/unknown detection; TS 119 612 and TS 119 602 applicability are separate | Profile declarations cannot override conflicting embedded evidence |
+| Reports | Stable JSON report schema v4 plus Markdown rendering of the same findings | No Markdown-only findings |
+| API | POST assessment routes, OpenAPI, Stoplight Elements UI | Core functions are reused; the API does not shell out to the CLI |
+| XML tooling | `xmlsec1` and `xmllint` declared as Mise bootstrap packages | Missing executables produce explicit `not_checked`/`unsupported` results |
+| Certificates | Parse subject, issuer, serial, validity and SHA-256 fingerprints; assess RPAC/WRPAC chains against supplied anchors | Embedded certificates are evidence, not automatically trusted anchors |
+| Fixtures | Deterministic positive/negative XML, JSON, JWS, chain and readiness fixtures | Live reference services are not normal test dependencies |
+| Test baseline | 31 test files and 170 tests passing at this reconciliation | Counts will change as tasks are added |
+
+## Boundary between the standards
+
+- A `TrustServiceStatusList` using a supported TS 119 612 namespace is assessed
+  under TS 119 612.
+- A TS 119 602 `ListOfTrustedEntities` XML document is assessed using the
+  scheme-explicit XML binding.
+- An official object/array JSON LoTE is assessed using the TS 119 602
+  scheme-explicit JSON binding.
+- JSON LoTE/LoTL artifacts are `not_applicable` to TS 119 612.
+- A TS 119 612 XML artifact is only a candidate for the TS 119 602 Annex A.2.2
+  alternative binding when embedded evidence selects the Pub-EAA profile.
+- The alternative binding must pass the applicable TS 119 612 validation and
+  an explicit Annex A Table A.1 mapping before TS 119 602 profile conclusions
+  are possible.
+- Legacy WE BUILD JSON/XML shapes remain compatibility inputs and must not be
+  silently described as normative ETSI bindings.
+
+## ETSI TS 119 612
+
+### Implemented baseline
+
+The existing TS 119 612 assessor provides useful evidence, but it is not yet
+driven by a clause-by-clause requirements ledger and must not be treated as a
+complete conformance validator.
+
+| Baseline task | Implemented scope | Status |
+| --- | --- | --- |
+| TS612-B01 | Detect `TrustServiceStatusList`, distinguish TL from LoTL using `TSLType`, mark foreign roots/namespaces not applicable, and retain the observed EUDI RI namespace variant as warning evidence | Complete |
+| TS612-B02 | Parse core scheme metadata, dates, distribution points, TSP/service counts, and mandatory-field presence | Complete task scope; semantic coverage partial |
+| TS612-B03 | Optional local XSD validation through `xmllint --nonet`, namespace matching, and actionable diagnostics | Complete task scope; official schema bundle not pinned |
+| TS612-B04 | XMLDSig/XAdES evidence, local-reference policy, `xmlsec1` cryptographic verification, embedded certificate parsing, validity evidence, and first-list/signing-certificate equality for LoTL/LoTE types | Complete task scope; trust/profile coverage partial |
+| TS612-B05 | Separate `ts119612` result/report summary, CLI/API/OpenAPI exposure, Markdown rendering, and focused malformed/namespace/date/XSD/signature fixtures | Complete |
+
+#### What TS 119 612 does not yet prove
+
+- The implemented field-presence checks are not a complete clause/cardinality,
+  vocabulary, or semantic assessment.
+- No pinned, integrity-checked official TS 119 612 XSD/catalog bundle is used
+  automatically. `schema.xsd` remains `not_checked` unless CLI `--xsd` is
+  supplied.
+- The canonical-version/profile source set and every supported namespace have
+  not been captured in a versioned requirements/interpretation ledger.
+- Date-time lexical rules, exact calendar update periods, sequence progression,
+  closed-list behavior, and historical retention are incomplete.
+- TSP/service information, service history, qualifiers, extensions, digital
+  identities, status transitions, and certificate-purpose rules are only
+  partially inspected.
+- XML signature verification does not by itself establish the complete TS
+  119 612 signature profile, certificate path, revocation, or signer trust.
+- LoTL `OtherTSLPointer` structure, type/community qualifiers, pointer
+  authentication, distribution consistency, and cross-list trust are not
+  comprehensively validated.
+- The current score/conformance calculation is not tied to a normative
+  coverage ledger and can therefore be more optimistic than the implemented
+  coverage justifies.
+
+### TS 119 612 sequential task plan
+
+Each row is intended to be one focused implementation prompt and one commit.
 
 | Task | Scope | Depends on | Status |
 | --- | --- | --- | --- |
-| TS602-01 | Separate TS 119 602/TS 119 612 result objects and summaries; add `unsupported`/`inconclusive`; make local JSON checks unconditional; remove the JSON signature-object pass shortcut. | None | Complete |
-| TS602-02 | Create the clause/table/profile requirements ledger with stable check IDs, applicability, severity, and normative citations. | TS602-01 | Complete |
-| TS602-03 | Classify the three Annex A bindings independently from the data model and selected profile, including guarded TS 119 612 alternative-binding applicability. | TS602-02 | Complete |
-| TS602-04 | Pin the official v1.1.1 JSON/XSD schema bundle, hashes, provenance, license, and offline resolvers. | TS602-02 | Complete |
-| TS602-05 | Validate the official JSON object/array model and isolate legacy WE BUILD/TSL-like JSON behind a compatibility adapter. | TS602-04 | Complete |
-| TS602-06 | Add reusable clause 6.1 validators for URI, strict UTC timestamp, language, country code, and multilingual values. | TS602-02 | Complete |
-| TS602-07 | Implement clause 6.2/6.3 list metadata, implicit/explicit presence, pointers, dates, distribution points, and critical extensions. | TS602-03, TS602-06 | Complete |
-| TS602-08 | Implement clauses 6.4-6.7 entity, service, identity, status, and history semantics. | TS602-04, TS602-06 | Complete |
-| TS602-09 | Implement XAdES Baseline B and exact Annex H.4 XML signature constraints, signer evidence, and trust separation. | TS602-03, TS602-08 | Complete |
-| TS602-10 | Implement compact JAdES Baseline B parsing, payload recovery, cryptographic verification, certificate evidence, and trust separation. | TS602-05, TS602-08 | Complete |
-| TS602-11 | Dispatch and validate all Annex D-I profiles, with positive and focused negative fixtures per requirement family. | TS602-07 through TS602-10 | Complete |
-| TS602-12 | Add contextual prior-list, distribution, pointer-authentication, archive, and supply-point checks, then synchronize CLI/API/OpenAPI/report compatibility tests. | TS602-11 | Complete |
-| TS602-13 | Validate scheme-explicit XML with the integrity-checked pinned XSD/catalog, offline diagnostics, and binding-source evidence. | TS602-04, TS602-09 | Complete |
-| TS602-14 | Implement Annex A.2.2/Table A.1 mapping for the TS 119 612 alternative XML binding. | TS602-03, TS602-13 | Next |
+| TS612-01 | Establish the exact supported TS 119 612 version/profile source set; create a clause/table requirements ledger with stable `ts119612.*` IDs, applicability, severity, citations and implementation status; gate verdicts on coverage so incomplete assessment cannot report full conformance | Baseline | **Next** |
+| TS612-02 | Pin the applicable official base/extension XSDs, XMLDSig dependencies, licenses, immutable provenance, hashes and an offline catalog; add bundle integrity verification | TS612-01 | Planned |
+| TS612-03 | Route every supported TS 119 612 namespace/version to the correct pinned schema automatically; retain `--xsd` only as an explicit override; report source-identified line diagnostics and document namespace/profile ambiguity | TS612-02 | Planned |
+| TS612-04 | Implement scheme-information structure and semantics: exact order/cardinality, version, sequence, type, operator name/address, scheme name/information URI, status approach, community rules, territory, policy/legal notice, issue/next-update, distribution points and extensions | TS612-01, TS612-03 | Planned |
+| TS612-05 | Implement TSP and service-information structure: exact nesting/cardinality, multilingual names/addresses/URIs, service types/names, digital identities, status/start time, supply points, definitions and extensions | TS612-04 | Planned |
+| TS612-06 | Implement service history, qualifiers and certificate semantics: history ordering/retention, status transitions, qualifier vocabularies, identity equivalence, certificate roles/purpose and deterministic certificate evidence | TS612-05 | Planned |
+| TS612-07 | Implement the exact applicable XML signature/XAdES profile: reference/transform/property rules, signer metadata, certificate path/revocation inputs and explicit signer-trust separation | TS612-03, TS612-06 | Planned |
+| TS612-08 | Implement LoTL `OtherTSLPointer` semantics: pointer structure, MIME/type/community qualifiers, service identities, signing-certificate rules, rollover and supported namespace/profile dispatch | TS612-04, TS612-07 | Planned |
+| TS612-09 | Add contextual validation for sequence progression, distribution equality, archive/history evidence, pointer dereferencing/authentication and bounded cross-list traversal | TS612-08 | Planned |
+| TS612-10 | Add explicit EUDI RI and WE BUILD TS 119 612 profile checks without treating reference-service behavior as normative ETSI behavior | TS612-05 through TS612-09 | Planned |
+| TS612-11 | Add deterministic positive and focused negative fixtures for every implemented requirement family; synchronize CLI, API, OpenAPI, JSON/Markdown and report compatibility tests | TS612-10 | Planned |
+| TS612-12 | Perform a coverage audit against the ledger, leave unsupported/contextual rules explicit, document manual live smoke procedures, and enable a complete verdict only if every applicable implemented requirement is conclusive | TS612-11 | Planned |
 
-TS602-01 establishes result isolation only; it does not claim that any TS
-119 602 binding or profile is completely validated.
+#### TS 119 612 implementation rules
 
-## Recommended implementation order
+- Do not infer a normative namespace/version relationship solely from an EUDI
+  RI fixture. Record observed variants separately from standard citations.
+- XSD validity, semantic validity, profile validity, signature validity,
+  certificate validity, signer trust and pointer trust are separate findings.
+- Use exact calendar arithmetic where the standard expresses months; do not
+  replace it with a fixed 183-day approximation without normative support.
+- Do not use descendant-name searches as proof of exact mandatory nesting.
+- A signing certificate embedded in `ds:KeyInfo` is not trusted merely because
+  the signature verifies.
+- Live LoTL traversal must enforce timeout, count, concurrency, byte and cycle
+  bounds and must remain disabled in normal tests.
 
-### Phase 1 — Result model and requirements ledger
+## ETSI TS 119 602 V1.1.1
 
-- [x] Add a first-class TS 119 602 result schema.
-- [x] Create one stable check ID per normative requirement or coherent
-  requirement family, with clause/table/profile citations.
-- [x] Add `unsupported` and `inconclusive` statuses.
-- [ ] Define binding, data-model, profile, signature, and trust results
-  separately.
-- [x] Remove all routes that can imply TS 119 602 conformance from presence
-  checks alone.
+### Implemented task sequence
 
-### Phase 2 — Official binding validation
+These tasks are complete for their bounded scopes. The requirements ledger
+currently contains 81 families: 19 implemented, 61 partial and 1 not
+implemented. Therefore TS 119 602 as a whole is not complete.
 
-- [x] Pin the official v1.1.1 JSON/XSD schema bundle and hashes.
-- [x] Implement offline JSON Schema validation.
-- [x] Implement offline XML Schema validation for scheme-explicit XML.
-- [ ] Implement TS 119 612 alternative-binding mapping.
-- [x] Correct official JSON parsing and fixtures.
-- [x] Keep WE BUILD legacy structures as explicitly non-conformant
-  compatibility inputs.
+| Task | Implemented scope | Status |
+| --- | --- | --- |
+| TS602-01 | Isolate TS 119 602/TS 119 612 results and summaries; add `unsupported`/`inconclusive`; remove opt-in and signature-object shortcuts | Complete |
+| TS602-02 | Add the 81-family clause/table/profile requirements ledger with citations and stable check IDs | Complete |
+| TS602-03 | Classify data model, three Annex A bindings and selected Annex D-I profile independently | Complete |
+| TS602-04 | Pin V1.1.1 JSON/XML schemas, dependencies, provenance, licenses, hashes and offline resolvers | Complete |
+| TS602-05 | Validate the official JSON object/array binding offline and isolate legacy WE BUILD JSON through a compatibility adapter | Complete |
+| TS602-06 | Add reusable URI, strict UTC timestamp, language, country-code and multilingual syntax validators | Complete task scope; some requirement families remain partial |
+| TS602-07 | Add clause 6.2/6.3 metadata, implicit/explicit presence, pointer, date, distribution and critical-extension checks | Complete task scope; contextual semantics remain partial |
+| TS602-08 | Add clauses 6.4-6.7 entity, service, identity, status and history checks | Complete task scope; strict nesting/identity semantics remain partial |
+| TS602-09 | Add XAdES Baseline B and Annex H.4 XML signature constraints with signer evidence/trust separation | Complete |
+| TS602-10 | Add compact JAdES Baseline B payload and cryptographic validation with certificate evidence/trust separation | Complete |
+| TS602-11 | Dispatch Annex D-I profiles and implement locally decidable profile tables with positive/focused negative coverage | Complete task scope; contextual/profile semantics remain partial |
+| TS602-12 | Add supplied prior-list evidence and bounded distribution, pointer, archive and supply-point contextual checks across product surfaces | Complete task scope; some identity/register/archive semantics remain partial |
+| TS602-13 | Validate scheme-explicit XML with the integrity-checked pinned XSD/catalog and source-identified diagnostics | Complete |
 
-### Phase 3 — Core clauses 6.1-6.7
+### Remaining TS 119 602 gaps
 
-- [x] Implement reusable validators for URIs, UTC timestamps, language tags,
-  country codes, and multilingual values.
-- [x] Implement reusable scheme-operator address validators.
-- [x] Implement Table 1 implicit/explicit presence rules.
-- [x] Implement list metadata, local pointer structure, dates, distribution
-  point structure, and critical scheme extensions.
-- [x] Implement local entities, services, identities, statuses, histories,
-  and critical entity/service extensions.
-- [x] Add local history-period, status-time, and history-order consistency
-  checks.
-- [ ] Add contextual and profile-specific cross-field consistency checks.
+#### Binding and schema
 
-### Phase 4 — Signature profiles
+- Annex A.2.2/Table A.1 mapping for the TS 119 612 alternative XML binding is
+  not implemented.
+- Positive and negative fixtures do not yet cover every JSON/XML extension
+  schema type.
+- Schema success remains evidence only; the normative document prevails over
+  known electronic-schema conflicts.
 
-- [x] Implement compact JAdES Baseline B parsing and verification.
-- [x] Implement XAdES Baseline B property validation.
-- [x] Implement the exact Annex H.4 XML signature constraints.
-- [x] Match signer subject country/organization to scheme metadata.
-- [ ] Authenticate target lists using pointer identities.
+#### Core data model and profiles
 
-### Phase 5 — Annex D-I profiles
+- Complete Annex B multilingual/transliteration and character rules.
+- Require `TEInformationURI` and exact
+  `TrustedEntityServices/TrustedEntityService` nesting.
+- Complete `TEName`, `TETradeName`, address, URI and `ServiceName` semantics.
+- Validate legal/natural-person registration identifiers and associated-body
+  requirements where Annex D-H requires them.
+- Complete profile-specific cross-field consistency and certificate-purpose
+  policies.
+- Compare `PublicKeyValue` and `X509SKI` with accompanying certificates and
+  support those identities for pointer authentication.
 
-- [x] Implement exact profile routing by LoTE type and binding.
-- [x] Implement every locally decidable scheme-information table rule.
-- [x] Implement every locally decidable entity-information table rule.
-- [x] Implement every locally decidable service-information table rule.
-- [x] Implement each profile's signature and local history rules.
-- [x] Add positive and focused negative fixture coverage per requirement family.
+#### Context and trust
 
-### Phase 6 — Contextual validation and product surfaces
+- Validate archive indexes/protocols beyond a directly returned prior list.
+- Validate scheme-information pages and authoritative legal/registration
+  records only when explicit evidence and policy are supplied.
+- Validate register record semantics beyond JSON/XML reachability.
+- Establish history retention completeness and final closed-LoTE semantics.
+- Add explicit certificate-chain/revocation policy for signers and pointer
+  identities; embedded certificates remain untrusted by default.
 
-- [x] Add optional prior-list/archive inputs for sequence/history checks.
-- [x] Add bounded distribution, pointer, and supply-point dereferencing.
-- [x] Expose the complete TS 119 602 result through CLI, API, OpenAPI, JSON,
-  and Markdown using the same core model.
-- [x] Add schema/version compatibility tests for report consumers.
-- [ ] Add optional live smoke tests without making normal tests network
-  dependent.
+### TS 119 602 remaining sequential task plan
 
-## Definition of a complete check
+| Task | Scope | Depends on | Status |
+| --- | --- | --- | --- |
+| TS602-14 | Implement Annex A.2.2/Table A.1 component mapping for the TS 119 612 alternative XML binding, consuming validated TS 119 612 facts rather than reparsing with ad hoc XPath | TS602-13, TS612-06 | Planned |
+| TS602-15 | Close core structure and syntax gaps: exact XML/JSON nesting/cardinality, `TEInformationURI`, multilingual/transliteration rules, names, addresses, URIs and service-name semantics | TS602-13 | **Next runnable TS 119 602 task** |
+| TS602-16 | Close Annex D-I local semantic gaps: registration identifiers, associated bodies, certificate-purpose rules and remaining profile cross-field consistency | TS602-15 | Planned |
+| TS602-17 | Implement certificate/public-key/SKI equivalence and use all supported pointer identity forms with explicit chain/revocation trust inputs | TS602-16 | Planned |
+| TS602-18 | Complete contextual rules for scheme pages, authoritative registration evidence, archive traversal, register records, history retention and final closed lists | TS602-17 | Planned |
+| TS602-19 | Add positive and negative fixtures for every base/extension schema and every newly completed requirement family; update interpretation-registry regression tests | TS602-18 | Planned |
+| TS602-20 | Synchronize CLI/API/OpenAPI/report contracts, add optional bounded live smoke procedures, audit all 81 ledger families and enable a complete verdict only when every applicable result is conclusive | TS602-14, TS602-19, TS612-12 | Planned |
 
-A complete TS 119 602 check is reached only when:
+### Published TS 119 602 conflicts that must remain explicit
 
-1. the artifact binding is identified and valid;
-2. the applicable official schema passes, with documented handling of known
-   PDF/schema conflicts;
-3. every applicable core semantic requirement has a result;
-4. the correct Annex D-I profile is selected and every additional requirement
-   has a result;
-5. JAdES or XAdES Baseline B and the profile-specific signature rules pass;
-6. signer and pointer identities are validated under an explicit trust model;
-7. contextual requirements are checked from supplied/fetched evidence or are
-   explicitly `inconclusive`;
-8. no mandatory check is `fail`, `not_checked`, `unsupported`, or
+The implementation registry in
+`src/standards/ts119602Interpretations.ts` must continue to cite and preserve
+these issues rather than silently normalize them:
+
+1. Clause 6.1.2 refers to registered URIs in Annex H while the registry is in
+   Annex C in V1.1.1.
+2. Clause 6.1.4 refers to multilingual rules in Annex G while they appear in
+   Annex B.
+3. The published WRPRC status-determination URI contains an apparent spelling
+   error.
+4. Clause 6.3.15 closed-LoTE null semantics conflict with the published schema
+   shape.
+5. Clause 6.3.5.1 postal-address text and the XML schema disagree about
+   `Locality` and `Country`/`CountryName`.
+6. Clause 6.8 requires a signature while the XML schema makes `ds:Signature`
+   optional.
+7. The JSON Schema's `additionalProperties` placement does not by itself close
+   every intended object.
+
+Unresolved conflicts must be `inconclusive` or linked to an explicit,
+versioned interpretation; they must never be silently corrected.
+
+## Cross-standard recommended order
+
+The recommended implementation sequence is:
+
+1. **TS612-01** — create the missing TS 119 612 normative ledger and prevent
+   optimistic verdicts before adding more checks.
+2. **TS612-02 through TS612-06** — establish pinned schemas and reliable local
+   TS 119 612 facts.
+3. **TS602-14** — implement the alternative-binding mapping using those facts.
+4. **TS612-07 through TS612-10** and **TS602-15 through TS602-18** — complete
+   signature, trust, semantic and contextual families in their respective
+   standards.
+5. **TS612-11/12** and **TS602-19/20** — close fixture/product-surface coverage
+   and perform ledger-driven completion audits.
+
+Tasks that do not share files may be developed independently, but the stated
+dependencies must still be satisfied before a conformance claim is enabled.
+
+## Completion gates
+
+Neither standard may report a complete conformance conclusion unless:
+
+1. artifact type, standard version, binding and applicable profile are
+   selected from authoritative artifact evidence;
+2. the correct integrity-checked schema passes or the report explicitly
+   explains why schema validation is not applicable;
+3. every applicable ledger requirement has a JSON finding with stable ID,
+   category, status, severity, message, evidence and applicability;
+4. semantic, schema, signature, certificate, chain, trust and contextual
+   results remain distinct;
+5. every mandatory result is free of `fail`, `not_checked`, `unsupported` and
    `inconclusive`;
-9. the JSON report contains the same findings as Markdown and identifies the
-   exact standard version, schemas, algorithms, evidence, and limitations;
-10. deterministic positive and negative fixtures cover every implemented
-    normative requirement family.
-
-Until those conditions are met, the product should continue to describe its
-TS 119 602 output as evidence checks, not full conformance validation.
+6. contextual requirements use supplied/bounded fetched evidence and do not
+   pass merely because evidence is absent;
+7. JSON and Markdown contain the same findings, and CLI/API/OpenAPI behavior is
+   synchronized;
+8. deterministic positive and negative fixtures cover every implemented
+   normative requirement family;
+9. known source conflicts are linked to a versioned interpretation rather
+   than silently normalized; and
+10. the report states the limits of the implemented checks and does not claim
+    legal certification or production trust.
