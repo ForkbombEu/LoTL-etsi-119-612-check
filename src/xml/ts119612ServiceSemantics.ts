@@ -20,7 +20,7 @@ const QUALIFICATIONS_NS = "http://uri.etsi.org/TrstSvc/SvcInfoExt/eSigDir-1999-9
 const ADDITIONAL_TYPES_NS = "http://uri.etsi.org/02231/v2/additionaltypes#";
 const XML_LANG = "http://www.w3.org/XML/1998/namespace";
 
-interface CertificateEvidence {
+export interface Ts119612CertificateIdentityEvidence {
   subject: string;
   issuer: string;
   serialNumber: string;
@@ -35,8 +35,8 @@ interface CertificateEvidence {
   subjectDn: Map<string, string[]>;
 }
 
-interface IdentityEvidence {
-  certificates: CertificateEvidence[];
+export interface Ts119612DigitalIdentityEvidence {
+  certificates: Ts119612CertificateIdentityEvidence[];
   certificateValues: string[];
   subjects: string[];
   skis: string[];
@@ -57,7 +57,7 @@ export function assessTs119612ServiceSemantics(document: Document): CheckResult[
     const statusStart = strictDate(value(child(information, "StatusStartingTime", TSL_NS)));
     const tsp = ancestor(service, "TrustServiceProvider");
     const tspNames = tsp ? descendants(child(tsp, "TSPInformation", TSL_NS), "Name", TSL_NS).map(value).filter(isString) : [];
-    const identity = inspectIdentity(child(information, "ServiceDigitalIdentity", TSL_NS));
+    const identity = inspectTs119612DigitalIdentity(child(information, "ServiceDigitalIdentity", TSL_NS));
 
     checks.push(identityResult(`${prefix}.identity_equivalence`, identity));
     checks.push(certificateRoleResult(`${prefix}.certificate_role`, serviceType, identity.certificates));
@@ -93,7 +93,7 @@ function assessHistory(
   currentType: string | undefined,
   currentStatus: string | undefined,
   currentStart: Date | undefined,
-  currentIdentity: IdentityEvidence,
+  currentIdentity: Ts119612DigitalIdentityEvidence,
   prefix: string,
   checks: CheckResult[],
 ): void {
@@ -144,7 +144,7 @@ function assessHistory(
       "Historical ServiceName has valid multilingual local syntax.",
       "Historical ServiceName shall be a non-empty valid multilingual name.", multilingual.diagnostics));
 
-    const historyIdentity = inspectIdentity(child(instance, "ServiceDigitalIdentity", TSL_NS));
+    const historyIdentity = inspectTs119612DigitalIdentity(child(instance, "ServiceDigitalIdentity", TSL_NS));
     const currentSkis = new Set(currentIdentity.certificates.map((cert) => cert.subjectKeyIdentifier).filter(isString));
     const identityValid = historyIdentity.certificateValues.length === 0 && historyIdentity.skis.length > 0
       && historyIdentity.skis.every((ski) => currentSkis.size === 0 || currentSkis.has(ski));
@@ -303,12 +303,15 @@ function additionalInformationResult(id: string, info: Element, serviceType: str
     { uri, serviceType, registered, customRegistrationChecked: false });
 }
 
-function inspectIdentity(identity: Element | undefined): IdentityEvidence {
-  const digitalIds = identity ? children(identity, "DigitalId", TSL_NS) : [];
+export function inspectTs119612DigitalIdentity(
+  identity: Element | undefined,
+  namespace = TSL_NS,
+): Ts119612DigitalIdentityEvidence {
+  const digitalIds = identity ? children(identity, "DigitalId", namespace) : [];
   const certificateValues = digitalIds.flatMap((digitalId) => children(digitalId, "X509Certificate").map(value).filter(isString));
   const subjects = digitalIds.flatMap((digitalId) => children(digitalId, "X509SubjectName").map(value).filter(isString));
   const skis = digitalIds.flatMap((digitalId) => children(digitalId, "X509SKI").map(value).filter(isString).map(normalizeBinary));
-  const certificates: CertificateEvidence[] = [];
+  const certificates: Ts119612CertificateIdentityEvidence[] = [];
   const diagnostics: string[] = [];
   certificateValues.forEach((encoded, index) => {
     try { certificates.push(certificateEvidence(encoded)); } catch { diagnostics.push(`X509Certificate ${index + 1} could not be parsed.`); }
@@ -330,7 +333,7 @@ function inspectIdentity(identity: Element | undefined): IdentityEvidence {
   return { certificates, certificateValues, subjects, skis, keyHashes: [...certificates.map((cert) => cert.publicKeySha256), ...keyHashes], diagnostics };
 }
 
-function identityResult(id: string, identity: IdentityEvidence): CheckResult {
+function identityResult(id: string, identity: Ts119612DigitalIdentityEvidence): CheckResult {
   return result(id, "certificates", identity.diagnostics.length === 0,
     "Service identity representations are mutually equivalent where locally comparable.",
     "Service identity representations are not mutually equivalent.",
@@ -338,7 +341,7 @@ function identityResult(id: string, identity: IdentityEvidence): CheckResult {
       publicKeySha256: [...new Set(identity.keyHashes)], certificates: identity.certificates.map(publicCertificateEvidence), diagnostics: identity.diagnostics }, "critical");
 }
 
-function certificateRoleResult(id: string, serviceType: string | undefined, certificates: CertificateEvidence[]): CheckResult {
+function certificateRoleResult(id: string, serviceType: string | undefined, certificates: Ts119612CertificateIdentityEvidence[]): CheckResult {
   if (certificates.length === 0) return check(id, "certificates", "not_applicable", "info", "No X.509 certificate is present for certificate-role assessment.", { serviceType });
   const required = CA_SERVICE_TYPES.has(serviceType ?? "") ? "keyCertSign" : CRL_SERVICE_TYPES.has(serviceType ?? "") ? "crlSign" : undefined;
   if (!required) return check(id, "certificates", "inconclusive", "warning", "Certificate evidence was extracted, but this service type has no locally asserted certificate-purpose rule.",
@@ -350,7 +353,7 @@ function certificateRoleResult(id: string, serviceType: string | undefined, cert
     { serviceType, requiredKeyUsage: required, certificates: certificates.map(publicCertificateEvidence), chainValidationChecked: false, revocationChecked: false }, "critical");
 }
 
-function subjectMatchResult(id: string, certificates: CertificateEvidence[], tspNames: string[], hasSchemeDefinition: boolean): CheckResult {
+function subjectMatchResult(id: string, certificates: Ts119612CertificateIdentityEvidence[], tspNames: string[], hasSchemeDefinition: boolean): CheckResult {
   if (certificates.length === 0) return check(id, "certificates", "not_applicable", "info", "No certificate subject organization is present for TSP-name comparison.");
   const organizations = certificates.flatMap((cert) => cert.subjectDn.get("O") ?? []);
   const matches = organizations.some((org) => tspNames.some((name) => normalizeText(org) === normalizeText(name)));
@@ -362,7 +365,7 @@ function subjectMatchResult(id: string, certificates: CertificateEvidence[], tsp
     { organizations, tspNames, hasSchemeDefinition, schemeDefinitionFetched: false });
 }
 
-function certificateEvidence(encoded: string): CertificateEvidence {
+function certificateEvidence(encoded: string): Ts119612CertificateIdentityEvidence {
   const raw = Buffer.from(encoded.replace(/\s+/g, ""), "base64");
   const certificate = new X509Certificate(raw);
   const publicKey = certificate.publicKey.export({ type: "spki", format: "der" });
@@ -378,7 +381,7 @@ function certificateEvidence(encoded: string): CertificateEvidence {
   };
 }
 
-function publicCertificateEvidence(cert: CertificateEvidence): Record<string, unknown> {
+function publicCertificateEvidence(cert: Ts119612CertificateIdentityEvidence): Record<string, unknown> {
   return { subject: cert.subject, issuer: cert.issuer, serialNumber: cert.serialNumber, notBefore: cert.notBefore, notAfter: cert.notAfter,
     fingerprintSha256: cert.fingerprintSha256, publicKeySha256: cert.publicKeySha256, subjectKeyIdentifier: cert.subjectKeyIdentifier,
     keyUsage: cert.keyUsage, isCertificateAuthority: cert.isCertificateAuthority, selfSigned: cert.selfSigned };

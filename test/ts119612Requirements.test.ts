@@ -54,7 +54,7 @@ describe("ETSI TS 119 612 requirements ledger", () => {
     expect(filterTs119612Requirements({ artifactKind: "ts119612_xml_lotl" }))
       .toEqual(expect.arrayContaining([expect.objectContaining({ checkId: "ts119612.scheme.pointers.structure" })]));
     expect(filterTs119612Requirements({ artifactKind: "ts119612_xml_tsl" }))
-      .not.toEqual(expect.arrayContaining([expect.objectContaining({ checkId: "ts119612.scheme.pointers.structure" })]));
+      .toEqual(expect.arrayContaining([expect.objectContaining({ checkId: "ts119612.scheme.pointers.structure" })]));
     expect(filterTs119612Requirements({ evidenceScope: "contextual" }))
       .toEqual(expect.arrayContaining([expect.objectContaining({ checkId: "ts119612.operations.availability" })]));
   });
@@ -62,9 +62,9 @@ describe("ETSI TS 119 612 requirements ledger", () => {
   it("reports incomplete coverage without implying conformance", () => {
     expect(summarizeTs119612Requirements()).toMatchObject({
       total: 69,
-      implemented: 11,
+      implemented: 12,
       partial: 45,
-      notImplemented: 13,
+      notImplemented: 12,
       complete: false,
     });
   });

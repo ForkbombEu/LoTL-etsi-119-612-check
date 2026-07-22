@@ -299,6 +299,8 @@ For XML artifacts, the tool performs layered best-effort ETSI TS 119 612 checks:
 - fetch status, final URL, content type, SHA-256, byte count, duration;
 - XML parse and root element checks;
 - core `SchemeInformation` structure checks;
+- `OtherTSLPointer` tuple, qualifier, certificate, rollover and target-profile
+  dispatch checks;
 - issue/next-update timestamp checks;
 - signature presence, embedded signing certificate extraction, signed-root reference checks, and `xmlsec1` XMLDSig verification;
 - XAdES qualifying-property detection;
@@ -323,8 +325,8 @@ assumed.
 
 The TS 119 612 requirements ledger in
 `src/standards/ts119612Requirements.ts` inventories 69 coherent families
-across clauses 4-6 and normative Annexes B-E/G/J. It currently records 11
-families as implemented, 45 as partial, and 13 as not implemented. Every
+across clauses 4-6 and normative Annexes B-E/G/J. It currently records 12
+families as implemented, 45 as partial, and 12 as not implemented. Every
 applicable assessment includes `ts119612.coverage.complete`; incomplete
 coverage prevents the result from ever becoming `conformant`, while concrete
 failures remain visible as partial/non-conformance evidence.
@@ -340,6 +342,14 @@ history period, strict UTC issuance, exact six-calendar-month next update,
 distribution URIs and extension criticality. Registry recognition, referenced
 URI content, sequence progression, distribution equality, legal authority and
 historical retention remain explicit contextual limitations.
+
+`OtherTSLPointer` assessment validates the exact identity/location/qualifier
+tuple, the five type/operator/community-rules/territory/MIME qualifiers, the
+registered ETSI XML media type, X.509/subject/SKI/RSA-key identity
+equivalence, certificate metadata matching, Annex A rollover evidence, and
+canonical dispatch for EU generic TL and EU LoTL targets. Actual target
+dereferencing and signer-certificate digest matching remain a separate
+`not_checked` contextual finding until target evidence is supplied.
 
 TSP and current-service assessment validates direct provider/service nesting,
 the 52 registered V2.4.1 service-type URIs, multilingual names and information

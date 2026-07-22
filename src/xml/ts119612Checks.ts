@@ -10,6 +10,7 @@ import { assessSignature } from "./signature.js";
 import { assessTs119612SchemeInformation } from "./ts119612SchemeInformation.js";
 import { extractTs119612ValidatedFacts, type Ts119612ValidatedFacts } from "./ts119612Facts.js";
 import { assessTs119612ServiceSemantics } from "./ts119612ServiceSemantics.js";
+import { assessTs119612Pointers } from "./ts119612Pointers.js";
 import { assessTs119612TspServices } from "./ts119612TspServices.js";
 import { validateTs119612XmlSchema } from "./ts119612Xsd.js";
 import type { XsdValidationDependencies } from "./xsd.js";
@@ -161,6 +162,9 @@ export async function assessTs119612Xml(
     assessmentDate,
     has(document, D("NextUpdate")),
   ));
+  const pointerAssessment = assessTs119612Pointers(document, artifactKind, assessmentDate);
+  checks.push(...pointerAssessment.checks);
+  certificates.push(...pointerAssessment.certificates);
   const serviceAssessment = assessTs119612TspServices(document, artifactKind, assessmentDate);
   checks.push(...serviceAssessment.checks);
   if (artifactKind === "ts119612_xml_tsl") checks.push(...assessTs119612ServiceSemantics(document));
