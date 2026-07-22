@@ -23,6 +23,15 @@ export interface Ts119602ServiceExtensionObservation extends Ts119602ExtensionOb
   payloadEvidence?: unknown;
 }
 
+export interface Ts119602StructureObservation {
+  path: string;
+  binding: "json" | "xml";
+  observedType: "object" | "array" | "element" | "missing" | "other";
+  childNames: string[];
+  violations: Array<{ code: string; message: string; observed?: unknown }>;
+  valid: boolean;
+}
+
 export interface Ts119602HistoryObservation {
   path: string;
   name: Ts119602MultilingualValue[];
@@ -35,6 +44,8 @@ export interface Ts119602HistoryObservation {
 
 export interface Ts119602ServiceObservation {
   path: string;
+  structure: Ts119602StructureObservation;
+  informationStructure: Ts119602StructureObservation;
   informationPresent: boolean;
   name: Ts119602MultilingualValue[];
   identity: Ts119602IdentityObservation;
@@ -55,13 +66,16 @@ export interface Ts119602ServiceObservation {
 
 export interface Ts119602EntityObservation {
   path: string;
+  structure: Ts119602StructureObservation;
+  informationStructure: Ts119602StructureObservation;
+  servicesStructure: Ts119602StructureObservation;
   informationPresent: boolean;
   servicesContainerPresent: boolean;
   name: Ts119602MultilingualValue[];
   tradeNamePresent: boolean;
   tradeName: Ts119602MultilingualValue[];
   address: Ts119602AddressObservation;
-  informationUris: unknown[];
+  informationUris: Ts119602MultilingualValue[];
   extensionsPresent: boolean;
   extensions: Ts119602ServiceExtensionObservation[];
   services: Ts119602ServiceObservation[];
@@ -69,6 +83,7 @@ export interface Ts119602EntityObservation {
 
 export interface Ts119602EntitiesInput {
   containerPresent: boolean;
+  listStructure: Ts119602StructureObservation;
   entities: Ts119602EntityObservation[];
   historyPeriod: unknown;
   listIssueDateTime: unknown;
@@ -126,20 +141,29 @@ export function buildTs119602EntityFindings(input: Ts119602EntitiesInput): {
 
 function entityListFinding(input: Ts119602EntitiesInput): CheckResult {
   if (!input.containerPresent) return finding("ts119602.entities.list", "inconclusive", "warning", "TrustedEntitiesList is absent; local evidence cannot establish whether no entity service is or was approved.", { entityCount: 0 });
-  const valid = input.entities.length > 0;
-  return finding("ts119602.entities.list", valid ? "pass" : "fail", valid ? "info" : "critical", valid ? "TrustedEntitiesList contains one or more trusted entities." : "A present TrustedEntitiesList must contain at least one TrustedEntity.", { entityCount: input.entities.length });
+  const valid = input.listStructure.valid && input.entities.length > 0;
+  return finding("ts119602.entities.list", valid ? "pass" : "fail", valid ? "info" : "critical", valid ? "TrustedEntitiesList contains one or more directly nested trusted entities." : "A present TrustedEntitiesList must be a non-empty sequence containing only directly nested TrustedEntity entries.", { entityCount: input.entities.length, structure: input.listStructure });
 }
 
 function entityStructureFinding(input: Ts119602EntitiesInput): CheckResult {
   if (input.entities.length === 0) return finding("ts119602.entities.structure", "not_applicable", "info", "Entity structure is not applicable because no TrustedEntity was observed.");
-  const results = input.entities.map((entity) => ({ path: entity.path, informationPresent: entity.informationPresent, servicesContainerPresent: entity.servicesContainerPresent, serviceCount: entity.services.length, valid: entity.informationPresent && entity.servicesContainerPresent && entity.services.length > 0 }));
-  return aggregate("ts119602.entities.structure", results, "Every TrustedEntity contains information and one or more service entries.", "Each TrustedEntity must contain TrustedEntityInformation and a non-empty TrustedEntityServices sequence.", "critical");
+  const results = input.entities.map((entity) => ({
+    path: entity.path,
+    structure: entity.structure,
+    servicesStructure: entity.servicesStructure,
+    services: entity.services.map((service) => ({ path: service.path, structure: service.structure })),
+    valid: entity.structure.valid
+      && entity.servicesStructure.valid
+      && entity.services.length > 0
+      && entity.services.every((service) => service.structure.valid),
+  }));
+  return aggregate("ts119602.entities.structure", results, "Every TrustedEntity and service wrapper has exact direct nesting and cardinality.", "TrustedEntity, TrustedEntityServices, TrustedEntityService, and optional ServiceHistory must use the exact binding-specific direct nesting and cardinality.", "critical");
 }
 
 function entityInformationFinding(input: Ts119602EntitiesInput): CheckResult {
   if (input.entities.length === 0) return finding("ts119602.entity.information", "not_applicable", "info", "Trusted entity information is not applicable because no entity was observed.");
-  const results = input.entities.map((entity) => ({ path: entity.path, informationPresent: entity.informationPresent, nameCount: entity.name.length, addressPresent: entity.address.present, informationUriCount: entity.informationUris.length, valid: entity.informationPresent && entity.name.length > 0 && entity.address.present && entity.informationUris.length > 0 }));
-  return aggregate("ts119602.entity.information", results, "Every entity contains the mandatory information components.", "TrustedEntityInformation must contain TEName, TEAddress, and TEInformationURI.", "critical");
+  const results = input.entities.map((entity) => ({ path: entity.path, structure: entity.informationStructure, nameCount: entity.name.length, addressPresent: entity.address.present, informationUriCount: entity.informationUris.length, valid: entity.informationStructure.valid && entity.name.length > 0 && entity.address.present && entity.informationUris.length > 0 }));
+  return aggregate("ts119602.entity.information", results, "Every entity contains the mandatory information components with exact direct nesting and cardinality.", "TrustedEntityInformation must contain exactly one TEName, TEAddress, and TEInformationURI, with only the defined optional components.", "critical");
 }
 
 function entityNamesFinding(input: Ts119602EntitiesInput): CheckResult {
@@ -160,14 +184,18 @@ function entityAddressFinding(input: Ts119602EntitiesInput): CheckResult {
 
 function entityInformationUriFinding(input: Ts119602EntitiesInput): CheckResult {
   if (input.entities.length === 0) return finding("ts119602.entity.information_uri", "not_applicable", "info", "TE information URIs are not applicable because no entity was observed.");
-  const results = input.entities.map((entity) => ({ path: entity.path, values: entity.informationUris.map(uriResult), valid: entity.informationUris.length > 0 && entity.informationUris.every((value) => validateTs119602Uri(value).outcome === "valid") }));
-  return aggregate("ts119602.entity.information_uri", results, "Every entity has one or more locally valid information URIs.", "TEInformationURI must be a non-empty sequence of absolute URIs.");
+  const results = input.entities.map((entity) => {
+    const multilingual = validateTs119602MultilingualValues(entity.informationUris);
+    const values = entity.informationUris.map((entry) => ({ ...entry, uriValidation: validateTs119602Uri(entry.value) }));
+    return { path: entity.path, multilingual, values, valid: multilingual.outcome === "valid" && values.every((entry) => entry.uriValidation.outcome === "valid") };
+  });
+  return aggregate("ts119602.entity.information_uri", results, "Every entity has one or more locally valid multilingual information pointers.", "TEInformationURI must be a non-empty multilingual pointer sequence including English and absolute RFC 3986 URIs.");
 }
 
 function serviceInformationFinding(services: Ts119602ServiceObservation[]): CheckResult {
   if (services.length === 0) return finding("ts119602.service.information", "not_applicable", "info", "Service information is not applicable because no service was observed.");
-  const results = services.map((service) => ({ path: service.path, informationPresent: service.informationPresent, serviceNameCount: service.name.length, digitalIdentityPresent: service.identity.present, valid: service.informationPresent && service.name.length > 0 && service.identity.present }));
-  return aggregate("ts119602.service.information", results, "Every service contains ServiceName and ServiceDigitalIdentity.", "ServiceInformation must contain ServiceName and ServiceDigitalIdentity.", "critical");
+  const results = services.map((service) => ({ path: service.path, structure: service.informationStructure, serviceNameCount: service.name.length, digitalIdentityPresent: service.identity.present, valid: service.informationStructure.valid && service.name.length > 0 && service.identity.present }));
+  return aggregate("ts119602.service.information", results, "Every service contains exactly nested ServiceName and ServiceDigitalIdentity components.", "ServiceInformation must contain exactly one ServiceName and ServiceDigitalIdentity, with only the defined optional components.", "critical");
 }
 
 function serviceNamesFinding(services: Ts119602ServiceObservation[]): CheckResult {
@@ -262,12 +290,33 @@ function extensionFinding(id: string, extensions: Ts119602ServiceExtensionObserv
   return finding(id, valid ? "pass" : "fail", valid ? "info" : "critical", valid ? "Every extension has criticality and a valid recognized payload, or is safely ignorable." : "An extension container is empty, lacks criticality, has an invalid known payload, or contains an unknown critical extension.", { extensionCount: results.length, results, registry });
 }
 
-function addressResult(address: Ts119602AddressObservation): { postalAddressCount: number; invalidPostal: Ts119602AddressObservation["postalAddresses"]; hasEmail: boolean; hasWebsite: boolean; valid: boolean } {
+function addressResult(address: Ts119602AddressObservation) {
   const invalidPostal = address.postalAddresses.filter((entry) => !entry.streetPresent || !entry.countryPresent);
-  const schemes = address.electronicUris.map((entry) => validateTs119602Uri(entry.value).classification);
+  const uriValidations = address.electronicUris.map((entry) => ({ ...entry, validation: validateTs119602Uri(entry.value) }));
+  const schemes = uriValidations.map((entry) => entry.validation.classification);
+  const postalLanguages = validateTs119602MultilingualValues(address.postalAddresses.map((entry) => ({ language: entry.language, value: entry.value })));
+  const electronicLanguages = validateTs119602MultilingualValues(address.electronicUris.map((entry) => ({ language: entry.language, value: entry.value })));
   const hasEmail = schemes.includes("mailto");
   const hasWebsite = schemes.includes("http") || schemes.includes("https");
-  return { postalAddressCount: address.postalAddresses.length, invalidPostal, hasEmail, hasWebsite, valid: address.present && address.postalAddresses.length > 0 && invalidPostal.length === 0 && hasEmail && hasWebsite };
+  return {
+    structure: address.structure,
+    postalAddressCount: address.postalAddresses.length,
+    invalidPostal,
+    postalLanguages,
+    electronicLanguages,
+    electronicUris: uriValidations,
+    hasEmail,
+    hasWebsite,
+    valid: address.present
+      && address.structure.valid
+      && address.postalAddresses.length > 0
+      && invalidPostal.length === 0
+      && postalLanguages.outcome === "valid"
+      && electronicLanguages.outcome === "valid"
+      && uriValidations.every((entry) => entry.validation.outcome === "valid")
+      && hasEmail
+      && hasWebsite,
+  };
 }
 
 function strictBase64(value: string): boolean {

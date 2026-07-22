@@ -9,6 +9,7 @@ import {
   type Ts119602IdentityObservation,
   type Ts119602ServiceExtensionObservation,
   type Ts119602ServiceObservation,
+  type Ts119602StructureObservation,
 } from "../standards/ts119602Entities.js";
 import {
   buildTs119602MetadataFindings,
@@ -62,6 +63,7 @@ export function assessJsonLote(
   const schemaValidation = validateTs119602JsonSchema(parsed);
   const entityInput = collectJsonEntitiesInput(
     trustedEntities,
+    legacy ? trustedEntities : officialTrustedEntities,
     isRecord(loteValue) && Object.hasOwn(loteValue, "TrustedEntitiesList"),
     info,
     assessmentDate,
@@ -158,12 +160,14 @@ export function assessJsonLote(
 
 function collectJsonEntitiesInput(
   entities: unknown[],
+  containerValue: unknown,
   containerPresent: boolean,
   schemeInfo: Record<string, unknown> | undefined,
   assessmentDate: Date,
 ): Ts119602EntitiesInput {
   return {
     containerPresent,
+    listStructure: jsonArrayStructure(containerValue, "/LoTE/TrustedEntitiesList", "TrustedEntity", 1),
     entities: entities.map((entity, entityIndex) => {
       const path = `/LoTE/TrustedEntitiesList/${entityIndex}`;
       const informationValue = getPath(entity, ["TrustedEntityInformation"]);
@@ -172,13 +176,16 @@ function collectJsonEntitiesInput(
       const services = asArray(servicesValue);
       return {
         path,
+        structure: jsonObjectStructure(entity, path, ["TrustedEntityInformation", "TrustedEntityServices"], ["TrustedEntityInformation", "TrustedEntityServices"]),
+        informationStructure: jsonObjectStructure(informationValue, `${path}/TrustedEntityInformation`, ["TEName", "TETradeName", "TEAddress", "TEInformationURI", "TEInformationExtensions"], ["TEName", "TEAddress", "TEInformationURI"]),
+        servicesStructure: jsonArrayStructure(servicesValue, `${path}/TrustedEntityServices`, "TrustedEntityService", 1),
         informationPresent: isRecord(informationValue),
         servicesContainerPresent: Array.isArray(servicesValue),
         name: jsonMultilingual(information.TEName),
         tradeNamePresent: Object.hasOwn(information, "TETradeName"),
         tradeName: jsonMultilingual(information.TETradeName),
         address: jsonAddress(information.TEAddress, `${path}/TrustedEntityInformation/TEAddress`, "TEPostalAddress", "TEElectronicAddress"),
-        informationUris: jsonUriValues(information.TEInformationURI),
+        informationUris: jsonMultilingual(information.TEInformationURI),
         extensionsPresent: Object.hasOwn(information, "TEInformationExtensions"),
         extensions: jsonExtensions(information.TEInformationExtensions, `${path}/TrustedEntityInformation/TEInformationExtensions`, "entity"),
         services: services.map((service, serviceIndex) => jsonService(service, `${path}/TrustedEntityServices/${serviceIndex}`)),
@@ -196,6 +203,13 @@ function jsonService(value: unknown, path: string): Ts119602ServiceObservation {
   const historyValue = getPath(value, ["ServiceHistory"]);
   return {
     path,
+    structure: jsonObjectStructure(value, path, ["ServiceInformation", "ServiceHistory"], ["ServiceInformation"]),
+    informationStructure: jsonObjectStructure(
+      informationValue,
+      `${path}/ServiceInformation`,
+      ["ServiceTypeIdentifier", "ServiceName", "ServiceDigitalIdentity", "ServiceStatus", "StatusStartingTime", "SchemeServiceDefinitionURI", "ServiceSupplyPoints", "ServiceDefinitionURI", "ServiceInformationExtensions"],
+      ["ServiceName", "ServiceDigitalIdentity"],
+    ),
     informationPresent: isRecord(informationValue),
     name: jsonMultilingual(information.ServiceName),
     identity: jsonIdentity(information.ServiceDigitalIdentity, `${path}/ServiceInformation/ServiceDigitalIdentity`),
@@ -227,6 +241,54 @@ function jsonService(value: unknown, path: string): Ts119602ServiceObservation {
   };
 }
 
+function jsonObjectStructure(
+  value: unknown,
+  path: string,
+  allowed: readonly string[],
+  required: readonly string[],
+): Ts119602StructureObservation {
+  if (!isRecord(value) || Array.isArray(value)) {
+    return {
+      path,
+      binding: "json",
+      observedType: value === undefined ? "missing" : Array.isArray(value) ? "array" : "other",
+      childNames: [],
+      violations: [{ code: "structure.object_required", message: "The component must be a JSON object." }],
+      valid: false,
+    };
+  }
+  const childNames = Object.keys(value);
+  const unexpected = childNames.filter((name) => !allowed.includes(name));
+  const missing = required.filter((name) => !Object.hasOwn(value, name));
+  const violations = [
+    ...missing.map((name) => ({ code: "structure.required_child", message: `Required direct child ${name} is missing.`, observed: name })),
+    ...unexpected.map((name) => ({ code: "structure.unexpected_child", message: `Unexpected direct child ${name} is not defined by this binding.`, observed: name })),
+  ];
+  return { path, binding: "json", observedType: "object", childNames, violations, valid: violations.length === 0 };
+}
+
+function jsonArrayStructure(
+  value: unknown,
+  path: string,
+  itemName: string,
+  minimumItems: number,
+): Ts119602StructureObservation {
+  if (!Array.isArray(value)) {
+    return {
+      path,
+      binding: "json",
+      observedType: value === undefined ? "missing" : isRecord(value) ? "object" : "other",
+      childNames: [],
+      violations: [{ code: "structure.array_required", message: "The component must be a JSON array." }],
+      valid: false,
+    };
+  }
+  const violations = value.length < minimumItems
+    ? [{ code: "structure.minimum_items", message: `The array must contain at least ${minimumItems} ${itemName} item(s).`, observed: value.length }]
+    : [];
+  return { path, binding: "json", observedType: "array", childNames: value.map(() => itemName), violations, valid: violations.length === 0 };
+}
+
 function jsonIdentity(value: unknown, path: string): Ts119602IdentityObservation {
   const identity = isRecord(value) ? value : {};
   return {
@@ -244,13 +306,60 @@ function jsonAddress(value: unknown, path: string, postalProperty: string, elect
   const address = isRecord(value) ? value : {};
   return {
     present: isRecord(value),
+    structure: jsonAddressStructure(value, postalProperty, electronicProperty),
     postalAddresses: asArray(address[postalProperty]).map((entry, index) => ({
       path: `${path}/${postalProperty}/${index}`,
       streetPresent: typeof getPath(entry, ["StreetAddress"]) === "string" && Boolean(firstString(getPath(entry, ["StreetAddress"]))),
       countryPresent: typeof getPath(entry, ["Country"]) === "string" && Boolean(firstString(getPath(entry, ["Country"]))),
+      language: getPath(entry, ["lang"]),
+      value: postalAddressValue(entry),
     })),
-    electronicUris: asArray(address[electronicProperty]).map((entry, index) => ({ path: `${path}/${electronicProperty}/${index}/uriValue`, value: getPath(entry, ["uriValue"]) ?? entry })),
+    electronicUris: asArray(address[electronicProperty]).map((entry, index) => ({ path: `${path}/${electronicProperty}/${index}/uriValue`, value: getPath(entry, ["uriValue"]) ?? entry, language: getPath(entry, ["lang"]) })),
   };
+}
+
+function jsonAddressStructure(value: unknown, postalProperty: string, electronicProperty: string): Ts119602AddressObservation["structure"] {
+  if (!isRecord(value) || Array.isArray(value)) {
+    return { childNames: [], violations: [{ code: "structure.object_required", message: "The address must be a JSON object." }], valid: false };
+  }
+  const childNames = Object.keys(value);
+  const allowed = [postalProperty, electronicProperty];
+  const violations: Ts119602AddressObservation["structure"]["violations"] = [];
+  for (const property of allowed) {
+    if (!Array.isArray(value[property]) || (value[property] as unknown[]).length === 0) {
+      violations.push({ code: "structure.non_empty_array_required", message: `${property} must be a non-empty directly nested array.`, observed: value[property] });
+    }
+  }
+  const postalAllowed = ["lang", "StreetAddress", "Locality", "StateOrProvince", "PostalCode", "Country"];
+  const electronicAllowed = ["lang", "uriValue"];
+  for (const [property, itemAllowed, itemRequired] of [
+    [postalProperty, postalAllowed, ["lang", "StreetAddress", "Country"]],
+    [electronicProperty, electronicAllowed, ["lang", "uriValue"]],
+  ] as const) {
+    for (const [index, entry] of asArray(value[property]).entries()) {
+      if (!isRecord(entry) || Array.isArray(entry)) {
+        violations.push({ code: "structure.address_item_object", message: `${property}[${index}] must be an object.`, observed: entry });
+        continue;
+      }
+      for (const name of itemRequired.filter((name) => !Object.hasOwn(entry, name))) {
+        violations.push({ code: "structure.required_child", message: `${property}[${index}] is missing ${name}.`, observed: name });
+      }
+      for (const name of Object.keys(entry).filter((name) => !itemAllowed.includes(name))) {
+        violations.push({ code: "structure.unexpected_child", message: `${property}[${index}] contains unexpected property ${name}.`, observed: name });
+      }
+    }
+  }
+  for (const property of childNames.filter((name) => !allowed.includes(name))) {
+    violations.push({ code: "structure.unexpected_child", message: `Unexpected address property ${property}.`, observed: property });
+  }
+  return { childNames, violations, valid: violations.length === 0 };
+}
+
+function postalAddressValue(value: unknown): unknown {
+  if (!isRecord(value)) return undefined;
+  const parts = ["StreetAddress", "Locality", "StateOrProvince", "PostalCode", "Country"]
+    .flatMap((property) => typeof value[property] === "string" && value[property] ? [value[property] as string] : []);
+  return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
 function jsonMultilingual(value: unknown): Array<{ language: unknown; value: unknown }> {
@@ -383,9 +492,6 @@ function collectJsonMetadataInput(
     return [field, { present, count: present ? Array.isArray(value) ? value.length : 1 : 0 }];
   })) as Ts119602MetadataInput["fields"];
   const addressValue = info.SchemeOperatorAddress;
-  const address = isRecord(addressValue) ? addressValue : {};
-  const postal = asArray(address.SchemeOperatorPostalAddress);
-  const electronic = asArray(address.SchemeOperatorElectronicAddress);
   const policyEntries = asArray(info.PolicyOrLegalNotice);
   const pointerEntries = asArray(info.PointersToOtherLoTE);
   const extensionEntries = asArray(info.SchemeExtensions);
@@ -405,18 +511,12 @@ function collectJsonMetadataInput(
       value: getPath(entry, ["value"]),
     })),
     territory: info.SchemeTerritory,
-    address: {
-      present: fields.SchemeOperatorAddress.present,
-      postalAddresses: postal.map((entry, index) => ({
-        path: `/LoTE/ListAndSchemeInformation/SchemeOperatorAddress/SchemeOperatorPostalAddress/${index}`,
-        streetPresent: typeof getPath(entry, ["StreetAddress"]) === "string" && Boolean(firstString(getPath(entry, ["StreetAddress"]))),
-        countryPresent: typeof getPath(entry, ["Country"]) === "string" && Boolean(firstString(getPath(entry, ["Country"]))),
-      })),
-      electronicUris: electronic.map((entry, index) => ({
-        path: `/LoTE/ListAndSchemeInformation/SchemeOperatorAddress/SchemeOperatorElectronicAddress/${index}/uriValue`,
-        value: getPath(entry, ["uriValue"]),
-      })),
-    },
+    address: jsonAddress(
+      addressValue,
+      "/LoTE/ListAndSchemeInformation/SchemeOperatorAddress",
+      "SchemeOperatorPostalAddress",
+      "SchemeOperatorElectronicAddress",
+    ),
     policy: {
       present: fields.PolicyOrLegalNotice.present,
       policyPointerCount: policyEntries.filter((entry) => getPath(entry, ["LoTEPolicy"]) !== undefined).length,

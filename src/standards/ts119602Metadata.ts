@@ -1,5 +1,5 @@
 import type { CheckResult } from "../types.js";
-import { parseTs119602UtcDateTime, validateTs119602Uri } from "./ts119602Syntax.js";
+import { parseTs119602UtcDateTime, validateTs119602MultilingualValues, validateTs119602Uri } from "./ts119602Syntax.js";
 
 export type Ts119602SchemeMode = "implicit" | "explicit";
 
@@ -28,8 +28,9 @@ type Presence = "mandatory" | "optional" | "prohibited";
 
 export interface Ts119602AddressObservation {
   present: boolean;
-  postalAddresses: Array<{ path: string; streetPresent: boolean; countryPresent: boolean }>;
-  electronicUris: Array<{ path: string; value: unknown }>;
+  structure: { childNames: string[]; violations: Array<{ code: string; message: string; observed?: unknown }>; valid: boolean };
+  postalAddresses: Array<{ path: string; streetPresent: boolean; countryPresent: boolean; language?: unknown; value?: unknown }>;
+  electronicUris: Array<{ path: string; value: unknown; language?: unknown }>;
 }
 
 export interface Ts119602PolicyObservation {
@@ -291,13 +292,20 @@ function addressFinding(input: Ts119602MetadataInput, mode: Ts119602SchemeMode):
   const invalidPostal = address.postalAddresses.filter((entry) => !entry.streetPresent || !entry.countryPresent);
   const uriSchemes = address.electronicUris.map((entry) => ({
     ...entry,
-    scheme: typeof entry.value === "string" ? /^([A-Za-z][A-Za-z0-9+.-]*):/.exec(entry.value)?.[1].toLowerCase() : undefined,
+    validation: validateTs119602Uri(entry.value),
+    scheme: validateTs119602Uri(entry.value).classification,
   }));
+  const postalLanguages = validateTs119602MultilingualValues(address.postalAddresses.map((entry) => ({ language: entry.language, value: entry.value })));
+  const electronicLanguages = validateTs119602MultilingualValues(address.electronicUris.map((entry) => ({ language: entry.language, value: entry.value })));
   const hasEmail = uriSchemes.some((entry) => entry.scheme === "mailto");
   const hasWebsite = uriSchemes.some((entry) => entry.scheme === "http" || entry.scheme === "https");
   const valid = address.postalAddresses.length > 0
+    && address.structure.valid
     && invalidPostal.length === 0
     && address.electronicUris.length > 0
+    && postalLanguages.outcome === "valid"
+    && electronicLanguages.outcome === "valid"
+    && uriSchemes.every((entry) => entry.validation.outcome === "valid")
     && hasEmail
     && hasWebsite;
   return finding(
@@ -305,7 +313,7 @@ function addressFinding(input: Ts119602MetadataInput, mode: Ts119602SchemeMode):
     valid ? "pass" : "fail",
     valid ? "info" : "error",
     valid ? "SchemeOperatorAddress contains postal, email, and website contact structures." : "SchemeOperatorAddress must contain valid postal entries plus a mailto URI and an HTTP(S) website URI.",
-    { postalAddressCount: address.postalAddresses.length, invalidPostal, electronicUris: uriSchemes, hasEmail, hasWebsite, citation: "ETSI TS 119 602 V1.1.1 clauses 6.3.5.1 and 6.3.5.2" },
+    { structure: address.structure, postalAddressCount: address.postalAddresses.length, invalidPostal, postalLanguages, electronicUris: uriSchemes, electronicLanguages, hasEmail, hasWebsite, citation: "ETSI TS 119 602 V1.1.1 clauses 6.3.5.1 and 6.3.5.2" },
   );
 }
 

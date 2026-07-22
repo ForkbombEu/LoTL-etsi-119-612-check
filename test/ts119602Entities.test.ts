@@ -63,16 +63,48 @@ describe("ETSI TS 119 602 clauses 6.4-6.7", () => {
     expect(find(buildTs119602EntityFindings(input), "ts119602.entity.extensions")).toMatchObject({ status: "fail", severity: "critical" });
     expect(find(buildTs119602EntityFindings(input), "ts119602.service.extensions")).toMatchObject({ status: "fail", severity: "critical" });
   });
+
+  it("rejects binding-specific direct nesting and cardinality violations", () => {
+    const input = validInput();
+    input.entities[0].informationStructure = {
+      ...input.entities[0].informationStructure,
+      childNames: ["TEName", "TEName", "TEAddress", "TEInformationURI"],
+      violations: [{ code: "structure.cardinality", message: "TEName cardinality must be exactly 1.", observed: 2 }],
+      valid: false,
+    };
+    input.entities[0].services[0].structure = {
+      ...input.entities[0].services[0].structure,
+      childNames: ["ServiceHistory", "ServiceInformation"],
+      violations: [{ code: "structure.child_order", message: "Direct children are out of order." }],
+      valid: false,
+    };
+    const result = buildTs119602EntityFindings(input);
+    expect(find(result, "ts119602.entity.information")).toMatchObject({ status: "fail", severity: "critical" });
+    expect(find(result, "ts119602.entities.structure")).toMatchObject({ status: "fail", severity: "critical" });
+  });
+
+  it("validates TE information pointers and every address URI as multilingual values", () => {
+    const input = validInput();
+    input.entities[0].informationUris = [{ language: "it", value: "https://example.test/info" }];
+    input.entities[0].address.electronicUris.push({ path: "/bad", value: "not a URI", language: "en" });
+    const result = buildTs119602EntityFindings(input);
+    expect(find(result, "ts119602.entity.information_uri")).toMatchObject({ status: "fail" });
+    expect(find(result, "ts119602.entity.address")).toMatchObject({ status: "fail" });
+  });
 });
 
 function validInput(): Ts119602EntitiesInput {
   return {
     containerPresent: true,
+    listStructure: structure("/entities", "array", ["TrustedEntity"]),
     historyPeriod: undefined,
     listIssueDateTime: "2026-07-01T00:00:00Z",
     assessmentDate: new Date("2026-07-21T00:00:00Z"),
     entities: [{
       path: "/entity/1",
+      structure: structure("/entity/1", "object", ["TrustedEntityInformation", "TrustedEntityServices"]),
+      informationStructure: structure("/entity/1/information", "object", ["TEName", "TEAddress", "TEInformationURI"]),
+      servicesStructure: structure("/entity/1/services", "array", ["TrustedEntityService"]),
       informationPresent: true,
       servicesContainerPresent: true,
       name: [{ language: "en", value: "Example Entity" }],
@@ -80,14 +112,17 @@ function validInput(): Ts119602EntitiesInput {
       tradeName: [],
       address: {
         present: true,
-        postalAddresses: [{ path: "/address/1", streetPresent: true, countryPresent: true }],
-        electronicUris: [{ path: "/email", value: "mailto:help@example.test" }, { path: "/web", value: "https://example.test/help" }],
+        structure: { childNames: ["TEPostalAddress", "TEElectronicAddress"], violations: [], valid: true },
+        postalAddresses: [{ path: "/address/1", streetPresent: true, countryPresent: true, language: "en", value: "1 Example Street EU" }],
+        electronicUris: [{ path: "/email", value: "mailto:help@example.test", language: "en" }, { path: "/web", value: "https://example.test/help", language: "en" }],
       },
-      informationUris: ["https://example.test/info"],
+      informationUris: [{ language: "en", value: "https://example.test/info" }],
       extensionsPresent: false,
       extensions: [],
       services: [{
         path: "/service/1",
+        structure: structure("/service/1", "object", ["ServiceInformation"]),
+        informationStructure: structure("/service/1/information", "object", ["ServiceName", "ServiceDigitalIdentity"]),
         informationPresent: true,
         name: [{ language: "en", value: "Example Service" }],
         identity: identity("/service/1/identity"),
@@ -107,6 +142,10 @@ function validInput(): Ts119602EntitiesInput {
       }],
     }],
   };
+}
+
+function structure(path: string, observedType: "object" | "array", childNames: string[]) {
+  return { path, binding: "json" as const, observedType, childNames, violations: [], valid: true };
 }
 
 function identity(path: string) {

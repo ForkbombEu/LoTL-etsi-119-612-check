@@ -5,6 +5,7 @@ import {
   validateTs119602CountryCode,
   validateTs119602LanguageTag,
   validateTs119602MultilingualValues,
+  validateTs119602Transliteration,
   validateTs119602Uri,
   validateTs119602UtcDateTime,
 } from "../src/standards/ts119602Syntax.js";
@@ -48,15 +49,36 @@ describe("ETSI TS 119 602 clause 6.1 syntax validators", () => {
     }
   });
 
-  it("validates lower-case RFC 5646 language tags", () => {
+  it("validates lower-case RFC 5646 language tags and the Annex B script-tag spellings", () => {
     for (const value of ["en", "en-gb", "zh-hant-tw", "de-ch-1901", "x-audit"]) {
       expect(validateTs119602LanguageTag(value)).toMatchObject({ outcome: "valid" });
     }
+    expect(validateTs119602LanguageTag("bg-Latn")).toMatchObject({
+      outcome: "valid",
+      classification: "annex_b_transliteration_tag",
+    });
     expect(validateTs119602LanguageTag("en-GB")).toMatchObject({
       outcome: "invalid",
       diagnostics: [expect.objectContaining({ code: "language.lower_case" })],
     });
     expect(validateTs119602LanguageTag("en--gb")).toMatchObject({ outcome: "invalid" });
+  });
+
+  it("requires the Annex B Latin transliteration tag for observed Bulgarian or Greek native terms", () => {
+    expect(validateTs119602Transliteration([
+      { language: "en", value: "Bulgaria" },
+      { language: "bg", value: "България" },
+      { language: "bg-Latn", value: "Bulgaria" },
+    ])).toMatchObject({ outcome: "valid", missingPairs: [] });
+
+    expect(validateTs119602Transliteration([
+      { language: "en", value: "Greece" },
+      { language: "el", value: "Ελλάδα" },
+    ])).toMatchObject({
+      outcome: "invalid",
+      missingPairs: [{ nativeLanguage: "el", transliterationLanguage: "el-Latn" }],
+      diagnostics: [expect.objectContaining({ code: "multilingual.transliteration_required" })],
+    });
   });
 
   it("requires English and validates every multilingual entry", () => {

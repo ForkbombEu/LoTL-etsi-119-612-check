@@ -26,6 +26,7 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "ts119602.syntax.date_time", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.language", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.country_code", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.language.transliteration", status: "pass" }),
       expect.objectContaining({ id: "ts119602.language.annex_b", status: "not_checked" }),
       expect.objectContaining({ id: "ts119602.structure.lote_tag", status: "not_applicable" }),
       expect.objectContaining({
@@ -165,6 +166,47 @@ describe("assessJsonLote", () => {
       expect.objectContaining({ id: "ts119602.service.digital_identity", status: "fail", severity: "critical" }),
       expect.objectContaining({ id: "ts119602.service.status", status: "fail" }),
     ]));
+  });
+
+  it("reports unexpected JSON children through the stable structure finding", async () => {
+    const parsed = await fixture("json-lote.json") as {
+      LoTE: { TrustedEntitiesList: Array<Record<string, unknown>> };
+    };
+    parsed.LoTE.TrustedEntitiesList[0].UnexpectedEntityField = true;
+    const information = parsed.LoTE.TrustedEntitiesList[0].TrustedEntityInformation as Record<string, unknown>;
+    const address = information.TEAddress as Record<string, unknown>;
+    address.UnexpectedAddressField = true;
+    const result = assessJsonLote(parsed, true, new Date("2026-07-21T00:00:00Z"));
+    expect(result.ts119602.checks).toContainEqual(expect.objectContaining({
+      id: "ts119602.entities.structure",
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            structure: expect.objectContaining({
+              violations: expect.arrayContaining([
+                expect.objectContaining({ code: "structure.unexpected_child", observed: "UnexpectedEntityField" }),
+              ]),
+            }),
+          }),
+        ]),
+      }),
+    }));
+    expect(result.ts119602.checks).toContainEqual(expect.objectContaining({
+      id: "ts119602.entity.address",
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            structure: expect.objectContaining({
+              violations: expect.arrayContaining([
+                expect.objectContaining({ code: "structure.unexpected_child", observed: "UnexpectedAddressField" }),
+              ]),
+            }),
+          }),
+        ]),
+      }),
+    }));
   });
 
   it("reports actionable schema errors for missing list information", async () => {

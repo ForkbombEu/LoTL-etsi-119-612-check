@@ -3,6 +3,7 @@ import type {
   Ts119602IdentityObservation,
   Ts119602ServiceExtensionObservation,
   Ts119602ServiceObservation,
+  Ts119602StructureObservation,
 } from "../standards/ts119602Entities.js";
 import {
   TS119602_SCHEME_FIELDS,
@@ -172,6 +173,11 @@ function entityFacts(root: Element, historyPeriod: unknown, issue: unknown, asse
   const providers = direct(providerContainer, "TrustServiceProvider");
   return {
     containerPresent: Boolean(providerContainer),
+    listStructure: mappedStructure(
+      "/TrustServiceStatusList/TrustServiceProviderList",
+      providers.map(() => "TrustServiceProvider"),
+      Boolean(providerContainer) && providers.length > 0,
+    ),
     entities: providers.map((provider, providerIndex) => {
       const path = `/TrustServiceStatusList/TrustServiceProviderList/TrustServiceProvider[${providerIndex + 1}]`;
       const information = direct(provider, "TSPInformation")[0];
@@ -179,13 +185,26 @@ function entityFacts(root: Element, historyPeriod: unknown, issue: unknown, asse
       const extensionContainer = direct(information, "TSPInformationExtensions")[0];
       return {
         path,
+        structure: mappedStructure(path, children(provider).map(local), Boolean(information && servicesContainer)),
+        informationStructure: mappedStructure(
+          `${path}/TSPInformation`,
+          children(information).map(local),
+          direct(information, "TSPName").length === 1
+            && direct(information, "TSPAddress").length === 1
+            && direct(information, "TSPInformationURI").length === 1,
+        ),
+        servicesStructure: mappedStructure(
+          `${path}/TSPServices`,
+          direct(servicesContainer, "TSPService").map(() => "TSPService"),
+          Boolean(servicesContainer) && direct(servicesContainer, "TSPService").length > 0,
+        ),
         informationPresent: Boolean(information),
         servicesContainerPresent: Boolean(servicesContainer),
         name: multilingual(direct(direct(information, "TSPName")[0], "Name")),
         tradeNamePresent: direct(information, "TSPTradeName").length > 0,
         tradeName: multilingual(direct(direct(information, "TSPTradeName")[0], "Name")),
         address: addressFacts(direct(information, "TSPAddress")[0]),
-        informationUris: values(direct(direct(information, "TSPInformationURI")[0], "URI")),
+        informationUris: multilingual(direct(direct(information, "TSPInformationURI")[0], "URI")),
         extensionsPresent: Boolean(extensionContainer),
         extensions: direct(extensionContainer, "Extension").map(extensionFacts),
         services: direct(servicesContainer, "TSPService").map((service, serviceIndex) => serviceFacts(service, `${path}/TSPServices/TSPService[${serviceIndex + 1}]`)),
@@ -204,6 +223,16 @@ function serviceFacts(service: Element, path: string): Ts119602ServiceObservatio
   const supplyPoints = direct(direct(information, "ServiceSupplyPoints")[0], "ServiceSupplyPoint");
   return {
     path,
+    structure: mappedStructure(
+      path,
+      children(service).map(local),
+      Boolean(information) && direct(service, "ServiceInformation").length === 1 && direct(service, "ServiceHistory").length <= 1,
+    ),
+    informationStructure: mappedStructure(
+      `${path}/ServiceInformation`,
+      children(information).map(local),
+      direct(information, "ServiceName").length === 1 && direct(information, "ServiceDigitalIdentity").length === 1,
+    ),
     informationPresent: Boolean(information),
     name: multilingual(direct(direct(information, "ServiceName")[0], "Name")),
     identity: identityFacts(direct(information, "ServiceDigitalIdentity")[0], `${path}/ServiceInformation/ServiceDigitalIdentity`),
@@ -234,6 +263,21 @@ function serviceFacts(service: Element, path: string): Ts119602ServiceObservatio
   };
 }
 
+function mappedStructure(
+  path: string,
+  childNames: string[],
+  valid: boolean,
+): Ts119602StructureObservation {
+  return {
+    path,
+    binding: "xml",
+    observedType: valid || childNames.length > 0 ? "element" : "missing",
+    childNames,
+    violations: valid ? [] : [{ code: "structure.ts119612_mapping", message: "The TS 119 612 source does not provide the mandatory directly mapped TS 119 602 component structure." }],
+    valid,
+  };
+}
+
 function identityFacts(identity: Element | undefined, path: string): Ts119602IdentityObservation {
   const digitalIds = direct(identity, "DigitalId");
   const alternatives = (name: string) => digitalIds.flatMap((digitalId, digitalIndex) => direct(digitalId, name).map((entry) => ({
@@ -252,12 +296,21 @@ function addressFacts(address: Element | undefined): Ts119602MetadataInput["addr
   const electronic = direct(direct(address, "ElectronicAddress")[0], "URI");
   return {
     present: Boolean(address),
+    structure: {
+      childNames: children(address).map(local),
+      violations: address && direct(address, "PostalAddresses").length === 1 && direct(address, "ElectronicAddress").length === 1 && postal.length > 0 && electronic.length > 0
+        ? []
+        : [{ code: "structure.ts119612_address_mapping", message: "The mapped address requires directly nested non-empty postal and electronic address components." }],
+      valid: Boolean(address && direct(address, "PostalAddresses").length === 1 && direct(address, "ElectronicAddress").length === 1 && postal.length > 0 && electronic.length > 0),
+    },
     postalAddresses: postal.map((entry, index) => ({
       path: `/PostalAddress[${index + 1}]`,
       streetPresent: Boolean(value(direct(entry, "StreetAddress")[0])),
       countryPresent: Boolean(value(direct(entry, "CountryName")[0])),
+      language: entry.getAttributeNS(XML_LANG, "lang") || undefined,
+      value: children(entry).map(value).filter(isString).join(" "),
     })),
-    electronicUris: electronic.map((entry, index) => ({ path: `/ElectronicAddress/URI[${index + 1}]`, value: value(entry) })),
+    electronicUris: electronic.map((entry, index) => ({ path: `/ElectronicAddress/URI[${index + 1}]`, value: value(entry), language: entry.getAttributeNS(XML_LANG, "lang") || undefined })),
   };
 }
 

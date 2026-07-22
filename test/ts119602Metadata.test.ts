@@ -119,10 +119,11 @@ function explicitInput(): Ts119602MetadataInput {
   input.territory = "EU";
   input.address = {
     present: true,
-    postalAddresses: [{ path: "/address/1", streetPresent: true, countryPresent: true }],
+    structure: { childNames: ["SchemeOperatorPostalAddress", "SchemeOperatorElectronicAddress"], violations: [], valid: true },
+    postalAddresses: [{ path: "/address/1", streetPresent: true, countryPresent: true, language: "en", value: "1 Example Street EU" }],
     electronicUris: [
-      { path: "/electronic/1", value: "mailto:audit@example.test" },
-      { path: "/electronic/2", value: "https://example.test/contact" },
+      { path: "/electronic/1", value: "mailto:audit@example.test", language: "en" },
+      { path: "/electronic/2", value: "https://example.test/contact", language: "en" },
     ],
   };
   input.policy = { present: true, policyPointerCount: 1, legalNoticeCount: 0, unknownEntryCount: 0 };
@@ -143,7 +144,7 @@ function implicitInput(): Ts119602MetadataInput {
     sequence: 1,
     schemeNames: [],
     territory: undefined,
-    address: { present: false, postalAddresses: [], electronicUris: [] },
+    address: { present: false, structure: { childNames: [], violations: [{ code: "structure.missing", message: "Address is absent." }], valid: false }, postalAddresses: [], electronicUris: [] },
     policy: { present: false, policyPointerCount: 0, legalNoticeCount: 0, unknownEntryCount: 0 },
     historyPeriod: undefined,
     pointers: [],

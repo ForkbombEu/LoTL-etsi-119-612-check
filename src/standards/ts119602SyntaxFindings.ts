@@ -3,6 +3,7 @@ import {
   TS119602_COUNTRY_CODE_POLICY,
   validateTs119602CountryCode,
   validateTs119602MultilingualValues,
+  validateTs119602Transliteration,
   validateTs119602Uri,
   validateTs119602UtcDateTime,
   type Ts119602MultilingualValue,
@@ -60,20 +61,32 @@ export function buildTs119602SyntaxFindings(inputs: Ts119602SyntaxInputs): Check
     "local multilingual structure and language tags",
     multilingualResults,
   );
+  const transliterationResults = inputs.multilingual.map((entry) => ({
+    path: entry.path,
+    value: entry.values,
+    validation: validateTs119602Transliteration(entry.values),
+  }));
+  const transliteration = findingFromResults(
+    "ts119602.language.transliteration",
+    "structure",
+    "Annex B native-term transliteration",
+    transliterationResults,
+  );
   const annexB: CheckResult = {
     id: "ts119602.language.annex_b",
     category: "structure",
     status: "not_checked",
     severity: "warning",
-    message: "Local language tags, English coverage, non-empty values, and control characters were checked; transliteration and dereferenced-content requirements remain not checked.",
+    message: "Local language tags, English coverage, character restrictions, and native-term transliteration were checked; dereferenced pointer content and parser interoperability remain not checked.",
     evidence: {
       localMultilingualSetCount: inputs.multilingual.length,
-      checked: ["language_tag", "english_entry", "non_empty_value", "control_characters", "private_use_characters", "unicode_tag_characters", "byte_order_mark", "plain_text_markup"],
-      notChecked: ["native_term_transliteration", "source_byte_encoding", "combining_character_recommendation", "dereferenced_content_language", "parser_interoperability"],
+      checked: ["language_tag", "english_entry", "non_empty_value", "control_characters", "private_use_characters", "unicode_tag_characters", "byte_order_mark", "plain_text_markup", "native_term_transliteration"],
+      transliterationStatus: transliteration.status,
+      notChecked: ["source_byte_encoding", "combining_character_recommendation", "dereferenced_pointer_content", "parser_interoperability"],
       citation: "ETSI TS 119 602 V1.1.1 Annex B",
     },
   };
-  return [uri, dateTime, language, country, annexB];
+  return [uri, dateTime, language, country, transliteration, annexB];
 }
 
 function aggregateFinding(

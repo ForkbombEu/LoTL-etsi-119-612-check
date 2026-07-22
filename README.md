@@ -517,6 +517,14 @@ Exact embedded `LoTEType` values dispatch Annex D-I local profile checks. Each s
 
 Optional contextual assessment compares supplied prior instances, requires certificate-declared self-pointers to return the identical current bytes with a verified matching signer, checks distribution-point byte equality, recognizes directly returned previous archive instances, verifies JSON/XML supply-point responses, and applies explicit signer fingerprints without trusting embedded certificates by default. Every fetch records the normal HTTP/hash evidence and observes timeout, count, concurrency, byte, and duplicate-URL cache bounds. Public-key/SKI pointer identities, archive indexes requiring traversal, register semantics beyond machine-readable syntax, authoritative legal records, certificate-purpose policy, and production chain/revocation trust remain explicit limitations; therefore success still cannot produce a complete TS 119 602 `conformant` verdict.
 
+Core TS 119 602 entity checks enforce binding-specific direct nesting,
+cardinality and allowed children independently of schema success. Multilingual
+names, postal/electronic addresses, service names and `TEInformationURI`
+pointers retain their language tags; all local URI forms are validated, and
+Bulgarian/Greek native terms require the Annex B `bg-Latn`/`el-Latn`
+transliteration entry. Dereferenced pointer-content encoding, parser capability
+and authoritative legal/contact semantics remain explicitly `not_checked`.
+
 The versioned requirements ledger is maintained in `src/standards/ts119602Requirements.ts`. It reserves stable `ts119602.*` check IDs for 81 coherent requirement families across clauses 6.1–6.8, Annex A bindings, Annex B/C rules, and every Annex D–I profile. Each entry records normative citations, binding/profile/scheme-mode applicability, local or contextual evidence scope, default severity, and current implementation coverage. The ledger is an engineering inventory, not proof that the listed requirements are implemented.
 
 Report schema v6 classifies the TS 119 602 data model, Annex A binding, and Annex D-I profile independently. Scheme-explicit JSON and XML roots are distinguished from compatibility structures. A TS 119 612 document remains only an alternative-XML-binding candidate unless its embedded type selects the XML-capable Pub-EAA profile; a pointer's declared type is evidence but cannot select the profile by itself. For a selected alternative binding, the TS 119 612 assessor emits a typed fact set and the TS 119 602 assessor applies all 34 Annex A.2.2/Table A.1 mappings only after the pinned source schema and namespace/version binding pass. The TS 119 602 layer does not reparse the XML. Published gaps around the unmapped `LOTETag` and the conflicting fixed version values are reported as `inconclusive`, not silently normalized.

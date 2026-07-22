@@ -150,7 +150,8 @@ function entityFinding(entities: Ts119602EntityObservation[], profile: ProfileDe
   }
   const results = entities.map((entity) => {
     const electronicUris = entity.address.electronicUris.map((entry) => entry.value);
-    const roleUris = profile.roleUriLocation === "address" ? electronicUris : entity.informationUris;
+    const informationUris = entity.informationUris.map((entry) => entry.value);
+    const roleUris = profile.roleUriLocation === "address" ? electronicUris : informationUris;
     const tradeNames = stringValues(entity.tradeName.map((entry) => entry.value));
     const result = {
       path: entity.path,
@@ -158,7 +159,7 @@ function entityFinding(entities: Ts119602EntityObservation[], profile: ProfileDe
       postalAddressPresent: entity.address.postalAddresses.length > 0,
       emailPresent: electronicUris.some((value) => uriScheme(value) === "mailto"),
       telephonePresent: electronicUris.some((value) => uriScheme(value) === "tel"),
-      informationPagePresent: entity.informationUris.some((value) => ["http", "https"].includes(uriScheme(value) ?? "")),
+      informationPagePresent: informationUris.some((value) => ["http", "https"].includes(uriScheme(value) ?? "")),
       countryRoleUriPresent: roleUris.some((value) => validCountryRoleUri(value, profile.roleUriName)),
       pubEaaLawReferencePresent: profile.profile !== "pub_eaa_providers" || tradeNames.some(validOjLawReference),
       officialRegistrationMatch: "not_checked_without_authoritative_records",

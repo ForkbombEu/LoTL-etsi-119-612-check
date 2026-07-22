@@ -92,10 +92,25 @@ describe("ETSI TS 119 602 requirements ledger", () => {
   it("reports coverage without implying complete normative validation", () => {
     expect(summarizeTs119602Requirements()).toMatchObject({
       total: 81,
-      implemented: 20,
-      partial: 61,
+      implemented: 24,
+      partial: 57,
       notImplemented: 0,
       complete: false,
+    });
+  });
+
+  it("marks the completed TS602-15 local structure and URI families as implemented", () => {
+    for (const id of [
+      "ts119602.syntax.uri",
+      "ts119602.entities.structure",
+      "ts119602.entity.information",
+      "ts119602.service.information",
+    ]) {
+      expect(findTs119602Requirement(id)?.implementation.status).toBe("implemented");
+    }
+    expect(findTs119602Requirement("ts119602.syntax.language")?.implementation).toMatchObject({
+      status: "partial",
+      existingCheckIds: expect.arrayContaining(["ts119602.language.transliteration", "ts119602.language.annex_b"]),
     });
   });
 });

@@ -22,6 +22,11 @@ export interface Ts119602MultilingualValidation extends Ts119602SyntaxValidation
   languages: string[];
 }
 
+export interface Ts119602TransliterationValidation extends Ts119602SyntaxValidation {
+  requiredPairs: Array<{ nativeLanguage: "bg" | "el"; transliterationLanguage: "bg-Latn" | "el-Latn" }>;
+  missingPairs: Array<{ nativeLanguage: "bg" | "el"; transliterationLanguage: "bg-Latn" | "el-Latn" }>;
+}
+
 const ISO_3166_ALPHA_2 = new Set([
   "AD", "AE", "AF", "AG", "AI", "AL", "AM", "AO", "AQ", "AR", "AS", "AT", "AU", "AW", "AX", "AZ",
   "BA", "BB", "BD", "BE", "BF", "BG", "BH", "BI", "BJ", "BL", "BM", "BN", "BO", "BQ", "BR", "BS", "BT", "BV", "BW", "BY", "BZ",
@@ -54,6 +59,8 @@ const GRANDFATHERED_LANGUAGE_TAGS = new Set([
   "i-lux", "i-mingo", "i-navajo", "i-pwn", "i-tao", "i-tay", "i-tsu", "no-bok", "no-nyn", "sgn-be-fr",
   "sgn-be-nl", "sgn-ch-de", "zh-guoyu", "zh-hakka", "zh-min", "zh-min-nan", "zh-xiang",
 ]);
+
+const ANNEX_B_TRANSLITERATION_TAGS = new Set(["bg-Latn", "el-Latn"]);
 
 const URI_CHARACTERS = /^[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]*$/;
 const STRICT_UTC_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})Z$/;
@@ -131,6 +138,9 @@ export function validateTs119602LanguageTag(value: unknown): Ts119602SyntaxValid
   if (typeof value !== "string" || value.length === 0) {
     return invalid("language.non_empty", "A language tag must be a non-empty string.");
   }
+  if (ANNEX_B_TRANSLITERATION_TAGS.has(value)) {
+    return { outcome: "valid", diagnostics: [], classification: "annex_b_transliteration_tag" };
+  }
   if (value !== value.toLowerCase()) {
     return invalid("language.lower_case", "RFC 5646 language tags must be represented in lower case for this profile.");
   }
@@ -138,6 +148,30 @@ export function validateTs119602LanguageTag(value: unknown): Ts119602SyntaxValid
     return invalid("language.rfc5646", "The language tag does not match the supported RFC 5646 syntax.");
   }
   return { outcome: "valid", diagnostics: [], classification: "rfc5646_lower_case" };
+}
+
+export function validateTs119602Transliteration(
+  values: readonly Ts119602MultilingualValue[],
+): Ts119602TransliterationValidation {
+  const languages = new Set(values.flatMap((entry) => typeof entry.language === "string" ? [entry.language] : []));
+  const requiredPairs: Ts119602TransliterationValidation["requiredPairs"] = [];
+  if (values.some((entry) => entry.language === "bg" && typeof entry.value === "string" && /\p{Script=Cyrillic}/u.test(entry.value))) {
+    requiredPairs.push({ nativeLanguage: "bg", transliterationLanguage: "bg-Latn" });
+  }
+  if (values.some((entry) => entry.language === "el" && typeof entry.value === "string" && /\p{Script=Greek}/u.test(entry.value))) {
+    requiredPairs.push({ nativeLanguage: "el", transliterationLanguage: "el-Latn" });
+  }
+  const missingPairs = requiredPairs.filter((pair) => !languages.has(pair.transliterationLanguage));
+  return {
+    outcome: missingPairs.length === 0 ? "valid" : "invalid",
+    diagnostics: missingPairs.map((pair) => ({
+      code: "multilingual.transliteration_required",
+      message: `A ${pair.nativeLanguage} native term using a non-Latin script requires a Latin-script entry tagged ${pair.transliterationLanguage}.`,
+    })),
+    requiredPairs,
+    missingPairs,
+    classification: "annex_b_local_transliteration",
+  };
 }
 
 export function validateTs119602CountryCode(value: unknown): Ts119602SyntaxValidation {

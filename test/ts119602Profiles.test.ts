@@ -180,6 +180,9 @@ function profileInput(profile: SelectedProfile): Ts119602ProfileAssessmentInput 
   }
   const entity = {
     path: "/entity/0",
+    structure: structure("/entity/0", "object", ["TrustedEntityInformation", "TrustedEntityServices"]),
+    informationStructure: structure("/entity/0/information", "object", ["TEName", "TEAddress", "TEInformationURI"]),
+    servicesStructure: structure("/entity/0/services", "array", ["TrustedEntityService"]),
     informationPresent: true,
     servicesContainerPresent: true,
     name: [{ language: "en", value: "JSON-Operator" }],
@@ -187,20 +190,25 @@ function profileInput(profile: SelectedProfile): Ts119602ProfileAssessmentInput 
     tradeName: profile === "pub_eaa_providers" ? [{ language: "en", value: "OJ:EU:2025-1569" }] : [],
     address: {
       present: true,
-      postalAddresses: [{ path: "/entity/0/address", streetPresent: true, countryPresent: true }],
+      structure: { childNames: ["TEPostalAddress", "TEElectronicAddress"], violations: [], valid: true },
+      postalAddresses: [{ path: "/entity/0/address", streetPresent: true, countryPresent: true, language: "en", value: "1 Example Street EU" }],
       electronicUris: [
-        { path: "/entity/0/email", value: "mailto:contact@example.test" },
-        { path: "/entity/0/telephone", value: "tel:+3900000000" },
-        ...(registry.roleUriLocation === "address" ? [{ path: "/entity/0/role", value: roleUri }] : []),
+        { path: "/entity/0/email", value: "mailto:contact@example.test", language: "en" },
+        { path: "/entity/0/telephone", value: "tel:+3900000000", language: "en" },
+        ...(registry.roleUriLocation === "address" ? [{ path: "/entity/0/role", value: roleUri, language: "en" }] : []),
       ],
     },
-    informationUris: ["https://provider.example.test/policy", ...(registry.roleUriLocation === "information" ? [roleUri] : [])],
+    informationUris: [
+      { language: "en", value: "https://provider.example.test/policy" },
+      ...(registry.roleUriLocation === "information" ? [{ language: "en", value: roleUri }] : []),
+    ],
     extensionsPresent: false,
     extensions: [],
     services: [service],
   };
   const entities: Ts119602EntitiesInput = {
     containerPresent: true,
+    listStructure: structure("/entities", "array", ["TrustedEntity"]),
     entities: [entity],
     historyPeriod: metadata.historyPeriod,
     listIssueDateTime: metadata.issueDateTime,
@@ -220,6 +228,8 @@ function profileInput(profile: SelectedProfile): Ts119602ProfileAssessmentInput 
 function baseService(serviceType: string): Ts119602ServiceObservation {
   return {
     path: "/entity/0/service/0",
+    structure: structure("/entity/0/service/0", "object", ["ServiceInformation"]),
+    informationStructure: structure("/entity/0/service/0/information", "object", ["ServiceName", "ServiceDigitalIdentity"]),
     informationPresent: true,
     name: [{ language: "en", value: "Profile service" }],
     identity: { path: "/entity/0/service/0/identity", present: true, certificates: [{ path: "/entity/0/service/0/certificate", value: certificate }], subjectNames: [], publicKeys: [], skis: [], otherIds: [] },
@@ -237,6 +247,10 @@ function baseService(serviceType: string): Ts119602ServiceObservation {
     historyPresent: false,
     history: [],
   };
+}
+
+function structure(path: string, observedType: "object" | "array", childNames: string[]) {
+  return { path, binding: "json" as const, observedType, childNames, violations: [], valid: true };
 }
 
 function signatureCheck(id: string, status: CheckResult["status"]): CheckResult {

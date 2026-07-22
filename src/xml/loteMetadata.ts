@@ -7,6 +7,7 @@ import {
   type Ts119602IdentityObservation,
   type Ts119602ServiceExtensionObservation,
   type Ts119602ServiceObservation,
+  type Ts119602StructureObservation,
 } from "../standards/ts119602Entities.js";
 import {
   buildTs119602MetadataFindings,
@@ -137,7 +138,7 @@ export async function assessXmlLoteMetadata(
 
 function assessTrustedEntities(root: Element): { checks: CheckResult[]; entityCount: number; serviceCount: number } {
   const entities = nodes(root, TRUSTED_ENTITIES);
-  const services = nodes(root, `${TRUSTED_ENTITIES}//*[local-name()='ServiceInformation']`);
+  const services = entities.flatMap((entity) => direct602(direct602(entity, "TrustedEntityServices")[0], "TrustedEntityService"));
   const containerPresent = has(
     root,
     `./*[local-name()='TrustedEntitiesList' and namespace-uri()='${ETSI_TS119602_NAMESPACE}']`,
@@ -165,19 +166,41 @@ function assessTrustedEntities(root: Element): { checks: CheckResult[]; entityCo
   ];
   entities.forEach((entity, entityIndex) => {
     const prefix = `xml_lote.services.entity.${entityIndex + 1}`;
-    exists(checks, entity, `${prefix}.information`, ".//*[local-name()='TrustedEntityInformation']", "TrustedEntityInformation exists.");
-    exists(checks, entity, `${prefix}.name`, ".//*[local-name()='TEName']", "TEName exists.");
-    exists(checks, entity, `${prefix}.address`, ".//*[local-name()='TEAddress']", "TEAddress exists.");
-    const entityServices = nodes(entity, ".//*[local-name()='ServiceInformation']");
-    checks.push(check(`${prefix}.service_count`, "services", entityServices.length > 0 ? "pass" : "warn", entityServices.length > 0 ? "info" : "warning", "ServiceInformation entries counted.", entityServices.length));
+    const information = direct602(entity, "TrustedEntityInformation")[0];
+    const servicesContainer = direct602(entity, "TrustedEntityServices")[0];
+    requiredDirectXmlCheck(checks, `${prefix}.information`, information, "TrustedEntityInformation");
+    requiredDirectXmlCheck(checks, `${prefix}.name`, direct602(information, "TEName")[0], "TEName");
+    requiredDirectXmlCheck(checks, `${prefix}.address`, direct602(information, "TEAddress")[0], "TEAddress");
+    const entityServices = direct602(servicesContainer, "TrustedEntityService");
+    checks.push(check(`${prefix}.service_count`, "services", entityServices.length > 0 ? "pass" : "fail", entityServices.length > 0 ? "info" : "critical", "Directly nested TrustedEntityService entries counted.", entityServices.length));
     entityServices.forEach((service, serviceIndex) => {
       const servicePrefix = `${prefix}.service.${serviceIndex + 1}`;
-      exists(checks, service, `${servicePrefix}.type_identifier`, ".//*[local-name()='ServiceTypeIdentifier']", "ServiceTypeIdentifier exists.");
-      exists(checks, service, `${servicePrefix}.service_name`, ".//*[local-name()='ServiceName']", "ServiceName exists.");
-      exists(checks, service, `${servicePrefix}.digital_identity`, ".//*[local-name()='ServiceDigitalIdentity']", "ServiceDigitalIdentity exists.");
+      const information = direct602(service, "ServiceInformation")[0];
+      const type = direct602(information, "ServiceTypeIdentifier")[0];
+      checks.push(check(`${servicePrefix}.type_identifier`, "structure", type ? "pass" : "not_applicable", "info", type ? "Optional directly nested ServiceTypeIdentifier is present." : "ServiceTypeIdentifier is optional and absent."));
+      requiredDirectXmlCheck(checks, `${servicePrefix}.service_name`, direct602(information, "ServiceName")[0], "ServiceName");
+      requiredDirectXmlCheck(checks, `${servicePrefix}.digital_identity`, direct602(information, "ServiceDigitalIdentity")[0], "ServiceDigitalIdentity");
     });
   });
   return { checks, entityCount: entities.length, serviceCount: services.length };
+}
+
+function direct602(node: Node | undefined, localName: string): Element[] {
+  if (!node) return [];
+  return Array.from(node.childNodes).filter((child): child is Element =>
+    child.nodeType === 1
+    && (child as Element).namespaceURI === ETSI_TS119602_NAMESPACE
+    && (child as Element).localName === localName);
+}
+
+function requiredDirectXmlCheck(checks: CheckResult[], id: string, node: Node | undefined, name: string): void {
+  checks.push(check(
+    id,
+    "structure",
+    node ? "pass" : "fail",
+    node ? "info" : "error",
+    node ? `${name} is present at the required direct binding path.` : `${name} is missing from the required direct binding path.`,
+  ));
 }
 
 function xmlLoteBinding(root: Element): XmlLoteBinding {
@@ -256,8 +279,6 @@ function collectXmlMetadataInput(
     return [field, { present: matches.length > 0, count: matches.length }];
   })) as Ts119602MetadataInput["fields"];
   const addressNode = firstNode(context, "./*[local-name()='SchemeOperatorAddress']");
-  const postalNodes = addressNode ? nodes(addressNode, ".//*[local-name()='PostalAddress']") : [];
-  const electronicNodes = addressNode ? nodes(addressNode, ".//*[local-name()='ElectronicAddress']/*[local-name()='URI']") : [];
   const policyNode = firstNode(context, "./*[local-name()='PolicyOrLegalNotice']");
   const policyPointers = policyNode ? nodes(policyNode, "./*[local-name()='LoTEPolicy']") : [];
   const legalNotices = policyNode ? nodes(policyNode, "./*[local-name()='LoTELegalNotice']") : [];
@@ -281,15 +302,7 @@ function collectXmlMetadataInput(
       value: node.textContent?.trim(),
     })),
     territory: text(context, "./*[local-name()='SchemeTerritory']"),
-    address: {
-      present: Boolean(addressNode),
-      postalAddresses: postalNodes.map((node) => ({
-        path: xmlNodePath(node),
-        streetPresent: has(node, "./*[local-name()='StreetAddress' and normalize-space(.) != '']"),
-        countryPresent: has(node, "./*[local-name()='Country' or local-name()='CountryName'][normalize-space(.) != '']"),
-      })),
-      electronicUris: electronicNodes.map((node) => ({ path: xmlNodePath(node), value: node.textContent?.trim() })),
-    },
+    address: xmlAddress(addressNode),
     policy: {
       present: Boolean(policyNode),
       policyPointerCount: policyPointers.length,
@@ -364,6 +377,9 @@ function collectXmlEntitiesInput(
   const entityNodes = nodes(root, TRUSTED_ENTITIES);
   return {
     containerPresent: Boolean(container),
+    listStructure: xmlElementStructure(container, `${xmlNodePath(root)}/TrustedEntitiesList`, [
+      { name: "TrustedEntity", minimum: 1, maximum: Number.POSITIVE_INFINITY },
+    ]),
     entities: entityNodes.map((entity) => {
       const path = xmlNodePath(entity);
       const information = firstNode(entity, "./*[local-name()='TrustedEntityInformation']");
@@ -371,13 +387,27 @@ function collectXmlEntitiesInput(
       const extensionContainer = information && firstNode(information, "./*[local-name()='TEInformationExtensions']");
       return {
         path,
+        structure: xmlElementStructure(entity, path, [
+          { name: "TrustedEntityInformation", minimum: 1, maximum: 1 },
+          { name: "TrustedEntityServices", minimum: 1, maximum: 1 },
+        ]),
+        informationStructure: xmlElementStructure(information, `${path}/TrustedEntityInformation`, [
+          { name: "TEName", minimum: 1, maximum: 1 },
+          { name: "TETradeName", minimum: 0, maximum: 1 },
+          { name: "TEAddress", minimum: 1, maximum: 1 },
+          { name: "TEInformationURI", minimum: 1, maximum: 1 },
+          { name: "TEInformationExtensions", minimum: 0, maximum: 1 },
+        ]),
+        servicesStructure: xmlElementStructure(servicesContainer, `${path}/TrustedEntityServices`, [
+          { name: "TrustedEntityService", minimum: 1, maximum: Number.POSITIVE_INFINITY },
+        ]),
         informationPresent: Boolean(information),
         servicesContainerPresent: Boolean(servicesContainer),
         name: information ? xmlMultilingual(information, "./*[local-name()='TEName']/*[local-name()='Name']") : [],
         tradeNamePresent: Boolean(information && firstNode(information, "./*[local-name()='TETradeName']")),
         tradeName: information ? xmlMultilingual(information, "./*[local-name()='TETradeName']/*[local-name()='Name']") : [],
         address: xmlAddress(information && firstNode(information, "./*[local-name()='TEAddress']")),
-        informationUris: information ? nodes(information, "./*[local-name()='TEInformationURI']/*[local-name()='URI']").map(nodeText) : [],
+        informationUris: information ? xmlMultilingual(information, "./*[local-name()='TEInformationURI']/*[local-name()='URI']") : [],
         extensionsPresent: Boolean(extensionContainer),
         extensions: extensionContainer ? nodes(extensionContainer, "./*[local-name()='Extension']").map((extension) => xmlTypedExtension(extension as Element, "entity")) : [],
         services: servicesContainer ? nodes(servicesContainer, "./*[local-name()='TrustedEntityService']").map((service) => xmlService(service)) : [],
@@ -397,6 +427,21 @@ function xmlService(node: Node): Ts119602ServiceObservation {
   const supplyPoints = information ? nodes(information, "./*[local-name()='ServiceSupplyPoints']/*[local-name()='ServiceSupplyPoint']") : [];
   return {
     path,
+    structure: xmlElementStructure(node, path, [
+      { name: "ServiceInformation", minimum: 1, maximum: 1 },
+      { name: "ServiceHistory", minimum: 0, maximum: 1 },
+    ]),
+    informationStructure: xmlElementStructure(information, `${path}/ServiceInformation`, [
+      { name: "ServiceTypeIdentifier", minimum: 0, maximum: 1 },
+      { name: "ServiceName", minimum: 1, maximum: 1 },
+      { name: "ServiceDigitalIdentity", minimum: 1, maximum: 1 },
+      { name: "ServiceStatus", minimum: 0, maximum: 1 },
+      { name: "StatusStartingTime", minimum: 0, maximum: 1 },
+      { name: "SchemeServiceDefinitionURI", minimum: 0, maximum: 1 },
+      { name: "ServiceSupplyPoints", minimum: 0, maximum: 1 },
+      { name: "TEServiceDefinitionURI", minimum: 0, maximum: 1 },
+      { name: "ServiceInformationExtensions", minimum: 0, maximum: 1 },
+    ]),
     informationPresent: Boolean(information),
     name: information ? xmlMultilingual(information, "./*[local-name()='ServiceName']/*[local-name()='Name']") : [],
     identity: xmlIdentity(information && firstNode(information, "./*[local-name()='ServiceDigitalIdentity']"), `${path}/ServiceInformation/ServiceDigitalIdentity`),
@@ -428,6 +473,59 @@ function xmlService(node: Node): Ts119602ServiceObservation {
   };
 }
 
+function xmlElementStructure(
+  node: Node | undefined,
+  path: string,
+  sequence: ReadonlyArray<{ name: string; minimum: number; maximum: number }>,
+): Ts119602StructureObservation {
+  if (!node || node.nodeType !== 1) {
+    return {
+      path,
+      binding: "xml",
+      observedType: "missing",
+      childNames: [],
+      violations: [{ code: "structure.element_required", message: "The component must be a directly nested XML element in the ETSI TS 119 602 namespace." }],
+      valid: false,
+    };
+  }
+  const children = Array.from(node.childNodes).filter((child): child is Element => child.nodeType === 1);
+  const childNames = children.map((child) => child.namespaceURI === ETSI_TS119602_NAMESPACE
+    ? child.localName
+    : `{${child.namespaceURI ?? ""}}${child.localName}`);
+  const expectedNames = sequence.map((entry) => entry.name);
+  const violations: Ts119602StructureObservation["violations"] = [];
+  for (const child of children) {
+    if (child.namespaceURI !== ETSI_TS119602_NAMESPACE) {
+      violations.push({ code: "structure.foreign_namespace_child", message: `Direct child ${child.localName} is outside the ETSI TS 119 602 namespace.`, observed: child.namespaceURI ?? "" });
+    } else if (!expectedNames.includes(child.localName)) {
+      violations.push({ code: "structure.unexpected_child", message: `Unexpected direct child ${child.localName} is not defined at this location.`, observed: child.localName });
+    }
+  }
+  for (const rule of sequence) {
+    const count = children.filter((child) => child.namespaceURI === ETSI_TS119602_NAMESPACE && child.localName === rule.name).length;
+    if (count < rule.minimum || count > rule.maximum) {
+      violations.push({
+        code: "structure.cardinality",
+        message: `${rule.name} cardinality must be ${cardinalityLabel(rule.minimum, rule.maximum)}.`,
+        observed: count,
+      });
+    }
+  }
+  const indexes = children
+    .filter((child) => child.namespaceURI === ETSI_TS119602_NAMESPACE && expectedNames.includes(child.localName))
+    .map((child) => expectedNames.indexOf(child.localName));
+  if (indexes.some((index, position) => position > 0 && index < indexes[position - 1])) {
+    violations.push({ code: "structure.child_order", message: "Direct child elements do not follow the binding sequence.", observed: childNames });
+  }
+  return { path, binding: "xml", observedType: "element", childNames, violations, valid: violations.length === 0 };
+}
+
+function cardinalityLabel(minimum: number, maximum: number): string {
+  if (minimum === maximum) return `exactly ${minimum}`;
+  if (!Number.isFinite(maximum)) return `at least ${minimum}`;
+  return `${minimum} to ${maximum}`;
+}
+
 function xmlIdentity(node: Node | undefined, fallbackPath: string): Ts119602IdentityObservation {
   const path = node ? xmlNodePath(node) : fallbackPath;
   const digitalIds = node ? nodes(node, "./*[local-name()='DigitalId']") : [];
@@ -453,12 +551,33 @@ function xmlIdentity(node: Node | undefined, fallbackPath: string): Ts119602Iden
 }
 
 function xmlAddress(node: Node | undefined): Ts119602EntitiesInput["entities"][number]["address"] {
-  const postal = node ? nodes(node, ".//*[local-name()='PostalAddress']") : [];
-  const electronic = node ? nodes(node, ".//*[local-name()='ElectronicAddress']/*[local-name()='URI']") : [];
+  const postalContainer = direct602(node, "PostalAddresses")[0];
+  const electronicContainer = direct602(node, "ElectronicAddress")[0];
+  const postal = direct602(postalContainer, "PostalAddress");
+  const electronic = direct602(electronicContainer, "URI");
+  const outer = xmlElementStructure(node, node ? xmlNodePath(node) : "/Address", [
+    { name: "PostalAddresses", minimum: 1, maximum: 1 },
+    { name: "ElectronicAddress", minimum: 1, maximum: 1 },
+  ]);
+  const postalStructure = xmlElementStructure(postalContainer, `${outer.path}/PostalAddresses`, [
+    { name: "PostalAddress", minimum: 1, maximum: Number.POSITIVE_INFINITY },
+  ]);
+  const electronicStructure = xmlElementStructure(electronicContainer, `${outer.path}/ElectronicAddress`, [
+    { name: "URI", minimum: 1, maximum: Number.POSITIVE_INFINITY },
+  ]);
+  const postalEntryViolations = postal.flatMap((entry) => xmlElementStructure(entry, xmlNodePath(entry), [
+    { name: "StreetAddress", minimum: 1, maximum: 1 },
+    { name: "Locality", minimum: 0, maximum: 1 },
+    { name: "StateOrProvince", minimum: 0, maximum: 1 },
+    { name: "PostalCode", minimum: 0, maximum: 1 },
+    { name: "CountryName", minimum: 1, maximum: 1 },
+  ]).violations);
+  const violations = [...outer.violations, ...postalStructure.violations, ...electronicStructure.violations, ...postalEntryViolations];
   return {
     present: Boolean(node),
-    postalAddresses: postal.map((entry) => ({ path: xmlNodePath(entry), streetPresent: has(entry, "./*[local-name()='StreetAddress' and normalize-space(.) != '']"), countryPresent: has(entry, "./*[local-name()='Country' or local-name()='CountryName'][normalize-space(.) != '']") })),
-    electronicUris: electronic.map((entry) => ({ path: xmlNodePath(entry), value: nodeText(entry) })),
+    structure: { childNames: outer.childNames, violations, valid: violations.length === 0 },
+    postalAddresses: postal.map((entry) => ({ path: xmlNodePath(entry), streetPresent: has(entry, "./*[local-name()='StreetAddress' and normalize-space(.) != '']"), countryPresent: has(entry, "./*[local-name()='Country' or local-name()='CountryName'][normalize-space(.) != '']"), language: (entry as Element).getAttributeNS("http://www.w3.org/XML/1998/namespace", "lang") || undefined, value: xmlMultilingualContent(entry as Element) })),
+    electronicUris: electronic.map((entry) => ({ path: xmlNodePath(entry), value: nodeText(entry), language: (entry as Element).getAttributeNS("http://www.w3.org/XML/1998/namespace", "lang") || undefined })),
   };
 }
 
@@ -608,5 +727,4 @@ function xmlNodePath(node: Node): string {
 }
 
 function names(context: Node, expression: string): string[] { const named = texts(context, `${expression}/*[local-name()='Name']`); return named.length > 0 ? named : texts(context, expression); }
-function exists(checks: CheckResult[], context: Node, id: string, expression: string, message: string): void { const present = has(context, expression); checks.push(check(id, "structure", present ? "pass" : "fail", present ? "info" : "error", message)); }
 function check(id: string, category: CheckResult["category"], status: CheckResult["status"], severity: CheckResult["severity"], message: string, evidence?: unknown): CheckResult { return { id, category, status, severity, message, evidence }; }

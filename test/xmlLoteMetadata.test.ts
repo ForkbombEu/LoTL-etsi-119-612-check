@@ -89,6 +89,7 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       expect.objectContaining({ id: "ts119602.syntax.date_time", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.language", status: "pass" }),
       expect.objectContaining({ id: "ts119602.syntax.country_code", status: "pass" }),
+      expect.objectContaining({ id: "ts119602.language.transliteration", status: "pass" }),
       expect.objectContaining({ id: "ts119602.language.annex_b", status: "not_checked" }),
       expect.objectContaining({ id: "ts119602.structure.lote_tag", status: "pass" }),
       expect.objectContaining({
@@ -190,5 +191,57 @@ describe("ETSI TS 119 602 XML LoTE metadata", () => {
       trustServiceProviderCount: 0,
       serviceCount: 0,
     });
+  });
+
+  it("rejects duplicate directly nested trusted-entity information components", async () => {
+    const duplicateName = standardXmlLote.replace(
+      "</TEName>",
+      "</TEName><TEName><Name xml:lang=\"en\">Duplicate name</Name></TEName>",
+    );
+    const result = await assessArtifactContent({
+      content: duplicateName,
+      contentType: "application/xml",
+      strict: false,
+      includeJsonLoteChecks: false,
+    });
+    expect(result.ts119602.checks).toContainEqual(expect.objectContaining({
+      id: "ts119602.entity.information",
+      status: "fail",
+      evidence: expect.objectContaining({
+        results: expect.arrayContaining([
+          expect.objectContaining({
+            structure: expect.objectContaining({
+              violations: expect.arrayContaining([
+                expect.objectContaining({ code: "structure.cardinality", observed: 2 }),
+              ]),
+            }),
+          }),
+        ]),
+      }),
+    }));
+  });
+
+  it("rejects unexpected directly nested XML address components", async () => {
+    const unexpectedAddressChild = standardXmlLote.replace(
+      "<ElectronicAddress>",
+      "<UnexpectedAddress/><ElectronicAddress>",
+    );
+    const result = await assessArtifactContent({
+      content: unexpectedAddressChild,
+      contentType: "application/xml",
+      strict: false,
+      includeJsonLoteChecks: false,
+    });
+    expect(result.ts119602.checks).toContainEqual(expect.objectContaining({
+      id: "ts119602.scheme.operator_address",
+      status: "fail",
+      evidence: expect.objectContaining({
+        structure: expect.objectContaining({
+          violations: expect.arrayContaining([
+            expect.objectContaining({ code: "structure.unexpected_child", observed: "UnexpectedAddress" }),
+          ]),
+        }),
+      }),
+    }));
   });
 });
