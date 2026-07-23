@@ -6,6 +6,7 @@ export function renderAuditUiHtml(): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Trusted List Audit</title>
+    <link rel="icon" href="/assets/logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/assets/audit-ui.css" />
   </head>
   <body>

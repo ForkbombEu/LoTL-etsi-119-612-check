@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { readFile } from "node:fs/promises";
 import { assessArtifactContent, assessArtifactUrl, runAuditFromJson, runAuditFromUrl } from "../audit.js";
 import { assessCertificateChain } from "../eudi/certificateChain.js";
 import type { EudiTrustRole } from "../eudi/roles.js";
@@ -95,6 +96,11 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
   app.get("/assets/audit-ui.js", async (_request, reply) => {
     reply.type("application/javascript; charset=utf-8");
     return auditUiScript;
+  });
+
+  app.get("/assets/logo.svg", async (_request, reply) => {
+    reply.type("image/svg+xml");
+    return readFile(new URL("./assets/logo.svg", import.meta.url), "utf8");
   });
 
   app.get("/healthz", async () => ({

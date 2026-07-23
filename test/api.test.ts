@@ -537,16 +537,18 @@ describe("API server", () => {
 
   it("serves the local audit interface and its assets", async () => {
     const app = await buildServer();
-    const [page, css, script] = await Promise.all([
+    const [page, css, script, favicon] = await Promise.all([
       app.inject({ method: "GET", url: "/" }),
       app.inject({ method: "GET", url: "/assets/audit-ui.css" }),
       app.inject({ method: "GET", url: "/assets/audit-ui.js" }),
+      app.inject({ method: "GET", url: "/assets/logo.svg" }),
     ]);
     expect(page.statusCode).toBe(200);
     expect(page.headers["content-type"]).toContain("text/html");
     expect(page.body).toContain("id=\"lotl-url\"");
     expect(page.body).toContain("Advanced options");
     expect(page.body).toContain("/assets/audit-ui.js");
+    expect(page.body).toContain('rel="icon" href="/assets/logo.svg"');
     expect(css.headers["content-type"]).toContain("text/css");
     expect(css.body).toContain("--brand-primary");
     expect(script.headers["content-type"]).toContain("application/javascript");
@@ -557,6 +559,8 @@ describe("API server", () => {
     expect(script.body).toContain("Negative fixture descriptors");
     expect(script.body).toContain("Fetched artifact:");
     expect(css.body).toContain(".result-group");
+    expect(favicon.headers["content-type"]).toContain("image/svg+xml");
+    expect(favicon.body).toContain("<svg");
     expect(() => new Function(script.body)).not.toThrow();
     await app.close();
   });
