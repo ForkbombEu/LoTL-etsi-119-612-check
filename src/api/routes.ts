@@ -93,14 +93,29 @@ export async function registerRoutes(app: FastifyInstance, options: RouteOptions
     return auditUiCss;
   });
 
+  app.get("/assets/style.css", async (_request, reply) => {
+    reply.type("text/css; charset=utf-8");
+    return readFile(new URL("./assets/style.css", import.meta.url), "utf8");
+  });
+
   app.get("/assets/audit-ui.js", async (_request, reply) => {
     reply.type("application/javascript; charset=utf-8");
     return auditUiScript;
   });
 
-  app.get("/assets/logo.svg", async (_request, reply) => {
+  app.get("/assets/credimi_logo.svg", async (_request, reply) => {
     reply.type("image/svg+xml");
-    return readFile(new URL("./assets/logo.svg", import.meta.url), "utf8");
+    return readFile(new URL("./assets/credimi_logo.svg", import.meta.url), "utf8");
+  });
+
+  app.get("/assets/credimi_logo_negative.svg", async (_request, reply) => {
+    reply.type("image/svg+xml");
+    return readFile(new URL("./assets/credimi_logo_negative.svg", import.meta.url), "utf8");
+  });
+
+  app.get("/favicon.svg", async (_request, reply) => {
+    reply.type("image/svg+xml");
+    return readFile(new URL("./assets/credimi_logo.svg", import.meta.url), "utf8");
   });
 
   app.get("/healthz", async () => ({

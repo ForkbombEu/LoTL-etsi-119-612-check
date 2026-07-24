@@ -7,7 +7,7 @@
     "we-build-tl-audit": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/api/assets && cp src/api/assets/logo.svg dist/api/assets/logo.svg",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/api/assets && cp src/api/assets/*.svg src/api/assets/*.css dist/api/assets/",
     "test": "vitest run",
     "test:ts119602-coverage": "vitest run test/ts119602ImplementedCoverage.test.ts test/ts119602Coverage.test.ts",
     "test:ts119612-coverage": "vitest run test/ts119612ImplementedCoverage.test.ts test/ts119612Coverage.test.ts",

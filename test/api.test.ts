@@ -14,6 +14,18 @@ describe("API server", () => {
     vi.restoreAllMocks();
   });
 
+  it("keeps runtime Credimi assets byte-identical to the HITL inputs", async () => {
+    await expect(readFile(new URL("../src/api/assets/style.css", import.meta.url))).resolves.toEqual(
+      await readFile(new URL("../HITL/style.css", import.meta.url)),
+    );
+    await expect(readFile(new URL("../src/api/assets/credimi_logo.svg", import.meta.url))).resolves.toEqual(
+      await readFile(new URL("../HITL/credimi_logo.svg", import.meta.url)),
+    );
+    await expect(readFile(new URL("../src/api/assets/credimi_logo_negative.svg", import.meta.url))).resolves.toEqual(
+      await readFile(new URL("../HITL/credimi_logo_negative.svg", import.meta.url)),
+    );
+  });
+
   it("returns healthz", async () => {
     const app = await buildServer();
     const response = await app.inject({ method: "GET", url: "/healthz" });
@@ -530,25 +542,32 @@ describe("API server", () => {
     const app = await buildServer();
     const response = await app.inject({ method: "GET", url: "/docs" });
     expect(response.statusCode).toBe(200);
-    expect(response.body).toContain("@stoplight/elements");
+    expect(response.body).toContain("@stoplight/elements@9.0.0");
     expect(response.body).toContain("/openapi.yaml");
+    expect(response.body).toContain('href="/favicon.svg"');
     await app.close();
   });
 
   it("serves the local audit interface and its assets", async () => {
     const app = await buildServer();
-    const [page, css, script, favicon] = await Promise.all([
+    const [page, css, script, favicon, sharedCss, negativeLogo] = await Promise.all([
       app.inject({ method: "GET", url: "/" }),
       app.inject({ method: "GET", url: "/assets/audit-ui.css" }),
       app.inject({ method: "GET", url: "/assets/audit-ui.js" }),
-      app.inject({ method: "GET", url: "/assets/logo.svg" }),
+      app.inject({ method: "GET", url: "/assets/credimi_logo.svg" }),
+      app.inject({ method: "GET", url: "/assets/style.css" }),
+      app.inject({ method: "GET", url: "/assets/credimi_logo_negative.svg" }),
     ]);
     expect(page.statusCode).toBe(200);
     expect(page.headers["content-type"]).toContain("text/html");
     expect(page.body).toContain("id=\"lotl-url\"");
     expect(page.body).toContain("Advanced options");
     expect(page.body).toContain("/assets/audit-ui.js");
-    expect(page.body).toContain('rel="icon" href="/assets/logo.svg"');
+    expect(page.body).toContain('rel="icon" href="/favicon.svg"');
+    expect(page.body).toContain('href="/assets/style.css"');
+    expect(page.body).toContain("eudi-trust-inspector");
+    expect(page.body).toContain('class="brand-logo-link"');
+    expect(page.body).toContain('class="brand-title" href="/">EUDI Trust Inspector</a>');
     expect(css.headers["content-type"]).toContain("text/css");
     expect(css.body).toContain("--brand-primary");
     expect(script.headers["content-type"]).toContain("application/javascript");
@@ -557,10 +576,12 @@ describe("API server", () => {
     expect(script.body).toContain("Fixture readiness");
     expect(script.body).toContain("FCAF trusted authorities");
     expect(script.body).toContain("Negative fixture descriptors");
-    expect(script.body).toContain("Fetched artifact:");
+    expect(script.body).toContain("Fetched TrustedList:");
     expect(css.body).toContain(".result-group");
     expect(favicon.headers["content-type"]).toContain("image/svg+xml");
     expect(favicon.body).toContain("<svg");
+    expect(sharedCss.headers["content-type"]).toContain("text/css");
+    expect(negativeLogo.headers["content-type"]).toContain("image/svg+xml");
     expect(() => new Function(script.body)).not.toThrow();
     await app.close();
   });
